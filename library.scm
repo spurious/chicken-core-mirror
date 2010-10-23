@@ -30,7 +30,7 @@
   (disable-interrupts)
   (hide ##sys#dynamic-unwind ##sys#find-symbol
 	##sys#grow-vector ##sys#default-parameter-vector 
-	print-length-limit current-print-length setter-tag read-marks
+	current-print-length setter-tag read-marks
 	##sys#print-exit
 	##sys#format-here-doc-warning)
   (not inline ##sys#user-read-hook ##sys#error-hook ##sys#signal-hook ##sys#schedule
@@ -2709,7 +2709,11 @@ EOF
 				  (list 'quasisyntax (readrec)) )
 				 ((#\$)
 				  (##sys#read-char-0 port)
-				  (list 'location (readrec)) )
+				  (let ((c (##sys#peek-char-0 port)))
+				    (cond ((char=? c #\{)
+					   (##sys#read-char-0 port)
+					   (##sys#read-bytevector-literal port))
+					  (else (list 'location (readrec)) ))))
 				 ((#\:) 
 				  (##sys#read-char-0 port)
 				  (build-keyword (r-token)) )
@@ -2790,6 +2794,30 @@ EOF
 	      (fxior (fxshl (fxand hi #b111111) 10)
 		     (fxand lo #b1111111111)))) )
 
+(define (##sys#read-bytevector-literal port)
+  (define (hex c)
+    (let ((c (char-downcase c)))
+      (cond ((and (char>=? c #\a) (char<=? c #\f))
+	     (fx- (char->integer c) 87)	) ; - #\a + 10
+	    ((and (char>=? c #\0) (char<=? c #\9))
+	     (fx- (char->integer c) 48))
+	    (else (##sys#read-error port "invalid hex-code in blob-literal")))))
+  (let loop ((lst '()) (h #f))
+    (let ((c (##sys#read-char-0 port)))
+      (cond ((eof-object? c)
+	     (##sys#read-error port "unexpected end of blob literal"))
+	    ((char=? #\} c)
+	     (let ((str (##sys#reverse-list->string
+			 (if h
+			     (cons (integer->char h) lst)
+			     lst))))
+	       (##core#inline "C_string_to_bytevector" str)
+	       str))
+	    ((char-whitespace? c) (loop lst h))
+	    (h (loop (cons (integer->char (fxior h (hex c))) lst) #f))
+	    (else (loop lst (fxshl (hex c) 4)))))))
+	      
+
 ;;; Hooks for user-defined read-syntax:
 ;
 ; - Redefine this to handle new read-syntaxes. If 'char' doesn't match
@@ -2799,9 +2827,9 @@ EOF
 (define (##sys#user-read-hook char port)
   (case char
     ;; I put it here, so the SRFI-4 unit can intercept '#f...'
-    [(#\f #\F) (##sys#read-char-0 port) #f ]
-    [(#\t #\T) (##sys#read-char-0 port) #t ]
-    [else (##sys#read-error port "invalid sharp-sign read syntax" char) ] ) )
+    ((#\f #\F) (##sys#read-char-0 port) #f)
+    ((#\t #\T) (##sys#read-char-0 port) #t)
+    (else (##sys#read-error port "invalid sharp-sign read syntax" char) ) ) )
 
 
 ;;; Table for specially handled read-syntax:
@@ -2914,7 +2942,7 @@ EOF
   (void) )
 
 (define current-print-length (make-parameter 0))
-(define print-length-limit (make-parameter #f))
+(define ##sys#print-length-limit (make-parameter #f))
 (define ##sys#print-exit (make-parameter #f))
 
 (define ##sys#print
@@ -2923,7 +2951,7 @@ EOF
       (##sys#check-port-mode port #f)
       (let ([csp (case-sensitive)]
 	    [ksp (keyword-style)]
-	    [length-limit (print-length-limit)]
+	    [length-limit (##sys#print-length-limit)]
 	    [special-characters '(#\( #\) #\, #\[ #\] #\{ #\} #\' #\" #\; #\ #\` #\|)] )
 
 	(define (outstr port str)
@@ -2945,12 +2973,13 @@ EOF
 	  ((##sys#slot (##sys#slot port 2) 3) port str) )
 
 	(define (outchr port chr)
-	  (let ((cpp0 (current-print-length)))
-	    (current-print-length (fx+ cpp0 1))
-	    (when (and length-limit (fx>= cpp0 length-limit))
-	      (outstr0 port "...")
-	      ((##sys#print-exit) #t) )
-	    ((##sys#slot (##sys#slot port 2) 2) port chr) ) )
+	  (when length-limit
+	    (let ((cpp0 (current-print-length)))
+	      (current-print-length (fx+ cpp0 1))
+	      (when (fx>= cpp0 length-limit)
+		(outstr0 port "...")
+		((##sys#print-exit) #t) )))
+	  ((##sys#slot (##sys#slot port 2) 2) port chr))
 
 	(define (specialchar? chr)
 	  (let ([c (char->integer chr)])
@@ -3086,11 +3115,15 @@ EOF
 		   (outchr port #\space)
 		   (out (##sys#slot x 0)) ) )
 		((##core#inline "C_bytevectorp" x)
-		 (if (##core#inline "C_permanentp" x)
-		     (outstr port "#<static blob of size")
-		     (outstr port "#<blob of size ") )
-		 (outstr port (number->string (##core#inline "C_block_size" x)))
-		 (outchr port #\>) )
+		 (outstr port "#${")
+		 (let ((len (##sys#size x)))
+		   (do ((i 0 (fx+ i 1)))
+		       ((fx>= i len))
+		     (let ((b (##sys#byte x i)))
+		       (when (fx< b 16)
+			 (outchr port #\0))
+		       (outstr port (##sys#number->string b 16)))))
+		 (outchr port #\}) )
 		((##core#inline "C_structurep" x) (##sys#user-print-hook x readable port))
 		((##core#inline "C_closurep" x) (outstr port (##sys#procedure->string x)))
 		((##core#inline "C_locativep" x) (outstr port "#<locative>"))
@@ -3167,7 +3200,7 @@ EOF
     (lambda (limit thunk)
       (call-with-current-continuation
        (lambda (return)
-	 (parameterize ((print-length-limit limit)
+	 (parameterize ((##sys#print-length-limit limit)
 			(##sys#print-exit return)
 			(current-print-length 0))
 	   (thunk)))))))
