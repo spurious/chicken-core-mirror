@@ -82,16 +82,15 @@ EOF
 
 (include "common-declarations.scm")
 
-#;(begin
-    (define stderr ##sys#standard-error) ; use default stderr port
-    (define (dbg . args)
-      (for-each
-       (lambda (x)
-	 (display x stderr))
-       args)
-      (newline stderr)))
+(begin
+  (define stderr ##sys#standard-error) ; use default stderr port
+  (define (dbg . args)
+    (parameterize ((##sys#print-length-limit #f))
+      (for-each (cut display <> stderr) args)
+      (newline stderr)
+      (##sys#flush-output stderr))))
 
-(define-syntax dbg
+#;(define-syntax dbg
   (syntax-rules ()
     ((_ . _) #f))) 
 
@@ -154,16 +153,15 @@ EOF
 		      (loop (cdr lst)) ) ) ) ) ) )
       ;; Unblock threads blocked by I/O:
       (if eintr
-	  (##sys#force-primordial)
-	  (begin
-	    (unless (null? ##sys#fd-list)
-	      (##sys#unblock-threads-for-i/o) ) ) )
+	  (##sys#force-primordial)	; force it to handle user-interrupt
+	  (unless (null? ##sys#fd-list)
+	    (##sys#unblock-threads-for-i/o) ) )
       ;; Fetch and activate next ready thread:
       (let loop2 ()
 	(let ([nt (remove-from-ready-queue)])
 	  (cond [(not nt) 
 		 (if (and (null? ##sys#timeout-list) (null? ##sys#fd-list))
-		     (##sys#signal-hook #:runtime-error "deadlock")
+		     (##sys#halt "deadlock")
 		     (loop1) ) ]
 		[(eq? (##sys#slot nt 3) 'ready) (switch nt)]
 		[else (loop2)] ) ) ) ) ) )
@@ -236,7 +234,8 @@ EOF
 
 (define (##sys#thread-block-for-timeout! t tm)
   (dbg t " blocks for timeout " tm)
-  (unless (flonum? tm)
+  (unless (and (flonum? tm)			; to catch old code that uses fixum timeouts
+	       (fp> tm 0.0))
     (panic "##sys#thread-block-for-timeout!: invalid timeout"))
   ;; This should really use a balanced tree:
   (let loop ([tl ##sys#timeout-list] [prev #f])
@@ -271,7 +270,7 @@ EOF
 	     (for-each
 	      (lambda (t2)
 		(dbg "  unblocking: " t2)
-		(##sys#thread-basic-unblock! t2) )
+		(##sys#thread-unblock! t2) )
 	      wts) ) )
 	 (##sys#setislot m 3 '()) )
        ms) ) ) )
@@ -421,7 +420,8 @@ EOF
 	      (or rq? to?)
 	      tmo)))
       (dbg n " fds ready")
-      (cond [(eq? -1 n) 
+      (cond [(eq? -1 n)
+	     (dbg "select(2) returned with result -1" )
 	     (##sys#force-primordial)]
 	    [(fx> n 0)
 	     (set! ##sys#fd-list
@@ -432,7 +432,7 @@ EOF
 			    [fd (car a)]
 			    [inf (##core#inline "C_fd_test_input" fd)]
 			    [outf (##core#inline "C_fd_test_output" fd)] )
-		       (dbg "fd " fd " ready: input=" inf ", output=" outf)
+		       (dbg "fd " fd " state: input=" inf ", output=" outf)
 		       (if (or inf outf)
 			   (let loop2 ((threads (cdr a)) (keep '()))
 			     (if (null? threads)
@@ -452,6 +452,8 @@ EOF
 					  (panic
 					   "##sys#unblock-threads-for-i/o: thread on fd-list has wrong FD"))
 					 ((fdset-test inf outf (cdr p))
+					  (when (##sys#slot t 4) ; also blocked for timeout?
+					    (##sys#remove-from-timeout-list t))
 					  (##sys#thread-basic-unblock! t) 
 					  (loop2 (cdr threads) keep))
 					 (else (loop2 (cdr threads) (cons t keep)))))))
