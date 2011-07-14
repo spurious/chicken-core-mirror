@@ -1093,21 +1093,19 @@
 
 (##sys#extend-macro-environment
  'define-compiler-syntax '()
- (##sys#er-transformer
-  (syntax-rules ()
-    ((_ name)
-     (##core#define-compiler-syntax name #f))
-    ((_ (name . llist) body ...)
-     (define-compiler-syntax name (lambda llist body ...)))
-    ((_ name transformer)
-     (##core#define-compiler-syntax name transformer)))))
+ (syntax-rules ()
+   ((_ name)
+    (##core#define-compiler-syntax name #f))
+   ((_ (name . llist) body ...)
+    (define-compiler-syntax name (lambda llist body ...)))
+   ((_ name transformer)
+    (##core#define-compiler-syntax name transformer))))
 
 (##sys#extend-macro-environment
  'let-compiler-syntax '()
- (##sys#er-transformer
-  (syntax-rules ()
-    ((_ (binding ...) body ...)
-     (##core#let-compiler-syntax (binding ...) body ...)))))
+ (syntax-rules ()
+   ((_ (binding ...) body ...)
+    (##core#let-compiler-syntax (binding ...) body ...))))
 
 
 ;;; interface definition
