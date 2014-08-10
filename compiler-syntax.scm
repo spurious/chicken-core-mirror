@@ -25,10 +25,18 @@
 
 
 (declare 
-  (unit compiler-syntax) )
+  (unit compiler-syntax)
+  (uses srfi-1 data-structures) )
 
-
+;; TODO: Remove these once everything's converted to modules
+(include "private-namespace")
 (include "compiler-namespace")
+
+(module compiler-syntax
+    (compiler-syntax-statistics)
+
+(import chicken scheme srfi-1 data-structures)
+
 (include "tweaks.scm")
 
 
@@ -312,3 +320,4 @@
 			       (,f ,zvar (##sys#slot ,lstvar 0)))
 			      ,zvar))))
       x))
+)

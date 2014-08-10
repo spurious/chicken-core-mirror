@@ -61,7 +61,6 @@
  compiler-cleanup-hook
  compiler-source-file
  compiler-syntax-enabled
- compiler-syntax-statistics
  compute-database-statistics
  constant-form-eval
  constant-table
@@ -251,7 +250,6 @@
  put!
  qnode
  quit
- r-c-s
  read/source-info
  real-name
  real-name-table
