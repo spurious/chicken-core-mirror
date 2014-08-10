@@ -80,7 +80,6 @@
  debugging
  debugging-chicken
  debugging-executable
- determine-loop-and-dispatch
  decompose-lambda-list
  default-debugging-declarations
  default-declarations
@@ -143,6 +142,7 @@
  first-analysis
  fold-boolean
  fold-inner
+ foldable?
  foldable-bindings
  follow-without-loop
  foreign-argument-conversion
@@ -229,9 +229,7 @@
  pending-canonicalizations
  perform-closure-conversion
  perform-cps-conversion
- perform-high-level-optimizations
  perform-inlining!
- perform-pre-optimization!
  posv
  posq
  postponed-initforms
@@ -255,23 +253,18 @@
  real-name-table
  real-name2
  register-unboxed-op
- reorganize-recursive-bindings
  require-imports-flag
  rest-parameters-promoted-to-vector
  rewrite
  safe-globals-flag
  scan-free-variables
  scan-sharp-greater-string
- scan-toplevel-assignments
  scan-used-variables
  scrutinize
  scrutiny-debug
  set-real-name!
  sexpr->node
  simple-lambda-node?
- simplifications
- simplified-ops
- simplify-named-call
  simplify-type
  slashify
  sort-symbols
@@ -285,14 +278,12 @@
  string->c-identifier
  string->expr
  stringify
- substitution-table
  symbolify
  target-heap-size
  target-include-file
  target-stack-size
  toplevel-lambda-id
  toplevel-scope
- transform-direct-lambdas!
  tree-copy
  uncommentify
  undefine-shadowed-macros

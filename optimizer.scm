@@ -27,10 +27,19 @@
 
 (declare
   (unit optimizer)
-  (not inline ##sys#compiler-syntax-hook) )
+  (uses srfi-1 data-structures) )
 
-
+;; TODO: Remove these once everything's converted to modules
+(include "private-namespace")
 (include "compiler-namespace")
+
+(module optimizer
+    (scan-toplevel-assignments perform-high-level-optimizations
+     transform-direct-lambdas! determine-loop-and-dispatch)
+
+(import (except chicken put! get quit syntax-error) scheme
+	srfi-1 data-structures)
+
 (include "tweaks")
 
 (define-constant maximal-number-of-free-variables-for-liftable 16)
@@ -912,6 +921,7 @@
 
 (define substitution-table (make-vector 301 '()))
 
+;; TODO: export this and remove it from compiler-namespace
 (define (rewrite name . class-and-args)
   (let ((old (or (##sys#hash-table-ref substitution-table name) '())))
     (##sys#hash-table-set! substitution-table name (append old (list class-and-args))) ) )
@@ -1760,4 +1770,4 @@
 
      groups)
     (values node (pair? groups))))
-
+)
