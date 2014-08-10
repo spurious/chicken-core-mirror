@@ -211,10 +211,16 @@
  no-global-procedure-checks
  enable-module-registration
  no-procedure-checks
+ node-class
+ node-class-set!
+ node-parameters
+ node-parameters-set!
  node->sexpr
  node-subexpressions
+ node-subexpressions-set!
  non-foldable-bindings
  nonwinding-call/cc
+ number-type
  optimization-iterations
  optimize-leaf-routines
  original-program-size
@@ -227,7 +233,6 @@
  perform-high-level-optimizations
  perform-inlining!
  perform-pre-optimization!
- perform-secondary-flow-analysis
  posv
  posq
  postponed-initforms

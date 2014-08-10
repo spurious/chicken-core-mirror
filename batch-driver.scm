@@ -29,7 +29,8 @@
 ;; Same goes for "backend" and "platform".
 (declare
   (unit batch-driver)
-  (uses extras data-structures files srfi-1) )
+  (uses extras data-structures files srfi-1
+	lfa2) )
 
 ;; TODO: Remove these once everything's converted to modules
 (include "private-namespace")
@@ -42,7 +43,8 @@
      user-post-analysis-pass)
   
 (import (except chicken put! get quit syntax-error) scheme
-	extras data-structures files srfi-1)
+	extras data-structures files srfi-1
+	lfa2)
 
 (include "tweaks")
 

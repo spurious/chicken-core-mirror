@@ -34,12 +34,18 @@
 
 (declare
   (unit lfa2)
-  (hide d-depth lfa2-debug d dd +type-check-map+ +predicate-map+))
+  (uses srfi-1) )
 
-
+;; TODO: Remove these once everything's converted to modules
+(include "private-namespace")
 (include "compiler-namespace")
-(include "tweaks")
 
+(module lfa2
+    (perform-secondary-flow-analysis)
+
+(import (except chicken put! get quit syntax-error) scheme srfi-1)
+
+(include "tweaks")
 
 (define d-depth 0)
 (define lfa2-debug #t)
@@ -359,3 +365,4 @@
 	 (for-each 
 	  (lambda (ss) (printf "  ~a:\t~a~%" (car ss) (cdr ss)))
 	  stats))))))
+)

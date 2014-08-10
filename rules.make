@@ -492,10 +492,11 @@ endef
 $(foreach lib, $(SETUP_API_OBJECTS_1),\
           $(eval $(call declare-emitted-import-lib-dependency,$(lib))))
 
-$(foreach lib, $(filter batch-driver,$(COMPILER_OBJECTS_1)),\
+$(foreach lib, batch-driver lfa2,\
           $(eval $(call declare-emitted-import-lib-dependency,$(lib))))
 
-chicken.scm: batch-driver.import.scm batch-driver.scm
+chicken.c: chicken.scm batch-driver.import.scm batch-driver.scm
+batch-driver.c: batch-driver.scm lfa2.import.scm lfa2.scm
 
 define profile-flags
 $(if $(filter $(basename $(1)),$(PROFILE_OBJECTS)),-profile)
