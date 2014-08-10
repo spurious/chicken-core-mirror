@@ -51,7 +51,6 @@
  check-signature
  chop-extension
  chop-separator
- cleanup
  close-checked-input-file
  collapsable-literal?
  collect!
@@ -107,7 +106,6 @@
  emit-type-file
  enable-inline-files
  enable-specialization
- encode-literal
  estimate-foreign-result-location-size
  estimate-foreign-result-size
  expand-debug-assignment
@@ -139,25 +137,33 @@
  foldable?
  foldable-bindings
  follow-without-loop
- foreign-argument-conversion
+ foreign-callback-stubs
+ foreign-callback-stub-argument-types
+ foreign-callback-stub-body
+ foreign-callback-stub-callback
+ foreign-callback-stub-cps
+ foreign-callback-stub-id
+ foreign-callback-stub-name
+ foreign-callback-stub-qualifiers
+ foreign-callback-stub-return-type
  foreign-declarations
  foreign-lambda-stubs
- foreign-result-conversion
  foreign-string-result-reserve
+ foreign-stub-argument-types
+ foreign-stub-argument-names
+ foreign-stub-body
+ foreign-stub-callback
+ foreign-stub-cps
+ foreign-stub-id
+ foreign-stub-name
+ foreign-stub-qualifiers
+ foreign-stub-return-type
  foreign-type->scrutiny-type
  foreign-type-check
  foreign-type-convert-argument
  foreign-type-convert-result
- foreign-type-declaration
  foreign-type-table
  foreign-variables
- gen
- gen-list
- generate-code
- generate-external-variables
- generate-foreign-callback-header
- generate-foreign-callback-stub-prototypes
- generate-foreign-stubs
  get
  get-all
  get-line
@@ -184,6 +190,23 @@
  intrinsic?
  line-number-database-2
  line-number-database-size
+ lambda-literal-id
+ lambda-literal-external
+ lambda-literal-arguments
+ lambda-literal-argument-count
+ lambda-literal-rest-argument
+ lambda-literal-rest-argument-mode
+ lambda-literal-temporaries
+ lambda-literal-unboxed-temporaries
+ lambda-literal-callee-signatures
+ lambda-literal-allocated
+ lambda-literal-directly-called
+ lambda-literal-closure-size
+ lambda-literal-looping
+ lambda-literal-customizable
+ rest-argument-mode
+ lambda-literal-body
+ lambda-literal-direct
  llist-length
  llist-match?
  load-identifier-database
@@ -191,10 +214,8 @@
  load-type-database
  local-definitions
  location-pointer-map
- make-argument-list
  make-block-variable-literal
  make-random-name
- make-variable-list
  mark-variable
  match-node
  no-argc-checks
@@ -214,8 +235,6 @@
  optimization-iterations
  optimize-leaf-routines
  original-program-size
- output
- parameter-limit
  parenthesis-synonyms
  pending-canonicalizations
  perform-closure-conversion
@@ -258,7 +277,6 @@
  simplify-type
  slashify
  sort-symbols
- small-parameter-limit
  source-filename
  source-info->string
  source-info->line
@@ -271,14 +289,12 @@
  stringify
  symbolify
  target-heap-size
- target-include-file
  target-stack-size
  toplevel-lambda-id
  toplevel-scope
  tree-copy
  uncommentify
  undefine-shadowed-macros
- unique-id
  unit-name
  unlikely-variables
  unsafe
@@ -293,5 +309,4 @@
  verbose-mode
  with-debugging-output
  words
- words->bytes
- words-per-flonum) 
+ words->bytes) 

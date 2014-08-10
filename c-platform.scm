@@ -40,7 +40,11 @@
 (module c-platform
     (default-declarations default-profiling-declarations
      units-used-by-default
-     valid-compiler-options valid-compiler-options-with-argument)
+     valid-compiler-options valid-compiler-options-with-argument
+
+     ;; For consumption by c-backend *only*
+     target-include-file words-per-flonum
+     parameter-limit small-parameter-limit)
 
 (import (except chicken put! get quit syntax-error) scheme
 	srfi-1 data-structures
@@ -75,11 +79,8 @@
        ##sys#profile-entry ##sys#profile-exit) ) ) )
 
 (define units-used-by-default '(library eval chicken-syntax))
-;; TODO: export this and remove it from compiler-namespace
 (define words-per-flonum 4)
-;; TODO: export this and remove it from compiler-namespace
 (define parameter-limit 1024)
-;; TODO: export this and remove it from compiler-namespace
 (define small-parameter-limit 128)
 ;; TODO: export this and remove it from compiler-namespace
 (define unlikely-variables '(unquote unquote-splicing))
@@ -89,7 +90,6 @@
   '(("C_i_memq" . "C_eqp") ("C_u_i_memq" . "C_eqp") ("C_i_member" . "C_i_equalp")
     ("C_i_memv" . "C_i_eqvp") ) )
 (membership-unfold-limit 20)
-;; TODO: export this and remove it from compiler-namespace
 (define target-include-file "chicken.h")
 
 (define valid-compiler-options

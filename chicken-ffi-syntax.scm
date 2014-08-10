@@ -28,7 +28,10 @@
 (declare
   (unit chicken-ffi-syntax)
   (disable-interrupts)
-  (fixnum) )
+  (fixnum))
+
+;; IMPORTANT: These macros expand directly into fully qualified names
+;; from the c-backend module.
 
 #+(not debugbuild)
 (declare
@@ -37,7 +40,6 @@
 
 (##sys#provide
  'chicken-ffi-syntax)
-
 
 (define ##sys#chicken-ffi-macro-environment
   (let ((me0 (##sys#macro-environment)))
@@ -287,7 +289,8 @@
 	   (decl
 	    (if (string? t)
 		t
-		(##compiler#foreign-type-declaration t ""))))
+		;; TODO: Backend should be configurable
+		(c-backend#foreign-type-declaration t ""))))
       `(##core#begin
 	(##core#define-foreign-variable ,tmp size_t ,(string-append "sizeof(" decl ")"))
 	(##core#the fixnum #f ,tmp))))))

@@ -25,12 +25,26 @@
 ; POSSIBILITY OF SUCH DAMAGE.
 
 
-(declare (unit backend))
+;; TODO: Rename c-backend back to "backend" and turn it into a
+;; functor?  This may require the creation of an additional file.
+;; Same goes for "platform" and "driver".
+(declare
+  (unit c-backend)
+  (uses srfi-1 data-structures
+	c-platform compiler))
 
-
+;; TODO: Remove these once everything's converted to modules
+(include "private-namespace")
 (include "compiler-namespace")
-(include "tweaks")
 
+(module c-backend
+    (generate-code
+     ;; For "foreign" (aka chicken-ffi-syntax):
+     foreign-type-declaration)
+
+(import (except chicken put! get quit syntax-error) scheme foreign
+	srfi-1 data-structures
+	c-platform)
 
 ;;; Write atoms to output-port:
 
@@ -48,14 +62,6 @@
   (for-each
    (lambda (x) (display x output))
    (intersperse lst #\space) ) )
-
-
-;;; Unique id/prefix:
-
-(define unique-id
-  (string->c-identifier
-   (sprintf "C_~X_~A_" (random #x1000000) (current-seconds)) ) )
-
 
 ;;; Generate target code:
 
@@ -1428,3 +1434,4 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	      (encode-size len)
 	      (list-tabulate len (lambda (i) (encode-literal (##sys#slot lit i)))))
 	     ""))))) )
+)
