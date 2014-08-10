@@ -35,7 +35,9 @@
 
 (module optimizer
     (scan-toplevel-assignments perform-high-level-optimizations
-     transform-direct-lambdas! determine-loop-and-dispatch)
+     transform-direct-lambdas! determine-loop-and-dispatch
+     eq-inline-operator membership-test-operators membership-unfold-limit
+     default-optimization-passes rewrite)
 
 (import (except chicken put! get quit syntax-error) scheme
 	srfi-1 data-structures)
@@ -44,6 +46,11 @@
 
 (define-constant maximal-number-of-free-variables-for-liftable 16)
 
+;; These are parameterized by the platform implementation
+(define eq-inline-operator (make-parameter #f))
+(define membership-test-operators (make-parameter #f))
+(define membership-unfold-limit (make-parameter #f))
+(define default-optimization-passes (make-parameter #f))
 
 ;;; Scan toplevel expressions for assignments:
 
@@ -650,7 +657,7 @@
 		     rest) ) ) )
    (var0 var1 var2 op const1 const2 body1 body2 d1 d2 rest)
    ,(lambda (db var0 var1 var2 op const1 const2 body1 body2 d1 d2 rest)
-      (and (equal? op eq-inline-operator)
+      (and (equal? op (eq-inline-operator))
 	   (immediate? const1)
 	   (immediate? const2)
 	   (= 1 (length (get-list db var1 'references)))
@@ -677,7 +684,7 @@
 	    (##core#switch (n) (##core#variable (var0)) . clauses) ) )
    (var op var0 const d body n clauses)
    ,(lambda (db var op var0 const d body n clauses)
-      (and (equal? op eq-inline-operator)
+      (and (equal? op (eq-inline-operator))
 	   (immediate? const)
 	   (= 1 (length (get-list db var 'references)))
 	   (make-node
@@ -768,7 +775,7 @@
 	    y) ) 
    (var op args d x y)
    ,(lambda (db var op args d x y)
-      (and (not (equal? op eq-inline-operator))
+      (and (not (equal? op (eq-inline-operator)))
 	   (= 1 (length (get-list db var 'references)))
 	   (make-node
 	    'if d
@@ -804,9 +811,9 @@
        z)
    (d1 op x clist y z)
    ,(lambda (db d1 op x clist y z)
-      (and-let* ([opa (assoc op membership-test-operators)]
+      (and-let* ([opa (assoc op (membership-test-operators))]
 		 [(proper-list? clist)]
-		 [(< (length clist) membership-unfold-limit)] )
+		 [(< (length clist) (membership-unfold-limit))] )
 	(let ([var (gensym)]
 	      [eop (list (cdr opa))] )
 	  (make-node
@@ -921,7 +928,6 @@
 
 (define substitution-table (make-vector 301 '()))
 
-;; TODO: export this and remove it from compiler-namespace
 (define (rewrite name . class-and-args)
   (let ((old (or (##sys#hash-table-ref substitution-table name) '())))
     (##sys#hash-table-set! substitution-table name (append old (list class-and-args))) ) )

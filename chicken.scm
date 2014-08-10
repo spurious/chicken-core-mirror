@@ -30,13 +30,13 @@
 	srfi-1 srfi-4 utils files extras data-structures support
 	compiler optimizer lfa2 compiler-syntax scrutinizer
 	;; TODO: These three need to be made configurable somehow
-	batch-driver platform backend 
+	batch-driver c-platform backend 
 	srfi-69))
 
 
 (include "compiler-namespace")
 (include "tweaks")
-(import batch-driver)
+(import batch-driver c-platform)
 
 ;;; Prefix argument list with default options:
 

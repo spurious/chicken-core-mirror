@@ -81,15 +81,10 @@
  debugging-chicken
  debugging-executable
  decompose-lambda-list
- default-debugging-declarations
- default-declarations
  default-default-target-heap-size
  default-extended-bindings
  default-optimization-iterations
- default-optimization-passes
- default-optimization-passes-when-trying-harder
  default-output-filename
- default-profiling-declarations
  default-standard-bindings
  defconstant-bindings
  dependency-list
@@ -113,7 +108,6 @@
  enable-inline-files
  enable-specialization
  encode-literal
- eq-inline-operator
  estimate-foreign-result-location-size
  estimate-foreign-result-size
  expand-debug-assignment
@@ -203,8 +197,6 @@
  make-variable-list
  mark-variable
  match-node
- membership-test-operators
- membership-unfold-limit
  no-argc-checks
  no-bound-checks
  no-global-procedure-checks
@@ -217,7 +209,6 @@
  node->sexpr
  node-subexpressions
  node-subexpressions-set!
- non-foldable-bindings
  nonwinding-call/cc
  number-type
  optimization-iterations
@@ -255,7 +246,6 @@
  register-unboxed-op
  require-imports-flag
  rest-parameters-promoted-to-vector
- rewrite
  safe-globals-flag
  scan-free-variables
  scan-sharp-greater-string
@@ -268,6 +258,7 @@
  simplify-type
  slashify
  sort-symbols
+ small-parameter-limit
  source-filename
  source-info->string
  source-info->line
@@ -289,15 +280,12 @@
  undefine-shadowed-macros
  unique-id
  unit-name
- units-used-by-default
  unlikely-variables
  unsafe
  update-line-number-database
  update-line-number-database!
  used-units
  valid-c-identifier?
- valid-compiler-options
- valid-compiler-options-with-argument
  validate-type
  variable-mark
  variable-visible?

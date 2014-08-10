@@ -30,7 +30,7 @@
 (declare
   (unit batch-driver)
   (uses extras data-structures files srfi-1
-	lfa2 compiler-syntax optimizer) )
+	lfa2 compiler-syntax optimizer c-platform) )
 
 ;; TODO: Remove these once everything's converted to modules
 (include "private-namespace")
@@ -44,7 +44,7 @@
   
 (import (except chicken put! get quit syntax-error) scheme
 	extras data-structures files srfi-1
-	lfa2 compiler-syntax optimizer)
+	lfa2 compiler-syntax optimizer c-platform)
 
 (include "tweaks")
 
@@ -88,7 +88,7 @@
 		    (string-split 
 		     (or (get-environment-variable "CHICKEN_INCLUDE_PATH") "") 
 		     ";")))
-	(opasses default-optimization-passes)
+	(opasses (default-optimization-passes))
 	(time0 #f)
 	(time-breakdown #f)
 	(forms '())

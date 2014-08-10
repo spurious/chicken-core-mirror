@@ -25,16 +25,33 @@
 ; POSSIBILITY OF SUCH DAMAGE.
 
 
-(declare (unit platform))
+;; TODO: Rename c-platform back to "platform" and turn it into a
+;; functor?  This may require the creation of an additional file.
+;; Same goes for "backend" and "driver".
+(declare
+  (unit c-platform)
+  (uses srfi-1 data-structures
+	optimizer))
 
-
+;; TODO: Remove these once everything's converted to modules
+(include "private-namespace")
 (include "compiler-namespace")
+
+(module c-platform
+    (default-declarations default-profiling-declarations
+     units-used-by-default
+     valid-compiler-options valid-compiler-options-with-argument)
+
+(import (except chicken put! get quit syntax-error) scheme
+	srfi-1 data-structures
+	optimizer)
+
 (include "tweaks")
 
 
 ;;; Parameters:
 
-(define default-optimization-passes 3)
+(default-optimization-passes 3)
 
 (define default-declarations
   '((always-bound
@@ -51,30 +68,28 @@
      ##sys#foreign-block-argument ##sys#foreign-string-argument ##sys#foreign-pointer-argument ##sys#foreign-integer-argument
      ##sys#call-with-current-continuation) ) )
 
-(define default-debugging-declarations
-  '((##core#declare
-      '(uses debugger)
-      '(bound-to-procedure
-	##sys#push-debug-frame ##sys#pop-debug-frame ##sys#check-debug-entry ##sys#check-debug-assignment
-	##sys#register-debug-lambdas ##sys#register-debug-variables ##sys#debug-call) ) ) )
-
 (define default-profiling-declarations
   '((##core#declare
      (uses profiler)
      (bound-to-procedure
        ##sys#profile-entry ##sys#profile-exit) ) ) )
 
-(define units-used-by-default '(library eval chicken-syntax)) 
+(define units-used-by-default '(library eval chicken-syntax))
+;; TODO: export this and remove it from compiler-namespace
 (define words-per-flonum 4)
+;; TODO: export this and remove it from compiler-namespace
 (define parameter-limit 1024)
+;; TODO: export this and remove it from compiler-namespace
 (define small-parameter-limit 128)
+;; TODO: export this and remove it from compiler-namespace
 (define unlikely-variables '(unquote unquote-splicing))
 
-(define eq-inline-operator "C_eqp")
-(define membership-test-operators
+(eq-inline-operator "C_eqp")
+(membership-test-operators
   '(("C_i_memq" . "C_eqp") ("C_u_i_memq" . "C_eqp") ("C_i_member" . "C_i_equalp")
     ("C_i_memv" . "C_i_eqvp") ) )
-(define membership-unfold-limit 20)
+(membership-unfold-limit 20)
+;; TODO: export this and remove it from compiler-namespace
 (define target-include-file "chicken.h")
 
 (define valid-compiler-options
@@ -109,6 +124,7 @@
 
 ;;; Standard and extended bindings:
 
+;; TODO: export this and remove it from compiler-namespace
 (define default-standard-bindings
   '(not boolean? apply call-with-current-continuation eq? eqv? equal? pair? cons car cdr caar cadr
     cdar cddr caaar caadr cadar caddr cdaar cdadr cddar cdddr caaaar caaadr caadar caaddr cadaar
@@ -130,6 +146,7 @@
     list-ref abs char-ready? peek-char list->string string->list
     current-input-port current-output-port) )
 
+;; TODO: export this and remove it from compiler-namespace
 (define default-extended-bindings
   '(bitwise-and alist-cons xcons
     bitwise-ior bitwise-xor bitwise-not add1 sub1 fx+ fx- fx* fx/
@@ -166,6 +183,7 @@
     current-error-port current-thread
     printf sprintf format fprintf get-keyword) )
 
+;; TODO: export this and remove it from compiler-namespace
 (define internal-bindings
   '(##sys#slot ##sys#setslot ##sys#block-ref ##sys#block-set!
     ##sys#call-with-current-continuation ##sys#size ##sys#byte ##sys#setbyte
@@ -220,6 +238,7 @@
     pointer-f32-ref pointer-f32-set!
     pointer-f64-ref pointer-f64-set!))
 
+;; TODO: export this and remove it from compiler-namespace
 (define foldable-bindings
   (lset-difference 
    eq?
@@ -1203,3 +1222,4 @@
 		    '##core#inline_allocate
 		    '("C_a_i_cons" 3) 
 		    (list (second callargs) (varnode tmp)))))))))))
+)
