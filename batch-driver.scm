@@ -24,11 +24,26 @@
 ; OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ; POSSIBILITY OF SUCH DAMAGE.
 
-
+;; TODO: Rename batch-driver back to "driver" and turn it into a
+;; functor?  This may require the creation of an additional file.
+;; Same goes for "backend" and "platform".
 (declare
-  (unit driver))
+  (unit batch-driver)
+  (uses extras data-structures files srfi-1) )
 
+;; TODO: Remove these once everything's converted to modules
+(include "private-namespace")
 (include "compiler-namespace")
+
+(module batch-driver
+    (compile-source-file
+
+     user-options-pass user-read-pass user-preprocessor-pass user-pass
+     user-post-analysis-pass)
+  
+(import (except chicken put! get quit syntax-error) scheme
+	extras data-structures files srfi-1)
+
 (include "tweaks")
 
 (define-constant funny-message-timeout 60000)
@@ -680,3 +695,4 @@
 			       (##sys#display-times (##sys#stop-timer)))
 			     (compiler-cleanup-hook)
 			     (dribble "compilation finished.") ) ) ) ) ) ) ) ) ) ) ) )
+)

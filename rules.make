@@ -492,6 +492,11 @@ endef
 $(foreach lib, $(SETUP_API_OBJECTS_1),\
           $(eval $(call declare-emitted-import-lib-dependency,$(lib))))
 
+$(foreach lib, $(filter batch-driver,$(COMPILER_OBJECTS_1)),\
+          $(eval $(call declare-emitted-import-lib-dependency,$(lib))))
+
+chicken.scm: batch-driver.import.scm batch-driver.scm
+
 define profile-flags
 $(if $(filter $(basename $(1)),$(PROFILE_OBJECTS)),-profile)
 endef
@@ -568,7 +573,7 @@ $(foreach obj, $(IMPORT_LIBRARIES),\
 define declare-bootstrap-compiler-object
 $(1).c: $$(SRCDIR)$(1).scm $$(SRCDIR)compiler-namespace.scm \
 	  $$(SRCDIR)private-namespace.scm $$(SRCDIR)tweaks.scm
-	$$(CHICKEN) $$< $$(CHICKEN_COMPILER_OPTIONS) -output-file $$@ 
+	$$(CHICKEN) $$< $$(CHICKEN_COMPILER_OPTIONS) -emit-import-library $(1) -output-file $$@ 
 endef
 
 $(foreach obj, $(COMPILER_OBJECTS_1),\

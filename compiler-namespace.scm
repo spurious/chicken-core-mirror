@@ -131,6 +131,7 @@
  export-dump-hook
  export-variable
  expression-has-side-effects?
+ extended-bindings
  external-protos-first
  external-to-pointer
  external-variables
@@ -211,12 +212,15 @@
  enable-module-registration
  no-procedure-checks
  node->sexpr
+ node-subexpressions
  non-foldable-bindings
  nonwinding-call/cc
  optimization-iterations
+ optimize-leaf-routines
  original-program-size
  output
  parameter-limit
+ parenthesis-synonyms
  pending-canonicalizations
  perform-closure-conversion
  perform-cps-conversion
@@ -273,6 +277,7 @@
  source-info->line
  specialize-node!
  standalone-executable
+ standard-bindings
  strict-variable-types
  string->c-identifier
  string->expr
@@ -292,6 +297,7 @@
  unit-name
  units-used-by-default
  unlikely-variables
+ unsafe
  update-line-number-database
  update-line-number-database!
  used-units
