@@ -31,7 +31,7 @@
   (unit batch-driver)
   (uses extras data-structures files srfi-1
 	;; TODO: Backend should be configurable
-	lfa2 compiler-syntax optimizer c-platform c-backend) )
+	lfa2 compiler-syntax optimizer scrutinizer c-platform c-backend) )
 
 ;; TODO: Remove these once everything's converted to modules
 (include "private-namespace")
@@ -45,7 +45,7 @@
 
 (import (except chicken put! get quit syntax-error) scheme
 	extras data-structures files srfi-1
-	lfa2 compiler-syntax optimizer c-platform c-backend)
+	lfa2 compiler-syntax optimizer scrutinizer c-platform c-backend)
 
 (include "tweaks")
 

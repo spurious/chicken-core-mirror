@@ -265,6 +265,7 @@
 (declare
  (unit compiler))
 
+(import scrutinizer)
 
 (include "compiler-namespace")
 

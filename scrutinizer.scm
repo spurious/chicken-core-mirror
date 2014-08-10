@@ -26,18 +26,20 @@
 
 (declare
   (unit scrutinizer)
-  (hide specialize-node! specialization-statistics
-	procedure-type? named? procedure-result-types procedure-argument-types
-	noreturn-type? rest-type procedure-name d-depth
-	noreturn-procedure-type? trail trail-restore walked-result 
-	typename multiples procedure-arguments procedure-results
-	smash-component-types! generate-type-checks! over-all-instantiations
-	compatible-types? type<=? match-types resolve match-argument-types))
+  (uses srfi-1 data-structures extras ports files) )
 
-
+;; TODO: Remove these once everything's converted to modules
+(include "private-namespace")
 (include "compiler-namespace")
-(include "tweaks")
 
+(module scrutinizer
+    (scrutinize load-type-database emit-type-file
+     validate-type check-and-validate-type install-specializations)
+
+(import (except chicken put! get quit syntax-error) scheme
+	srfi-1 data-structures extras ports files)
+
+(include "tweaks")
 
 (define d-depth 0)
 (define scrutiny-debug #t)
@@ -826,9 +828,9 @@
 				       (sprintf "(~a) " (first params))
 				       "")
 				   (car ts)
-				   (string-concatenate
+				   (string-intersperse
 				    (map (lambda (t) (sprintf "\n    ~a" t))
-					 (cdr params)))))
+					 (cdr params)) "")))
 			    ((match-types (car types) (car ts) 
 					  (append (type-typeenv (car types)) typeenv)
 					  #t)
@@ -2353,3 +2355,4 @@
 	    (else 
 	     (restore)
 	     (loop (cdr ts) ok))))))
+)

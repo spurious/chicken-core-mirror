@@ -43,11 +43,9 @@
  c-ify-string
  callback-names
  call-info
- canonicalize-list-type
  canonicalize-begin-body
  canonicalize-expression
  check-and-open-input-file
- check-and-validate-type
  check-signature
  chop-extension
  chop-separator
@@ -103,7 +101,6 @@
  emit-profile
  emit-syntax-trace-info
  emit-trace-info
- emit-type-file
  enable-inline-files
  enable-specialization
  estimate-foreign-result-location-size
@@ -184,7 +181,6 @@
  inline-table-used
  inlining
  insert-timer-checks
- install-specializations
  installation-home
  internal-bindings
  intrinsic?
@@ -211,7 +207,6 @@
  llist-match?
  load-identifier-database
  load-inline-file
- load-type-database
  local-definitions
  location-pointer-map
  make-block-variable-literal
@@ -269,18 +264,14 @@
  scan-free-variables
  scan-sharp-greater-string
  scan-used-variables
- scrutinize
- scrutiny-debug
  set-real-name!
  sexpr->node
  simple-lambda-node?
- simplify-type
  slashify
  sort-symbols
  source-filename
  source-info->string
  source-info->line
- specialize-node!
  standalone-executable
  standard-bindings
  strict-variable-types
@@ -302,7 +293,6 @@
  update-line-number-database!
  used-units
  valid-c-identifier?
- validate-type
  variable-mark
  variable-visible?
  varnode
