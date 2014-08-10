@@ -31,7 +31,7 @@
 (declare
   (unit c-backend)
   (uses srfi-1 data-structures
-	c-platform compiler))
+	c-platform compiler support))
 
 ;; TODO: Remove these once everything's converted to modules
 (include "private-namespace")
@@ -42,9 +42,9 @@
      ;; For "foreign" (aka chicken-ffi-syntax):
      foreign-type-declaration)
 
-(import (except chicken put! get quit syntax-error) scheme foreign
+(import (except chicken put! get syntax-error) scheme foreign
 	srfi-1 data-structures
-	c-platform)
+	c-platform support)
 
 ;;; Write atoms to output-port:
 
@@ -62,6 +62,11 @@
   (for-each
    (lambda (x) (display x output))
    (intersperse lst #\space) ) )
+
+;; Hacky procedures to make certain names more suitable for use in C.
+;; TODO: Slashify should probably be changed to convert \ into \\?
+(define (slashify s) (string-translate (->string s) "\\" "/"))
+(define (uncommentify s) (string-translate* (->string s) '(("*/" . "*_/"))))
 
 ;;; Generate target code:
 
@@ -685,7 +690,7 @@
 	    [(block-variable-literal? lit) 0]
 	    [(##sys#immediate? lit) (bad-literal lit)]
 	    [(##core#inline "C_lambdainfop" lit) 0]
-	    [(##sys#bytevector? lit) (+ 2 (words (##sys#size lit))) ] ; drops "permanent" property!
+	    [(##sys#bytevector? lit) (+ 2 (bytes->words (##sys#size lit))) ] ; drops "permanent" property!
 	    [(##sys#generic-structure? lit)
 	     (let ([n (##sys#size lit)])
 	       (let loop ([i 0] [s (+ 2 n)])
@@ -1155,47 +1160,47 @@
 ;; Create type declarations
 
 (define (foreign-type-declaration type target)
-  (let ([err (lambda () (quit "illegal foreign type `~A'" type))]
-	[str (lambda (ts) (string-append ts " " target))] )
+  (let ((err (lambda () (quit-compiling "illegal foreign type `~A'" type)))
+	(str (lambda (ts) (string-append ts " " target))) )
     (case type
-      [(scheme-object) (str "C_word")]
-      [(char byte) (str "C_char")]
-      [(unsigned-char unsigned-byte) (str "unsigned C_char")]
-      [(unsigned-int unsigned-integer) (str "unsigned int")]
-      [(unsigned-int32 unsigned-integer32) (str "C_u32")]
-      [(int integer bool) (str "int")]
-      [(size_t) (str "size_t")]
-      [(int32 integer32) (str "C_s32")]
-      [(integer64) (str "C_s64")]
-      [(unsigned-integer64) (str "C_u64")]
-      [(short) (str "short")]
-      [(long) (str "long")]
-      [(unsigned-short) (str "unsigned short")]
-      [(unsigned-long) (str "unsigned long")]
-      [(float) (str "float")]
-      [(double number) (str "double")]
-      [(c-pointer nonnull-c-pointer scheme-pointer nonnull-scheme-pointer) (str "void *")]
-      [(c-string-list c-string-list*) "C_char **"]
-      [(blob nonnull-blob u8vector nonnull-u8vector) (str "unsigned char *")]
-      [(u16vector nonnull-u16vector) (str "unsigned short *")]
-      [(s8vector nonnull-s8vector) (str "signed char *")]
-      [(u32vector nonnull-u32vector) (str "unsigned int *")]
-      [(s16vector nonnull-s16vector) (str "short *")]
-      [(s32vector nonnull-s32vector) (str "int *")]
-      [(f32vector nonnull-f32vector) (str "float *")]
-      [(f64vector nonnull-f64vector) (str "double *")]
+      ((scheme-object) (str "C_word"))
+      ((char byte) (str "C_char"))
+      ((unsigned-char unsigned-byte) (str "unsigned C_char"))
+      ((unsigned-int unsigned-integer) (str "unsigned int"))
+      ((unsigned-int32 unsigned-integer32) (str "C_u32"))
+      ((int integer bool) (str "int"))
+      ((size_t) (str "size_t"))
+      ((int32 integer32) (str "C_s32"))
+      ((integer64) (str "C_s64"))
+      ((unsigned-integer64) (str "C_u64"))
+      ((short) (str "short"))
+      ((long) (str "long"))
+      ((unsigned-short) (str "unsigned short"))
+      ((unsigned-long) (str "unsigned long"))
+      ((float) (str "float"))
+      ((double number) (str "double"))
+      ((c-pointer nonnull-c-pointer scheme-pointer nonnull-scheme-pointer) (str "void *"))
+      ((c-string-list c-string-list*) "C_char **")
+      ((blob nonnull-blob u8vector nonnull-u8vector) (str "unsigned char *"))
+      ((u16vector nonnull-u16vector) (str "unsigned short *"))
+      ((s8vector nonnull-s8vector) (str "signed char *"))
+      ((u32vector nonnull-u32vector) (str "unsigned int *"))
+      ((s16vector nonnull-s16vector) (str "short *"))
+      ((s32vector nonnull-s32vector) (str "int *"))
+      ((f32vector nonnull-f32vector) (str "float *"))
+      ((f64vector nonnull-f64vector) (str "double *"))
       ((pointer-vector nonnull-pointer-vector) (str "void **"))
-      [(nonnull-c-string c-string nonnull-c-string* c-string* symbol) 
-       (str "char *")]
-      [(nonnull-unsigned-c-string nonnull-unsigned-c-string* unsigned-c-string unsigned-c-string*)
-       (str "unsigned char *")]
-      [(void) (str "void")]
-      [else
-       (cond [(and (symbol? type) (##sys#hash-table-ref foreign-type-table type))
+      ((nonnull-c-string c-string nonnull-c-string* c-string* symbol) 
+       (str "char *"))
+      ((nonnull-unsigned-c-string nonnull-unsigned-c-string* unsigned-c-string unsigned-c-string*)
+       (str "unsigned char *"))
+      ((void) (str "void"))
+      (else
+       (cond ((and (symbol? type) (##sys#hash-table-ref foreign-type-table type))
 	      => (lambda (t)
-		   (foreign-type-declaration (if (vector? t) (vector-ref t 0) t) target)) ]
-	     [(string? type) (str type)]
-	     [(list? type)
+		   (foreign-type-declaration (if (vector? t) (vector-ref t 0) t) target)) )
+	     ((string? type) (str type))
+	     ((list? type)
 	      (let ((len (length type)))
 		(cond 
 		 ((and (= 2 len)
@@ -1244,14 +1249,15 @@
 			   argtypes) 
 		      ",")
 		     ")" ) ) )
-		 (else (err)) ) ) ]
-	     [else (err)] ) ] ) ) )
+		 (else (err)) ) ) )
+	     (else (err)) ) ) ) ) )
 
 
 ;; Generate expression to convert argument from Scheme data
 
 (define (foreign-argument-conversion type)
-  (let ([err (lambda () (quit "illegal foreign argument type `~A'" type))])
+  (let ((err (lambda ()
+	       (quit-compiling "illegal foreign argument type `~A'" type))))
     (case type
       ((scheme-object) "(")
       ((char unsigned-char) "C_character_code((C_word)")
@@ -1321,7 +1327,8 @@
 ;; Generate suitable conversion of a result value into Scheme data
 	    
 (define (foreign-result-conversion type dest)
-  (let ([err (lambda () (quit "illegal foreign return type `~A'" type))])
+  (let ((err (lambda ()
+	       (quit-compiling "illegal foreign return type `~A'" type))))
     (case type
       ((char unsigned-char) "C_make_character((C_word)")
       ((int int32) "C_fix((C_word)")

@@ -26,7 +26,8 @@
 
 (declare 
   (unit compiler-syntax)
-  (uses srfi-1 data-structures) )
+  (uses srfi-1 data-structures
+	support) )
 
 ;; TODO: Remove these once everything's converted to modules
 (include "private-namespace")
@@ -35,7 +36,8 @@
 (module compiler-syntax
     (compiler-syntax-statistics)
 
-(import chicken scheme srfi-1 data-structures)
+(import (except chicken put! get syntax-error) scheme srfi-1 data-structures
+	support)
 
 (include "tweaks.scm")
 

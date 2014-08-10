@@ -31,7 +31,7 @@
 (declare
   (unit c-platform)
   (uses srfi-1 data-structures
-	optimizer))
+	optimizer support))
 
 ;; TODO: Remove these once everything's converted to modules
 (include "private-namespace")
@@ -46,9 +46,9 @@
      target-include-file words-per-flonum
      parameter-limit small-parameter-limit)
 
-(import (except chicken put! get quit syntax-error) scheme
+(import (except chicken put! get syntax-error) scheme
 	srfi-1 data-structures
-	optimizer)
+	optimizer support)
 
 (include "tweaks")
 
@@ -1090,7 +1090,7 @@
 		(and-let* ([proc (get db (first (node-parameters val)) 'value)]
 			   [(eq? '##core#lambda (node-class proc))] )
 		  (let ([llist (third (node-parameters proc))])
-		    (decompose-lambda-list 
+		    (##sys#decompose-lambda-list 
 		     llist
 		     (lambda (vars argc rest)
 		       (and (= argc 2)

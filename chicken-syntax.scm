@@ -31,7 +31,7 @@
   (fixnum) )
 
 ;; IMPORTANT: These macros expand directly into fully qualified names
-;; from the scrutinizer module.
+;; from the scrutinizer and support modules.
 
 #+(not debugbuild)
 (declare
@@ -1244,7 +1244,7 @@
 					   rtypes)
 				      spec)
 				     (list spec))))
-			  (or (##compiler#variable-mark 
+			  (or (support#variable-mark
 			       gname
 			       '##compiler#local-specializations)
 			      '())))

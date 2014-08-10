@@ -28,44 +28,17 @@
  compiler
  analyze-expression
  all-import-libraries
- banner
- basic-literal?
- big-fixnum?
  block-compilation
- block-variable-literal-name
- block-variable-literal?
  bootstrap-mode
- bomb
  broken-constant-nodes
- build-expression-tree
- build-lambda-list
- build-node-graph
- c-ify-string
  callback-names
- call-info
- canonicalize-begin-body
  canonicalize-expression
- check-and-open-input-file
- check-signature
- chop-extension
- chop-separator
- close-checked-input-file
- collapsable-literal?
- collect!
- collected-debugging-output
  compile-format-string
  compiler-arguments
- compiler-cleanup-hook
  compiler-source-file
  compiler-syntax-enabled
- compute-database-statistics
- constant-form-eval
  constant-table
- constant?
  constants-used
- copy-node!
- copy-node-tree-and-rename
- count!
  create-foreign-stub
  csc-control-file
  current-program-size
@@ -74,10 +47,8 @@
  debug-info-vector-name
  debug-lambda-list
  debug-variable-list
- debugging
  debugging-chicken
  debugging-executable
- decompose-lambda-list
  default-default-target-heap-size
  default-extended-bindings
  default-optimization-iterations
@@ -87,24 +58,12 @@
  dependency-list
  direct-call-ids
  disable-stack-overflow-checking
- disabled-warnings
- display-analysis-database
- display-line-number-database
- display-real-name-table
- dump-defined-globals
- dump-global-refs
- dump-nodes
- dump-undefined-globals
  emit-closure-info
  emit-control-file-item
- emit-global-inline-file
  emit-profile
- emit-syntax-trace-info
  emit-trace-info
  enable-inline-files
  enable-specialization
- estimate-foreign-result-location-size
- estimate-foreign-result-size
  expand-debug-assignment
  expand-debug-call
  expand-debug-lambda
@@ -113,27 +72,18 @@
  expand-foreign-lambda
  expand-foreign-lambda*
  expand-foreign-primitive
- expand-profile-lambda
  explicit-use-flag
  export-dump-hook
- export-variable
- expression-has-side-effects?
  extended-bindings
  external-protos-first
  external-to-pointer
  external-variables
  file-io-only
  file-requirements
- final-foreign-type
  find-early-refs
  find-inlining-candidates
- finish-foreign-result
  first-analysis
- fold-boolean
- fold-inner
- foldable?
  foldable-bindings
- follow-without-loop
  foreign-callback-stubs
  foreign-callback-stub-argument-types
  foreign-callback-stub-body
@@ -155,25 +105,11 @@
  foreign-stub-name
  foreign-stub-qualifiers
  foreign-stub-return-type
- foreign-type->scrutiny-type
- foreign-type-check
- foreign-type-convert-argument
- foreign-type-convert-result
  foreign-type-table
  foreign-variables
- get
- get-all
- get-line
- get-line-2
- get-list
- hide-variable
- immediate?
  immutable-constants
  import-libraries
- read-info-hook
- initialize-analysis-database
  initialize-compiler
- inline-lambda-bindings
  inline-locally
  inline-max-size
  inline-substitutions-enabled
@@ -183,7 +119,6 @@
  insert-timer-checks
  installation-home
  internal-bindings
- intrinsic?
  line-number-database-2
  line-number-database-size
  lambda-literal-id
@@ -203,28 +138,13 @@
  rest-argument-mode
  lambda-literal-body
  lambda-literal-direct
- llist-length
- llist-match?
- load-identifier-database
- load-inline-file
  local-definitions
  location-pointer-map
- make-block-variable-literal
- make-random-name
- mark-variable
- match-node
  no-argc-checks
  no-bound-checks
  no-global-procedure-checks
  enable-module-registration
  no-procedure-checks
- node-class
- node-class-set!
- node-parameters
- node-parameters-set!
- node->sexpr
- node-subexpressions
- node-subexpressions-set!
  nonwinding-call/cc
  number-type
  optimization-iterations
@@ -235,56 +155,27 @@
  perform-closure-conversion
  perform-cps-conversion
  perform-inlining!
- posv
- posq
  postponed-initforms
- pprint-expressions-to-file
  prepare-for-code-generation
- print-debug-options
- print-program-statistics
- print-usage
- print-version
  process-command-line
  process-declaration
  profile-info-vector-name
  profile-lambda-index
  profile-lambda-list
  profiled-procedures
- put!
- qnode
- quit
- read/source-info
- real-name
  real-name-table
- real-name2
  register-unboxed-op
  require-imports-flag
  rest-parameters-promoted-to-vector
  safe-globals-flag
- scan-free-variables
- scan-sharp-greater-string
- scan-used-variables
- set-real-name!
- sexpr->node
- simple-lambda-node?
- slashify
- sort-symbols
  source-filename
- source-info->string
- source-info->line
  standalone-executable
  standard-bindings
  strict-variable-types
- string->c-identifier
- string->expr
- stringify
- symbolify
  target-heap-size
  target-stack-size
  toplevel-lambda-id
  toplevel-scope
- tree-copy
- uncommentify
  undefine-shadowed-macros
  unit-name
  unlikely-variables
@@ -292,11 +183,4 @@
  update-line-number-database
  update-line-number-database!
  used-units
- valid-c-identifier?
- variable-mark
- variable-visible?
- varnode
- verbose-mode
- with-debugging-output
- words
- words->bytes) 
+ verbose-mode) 

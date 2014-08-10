@@ -144,7 +144,7 @@
 	      ((memq o valid-compiler-options-with-argument)
 	       (if (pair? rest)
 		   (loop (cdr rest))
-		   (quit "missing argument to `-~s' option" o) ) )
+		   (quit-compiling "missing argument to `-~s' option" o) ) )
 	      (else
 	       (warning 
 		"invalid compiler option (ignored)" 

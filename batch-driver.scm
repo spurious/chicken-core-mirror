@@ -31,7 +31,7 @@
   (unit batch-driver)
   (uses extras data-structures files srfi-1
 	;; TODO: Backend should be configurable
-	lfa2 compiler-syntax optimizer scrutinizer c-platform c-backend) )
+	support lfa2 compiler-syntax optimizer scrutinizer c-platform c-backend) )
 
 ;; TODO: Remove these once everything's converted to modules
 (include "private-namespace")
@@ -43,9 +43,9 @@
      user-options-pass user-read-pass user-preprocessor-pass user-pass
      user-post-analysis-pass)
 
-(import (except chicken put! get quit syntax-error) scheme
+(import (except chicken put! get syntax-error) scheme
 	extras data-structures files srfi-1
-	lfa2 compiler-syntax optimizer scrutinizer c-platform c-backend)
+	support lfa2 compiler-syntax optimizer scrutinizer c-platform c-backend)
 
 (include "tweaks")
 
@@ -63,10 +63,10 @@
 (define (compile-source-file filename . options)
   (define (option-arg p)
     (if (null? (cdr p))
-	(quit "missing argument to `-~A' option" (car p))
+	(quit-compiling "missing argument to `-~A' option" (car p))
 	(let ([arg (cadr p)])
 	  (if (symbol? arg)
-	      (quit "invalid argument to `~A' option" arg)
+	      (quit-compiling "invalid argument to `~A' option" arg)
 	      arg) ) ) )
   (initialize-compiler)
   (set! explicit-use-flag (memq 'explicit-use options))
@@ -156,7 +156,7 @@
 		  ((#\m #\M) (* (string->number (substring str 0 len1)) (* 1024 1024)))
 		  ((#\k #\K) (* (string->number (substring str 0 len1)) 1024))
 		  (else (string->number str)) ) )
-	    (quit "invalid numeric argument ~S" str) ) ) )
+	    (quit-compiling "invalid numeric argument ~S" str) ) ) )
 
     (define (collect-options opt)
       (let loop ([opts options])
@@ -262,7 +262,8 @@
       (set! inline-max-size 
 	(let ([arg (option-arg inlimit)])
 	  (or (string->number arg)
-	      (quit "invalid argument to `-inline-limit' option: `~A'" arg) ) ) ) )
+	      (quit-compiling
+	       "invalid argument to `-inline-limit' option: `~A'" arg) ) ) ) )
     (when (memq 'case-insensitive options) 
       (dribble "Identifiers and symbols are case insensitive")
       (register-feature! 'case-insensitive)
@@ -272,7 +273,8 @@
 	(cond [(string=? "prefix" val) (keyword-style #:prefix)]
 	      [(string=? "none" val) (keyword-style #:none)]
 	      [(string=? "suffix" val) (keyword-style #:suffix)]
-	      [else (quit "invalid argument to `-keyword-style' option")] ) ) )
+	      [else (quit-compiling
+		     "invalid argument to `-keyword-style' option")] ) ) )
     (when (memq 'no-parenthesis-synonyms options)
       (dribble "Disabled support for parenthesis synonyms")
       (parenthesis-synonyms #f) )
@@ -292,7 +294,7 @@
 	      ##sys#include-pathnames
 	      ipath) )
     (when (and outfile filename (string=? outfile filename))
-      (quit "source- and output-filename are the same") )
+      (quit-compiling "source- and output-filename are the same") )
     (set! uses-units
       (append-map
        (lambda (u) (map string->symbol (string-split u ", ")))
@@ -373,7 +375,7 @@
     (when profile
       (let ((acc (eq? 'accumulate-profile (car profile))))
 	(when (and acc (not profile-name))
-	  (quit
+	  (quit-compiling
 	   "you need to specify -profile-name if using accumulated profiling runs"))
 	(set! emit-profile #t)
 	(set! profiled-procedures 'all)
@@ -558,11 +560,12 @@
 		   ;;XXX hardcoded database file name
 		   (unless (memq 'ignore-repository options)
 		     (unless (load-type-database "types.db")
-		       (quit "default type-database `types.db' not found")))
+		       (quit-compiling
+			"default type-database `types.db' not found")))
 		   (for-each 
 		    (lambda (fn)
 		      (or (load-type-database fn #f)
-			  (quit "type-database `~a' not found" fn)))
+			  (quit-compiling "type-database `~a' not found" fn)))
 		    (collect-options 'types))
 		   (for-each
 		    (lambda (id)

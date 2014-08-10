@@ -26,7 +26,8 @@
 
 (declare
   (unit scrutinizer)
-  (uses srfi-1 data-structures extras ports files) )
+  (uses srfi-1 data-structures extras ports files
+	support) )
 
 ;; TODO: Remove these once everything's converted to modules
 (include "private-namespace")
@@ -36,8 +37,9 @@
     (scrutinize load-type-database emit-type-file
      validate-type check-and-validate-type install-specializations)
 
-(import (except chicken put! get quit syntax-error) scheme
-	srfi-1 data-structures extras ports files)
+(import (except chicken put! get syntax-error) scheme
+	srfi-1 data-structures extras ports files
+	support)
 
 (include "tweaks")
 
@@ -554,7 +556,7 @@
 				(set! aliased (alist-cons var var2 aliased)))))
 			  (loop (cdr vars) (cdr body) (alist-cons (car vars) t e2))))))
 		 ((##core#lambda lambda)
-		  (decompose-lambda-list
+		  (##sys#decompose-lambda-list
 		   (first params)
 		   (lambda (vars argc rest)
 		     (let* ((namelst (if dest (list dest) '()))
@@ -822,15 +824,16 @@
 		    ;; first exp is always a variable so ts must be of length 1
 		    (let loop ((types (cdr params)) (subs (cdr subs)))
 		      (cond ((null? types)
-			     (quit "~a~ano clause applies in `compiler-typecase' for expression of type `~s':~a" 
-				   (location-name loc)
-				   (if (first params) 
-				       (sprintf "(~a) " (first params))
-				       "")
-				   (car ts)
-				   (string-intersperse
-				    (map (lambda (t) (sprintf "\n    ~a" t))
-					 (cdr params)) "")))
+			     (quit-compiling
+			      "~a~ano clause applies in `compiler-typecase' for expression of type `~s':~a" 
+			      (location-name loc)
+			      (if (first params) 
+				  (sprintf "(~a) " (first params))
+				  "")
+			      (car ts)
+			      (string-intersperse
+			       (map (lambda (t) (sprintf "\n    ~a" t))
+				    (cdr params)) "")))
 			    ((match-types (car types) (car ts) 
 					  (append (type-typeenv (car types)) typeenv)
 					  #t)
@@ -864,7 +867,7 @@
       (when (positive? dropped-branches)
 	(debugging '(o e) "dropped branches" dropped-branches))
       (when errors
-	(quit "some variable types do not satisfy strictness"))
+	(quit-compiling "some variable types do not satisfy strictness"))
       rn)))
       
 

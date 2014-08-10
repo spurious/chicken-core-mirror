@@ -263,9 +263,10 @@
 
 
 (declare
- (unit compiler))
+ (unit compiler)
+ (uses scrutinizer support) )
 
-(import scrutinizer)
+(import scrutinizer support)
 
 (include "compiler-namespace")
 
@@ -659,7 +660,7 @@
 			      (llist obody) 
 			      (##sys#expand-extended-lambda-list 
 			       llist obody ##sys#error se) ) )
-			   (decompose-lambda-list
+			   (##sys#decompose-lambda-list
 			    llist
 			    (lambda (vars argc rest)
 			      (let* ((aliases (map gensym vars))
@@ -1095,7 +1096,7 @@
 			   (set! location-pointer-map
 			     (cons (list alias store type) location-pointer-map) )
 			   (walk
-			    `(let (,(let ([size (words (estimate-foreign-result-location-size type))])
+			    `(let (,(let ([size (bytes->words (estimate-foreign-result-location-size type))])
 				      ;; Add 2 words: 1 for the header, 1 for double-alignment:
 				      ;; Note: C_a_i_bytevector takes number of words, not bytes
 				      (list 
@@ -1123,7 +1124,7 @@
 				[valexp (third x)]
 				[val (handle-exceptions ex
 					 ;; could show line number here
-					 (quit "error in constant evaluation of ~S for named constant `~S'" 
+					 (quit-compiling "error in constant evaluation of ~S for named constant `~S'" 
 					       valexp name)
 				       (if (and (not (symbol? valexp))
 						(collapsable-literal? valexp))
@@ -1145,7 +1146,7 @@
 				    (mark-variable var '##compiler#always-bound)
 				    (walk `(define ,var ',val) e se #f #f h ln) ) )
 				 (else
-				  (quit "invalid compile-time value for named constant `~S'"
+				  (quit-compiling "invalid compile-time value for named constant `~S'"
 					name)))))
 
 			((##core#declare)
@@ -1170,7 +1171,7 @@
 			     (if (valid-c-identifier? raw-c-name)
 				 (set! callback-names
 				   (cons (cons raw-c-name name) callback-names))
-				 (quit "name `~S' of external definition is not a valid C identifier"
+				 (quit-compiling "name `~S' of external definition is not a valid C identifier"
 				       raw-c-name) )
 			     (when (or (not (proper-list? vars)) 
 				       (not (proper-list? atypes))
@@ -1482,7 +1483,8 @@
 	      (for-each 
 	       (cut mark-variable <> '##compiler#pure #t) 
 	       (globalize-all syms))
-	      (quit "invalid arguments to `constant' declaration: ~S" spec)) ) )
+	      (quit-compiling
+	       "invalid arguments to `constant' declaration: ~S" spec)) ) )
        ((emit-import-library)
 	(set! import-libraries
 	  (append
@@ -1630,19 +1632,21 @@
 	 ,(if (zero? rsize) 
 	      (foreign-type-convert-result (append head (cons '(##core#undefined) rest)) rtype)
 	      (let ([ft (final-foreign-type rtype)]
-		    [ws (words rsize)] )
+		    [ws (bytes->words rsize)] )
 		`(let ([,bufvar (##core#inline_allocate ("C_a_i_bytevector" ,(+ 2 ws)) ',ws)])
 		   ,(foreign-type-convert-result
 		     (finish-foreign-result ft (append head (cons bufvar rest)))
 		     rtype) ) ) ) ) ) ) )
 
 (define (expand-foreign-lambda exp callback?)
-  (let* ([name (third exp)]
-	 [sname (cond ((symbol? name) (symbol->string (##sys#strip-syntax name)))
+  (let* ((name (third exp))
+	 (sname (cond ((symbol? name) (symbol->string (##sys#strip-syntax name)))
 		      ((string? name) name)
-		      (else (quit "name `~s' of foreign procedure has wrong type" name)) ) ]
-	 [rtype (second exp)]
-	 [argtypes (cdddr exp)] )
+		      (else (quit-compiling
+			     "name `~s' of foreign procedure has wrong type"
+			     name)) ) )
+	 (rtype (second exp))
+	 (argtypes (cdddr exp)) )
     (create-foreign-stub rtype sname argtypes #f #f callback? callback?) ) )
 
 (define (expand-foreign-lambda* exp callback?)
@@ -1887,7 +1891,7 @@
 
 	  ((lambda) ; this is an intermediate lambda, slightly different
 	   (grow 1) ; from '##core#lambda nodes (params = (LLIST));
-	   (decompose-lambda-list	; CPS will convert this into ##core#lambda
+	   (##sys#decompose-lambda-list	; CPS will convert this into ##core#lambda
 	    (first params)
 	    (lambda (vars argc rest)
 	      (for-each 
@@ -1900,7 +1904,7 @@
 
 	  ((##core#lambda ##core#direct_lambda)
 	   (grow 1)
-	   (decompose-lambda-list
+	   (##sys#decompose-lambda-list
 	    (third params)
 	    (lambda (vars argc rest)
 	      (let ([id (first params)]
@@ -2128,7 +2132,7 @@
 			(= nreferences ncall-sites) )
 	       (let ([lparams (node-parameters value)])
 		 (when (second lparams)
-		   (decompose-lambda-list
+		   (##sys#decompose-lambda-list
 		    (third lparams)
 		    (lambda (vars argc rest)
 		      (unless rest
@@ -2297,7 +2301,7 @@
 						     (proper-list? llist) ) ] )
 					  (when (and name 
 						     (not (llist-match? llist (cdr subs))))
-					    (quit
+					    (quit-compiling
 					     "~a: procedure `~a' called with wrong number of arguments" 
 					     (source-info->line name)
 					     (if (pair? name) (cadr name) name)))
@@ -2310,7 +2314,7 @@
 	     (concatenate (map (lambda (n) (gather n here locals)) subs) ) ))
 
 	  ((##core#lambda ##core#direct_lambda)
-	   (decompose-lambda-list
+	   (##sys#decompose-lambda-list
 	    (third params)
 	    (lambda (vars argc rest)
 	      (let ((id (if here (first params) 'toplevel)))
@@ -2363,7 +2367,7 @@
 
 	  ((##core#lambda ##core#direct_lambda)
 	   (let ([llist (third params)])
-	     (decompose-lambda-list
+	     (##sys#decompose-lambda-list
 	      llist
 	      (lambda (vars argc rest)
 		(let* ([boxedvars (filter (lambda (v) (test v 'boxed)) vars)]
@@ -2569,11 +2573,11 @@
 	   (make-node class params (mapwalk subs e e-count here boxes)) )
 
 	  ((##core#inline_ref)
-	   (set! allocated (+ allocated (words (estimate-foreign-result-size (second params)))))
+	   (set! allocated (+ allocated (bytes->words (estimate-foreign-result-size (second params)))))
 	   (make-node class params '()) )
 
 	  ((##core#inline_loc_ref)
-	   (set! allocated (+ allocated (words (estimate-foreign-result-size (first params)))))
+	   (set! allocated (+ allocated (bytes->words (estimate-foreign-result-size (first params)))))
 	   (make-node class params (mapwalk subs e e-count here boxes)) )
 
 	  ((##core#closure) 
@@ -2608,7 +2612,7 @@
 	     (set! allocated 0)
 	     (set! signatures '())
 	     (set! looping 0)
-	     (decompose-lambda-list
+	     (##sys#decompose-lambda-list
 	      (third params)
 	      (lambda (vars argc rest)
 		(let* ([id (first params)]
@@ -2730,7 +2734,7 @@
 				       "coerced inexact literal number `~S' to fixnum ~S" 
 				     c (inexact->exact c)))
 				  (immediate-literal (inexact->exact c)) )
-				 (else (quit "cannot coerce inexact literal `~S' to fixnum" c)) ) )
+				 (else (quit-compiling "cannot coerce inexact literal `~S' to fixnum" c)) ) )
 			  (else (make-node '##core#literal (list (literal c)) '())) ) )
 		   ((immediate? c) (immediate-literal c))
 		   (else (make-node '##core#literal (list (literal c)) '())) ) ) )

@@ -27,7 +27,8 @@
 
 (declare
   (unit optimizer)
-  (uses srfi-1 data-structures) )
+  (uses srfi-1 data-structures
+	support) )
 
 ;; TODO: Remove these once everything's converted to modules
 (include "private-namespace")
@@ -39,8 +40,9 @@
      eq-inline-operator membership-test-operators membership-unfold-limit
      default-optimization-passes rewrite)
 
-(import (except chicken put! get quit syntax-error) scheme
-	srfi-1 data-structures)
+(import (except chicken put! get syntax-error) scheme
+	srfi-1 data-structures
+	support)
 
 (include "tweaks")
 
@@ -283,7 +285,7 @@
 	   (let ((llist (third params))
 		 (id (first params)))
 	     (cond [(test id 'has-unused-parameters)
-		    (decompose-lambda-list
+		    (##sys#decompose-lambda-list
 		     llist
 		     (lambda (vars argc rest)
 		       (receive (unused used) (partition (lambda (v) (test v 'unused)) vars)
@@ -300,7 +302,7 @@
 				(fourth params) )
 			  (list (walk (first subs) (cons id fids) '())) ) ) ) ) ]
 		   [(test id 'explicit-rest)
-		    (decompose-lambda-list
+		    (##sys#decompose-lambda-list
 		     llist
 		     (lambda (vars argc rest)
 		       (touch)
@@ -372,7 +374,7 @@
 			 ;; callee is a lambda
 			 (let* ([lparams (node-parameters lval)]
 				[llist (third lparams)] )
-			   (decompose-lambda-list
+			   (##sys#decompose-lambda-list
 			    llist
 			    (lambda (vars argc rest)
 			      (let ((ifid (first lparams))
@@ -1394,7 +1396,7 @@
 			    #t) ) ) ) ]
 	      [(##core#lambda)
 	       (and v
-		    (decompose-lambda-list
+		    (##sys#decompose-lambda-list
 		     (third params)
 		     (lambda (vars argc rest)
 		       (set! closures (cons v closures))
@@ -1491,7 +1493,7 @@
 			     (set! ksites (alist-cons #f n ksites))
 			     (cond [(eq? kvar (first arg0p))
 				    (unless (= argc (length (cdr subs)))
-				      (quit
+				      (quit-compiling
 				       "known procedure called recursively with wrong number of arguments: `~A'" 
 				       fnvar) )
 				    (node-class-set! n '##core#recurse)
@@ -1502,7 +1504,7 @@
 					 (let* ([klam (cdr a)]
 						[kbody (first (node-subexpressions klam))] )
 					   (unless (= argc (length (cdr subs)))
-					     (quit
+					     (quit-compiling
 					      "known procedure called recursively with wrong number of arguments: `~A'" 
 					      fnvar) )
 					   (node-class-set! n 'let)
@@ -1534,7 +1536,7 @@
 	      (let* ([n (cdr site)]
 		     [nsubs (node-subexpressions n)] )
 		(unless (= argc (length (cdr nsubs)))
-		  (quit
+		  (quit-compiling
 		   "known procedure called with wrong number of arguments: `~A'"
 		   fnvar) )
 		(node-subexpressions-set!
@@ -1642,7 +1644,7 @@
 		    (walk val e)
 		    (walk body (cons var e))))))
 	  ((##core#lambda ##core#direct_lambda)
-	   (decompose-lambda-list
+	   (##sys#decompose-lambda-list
 	    (third params)
 	    (lambda (vars argc rest)
 	      ;; walk recursively, with cleared cluster state
@@ -1676,7 +1678,7 @@
 			     (pparams (node-parameters proc))
 			     (llist (third pparams))
 			     (aliases (map gensym llist)))
-			(decompose-lambda-list
+			(##sys#decompose-lambda-list
 			 llist
 			 (lambda (vars argc rest)
 			   (let ((body (first (node-subexpressions proc)))
