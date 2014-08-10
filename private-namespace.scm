@@ -43,6 +43,7 @@
 	  vars)
 	 '(##core#undefined) ) ) ) ) )
 
-(set! ##sys#alias-global-hook
-  (lambda (var . assign)		; must work with old chicken
-    (or (get var 'c:namespace) var) ) )
+(let ((old-hook ##sys#alias-global-hook))
+  (set! ##sys#alias-global-hook
+    (lambda (var . assign)		; must work with old chicken
+      (or (get var 'c:namespace) (apply old-hook var assign)) ) ))
