@@ -46,8 +46,7 @@
      target-include-file words-per-flonum
      parameter-limit small-parameter-limit)
 
-(import (except chicken put! get syntax-error) scheme
-	srfi-1 data-structures
+(import chicken scheme srfi-1 data-structures
 	optimizer support)
 
 (include "tweaks")
@@ -489,22 +488,22 @@
        (and (= (length callargs) 1)
 	    (call-with-current-continuation
 	     (lambda (return)
-	       (let ([arg (first callargs)])
+	       (let ((arg (first callargs)))
 		 (make-node
 		  '##core#call (list #t)
 		  (list
 		   cont
-		   (cond [(and (eq? '##core#variable (node-class arg))
-			       (eq? 'vector (get db (first (node-parameters arg)) 'rest-parameter)) )
+		   (cond ((and (eq? '##core#variable (node-class arg))
+			       (eq? 'vector (db-get db (first (node-parameters arg)) 'rest-parameter)) )
 			  (make-node
 			   '##core#inline 
 			   (if unsafe
 			       '("C_slot")
 			       '("C_i_vector_ref") )
-			   (list arg (qnode index)) ) ]
-			 [(and unsafe iop2) (make-node '##core#inline (list iop2) callargs)]
-			 [iop1 (make-node '##core#inline (list iop1) callargs)]
-			 [else (return #f)] ) ) ) ) ) ) ) ) ) )
+			   (list arg (qnode index)) ) )
+			 ((and unsafe iop2) (make-node '##core#inline (list iop2) callargs))
+			 (iop1 (make-node '##core#inline (list iop1) callargs))
+			 (else (return #f)) ) ) ) ) ) ) ) ) ) )
 
   (rewrite-c..r 'car "C_i_car" "C_u_i_car" 0)
   (rewrite-c..r '##sys#car "C_i_car" "C_u_i_car" 0)
@@ -535,7 +534,7 @@
 	  (and (eq? '##core#variable (node-class arg1))	; probably not needed
 	       (eq? '##core#variable (node-class arg2))
 	       (and-let* ((sym (car (node-parameters arg2)))
-			  (val (get db sym 'value)) )
+			  (val (db-get db sym 'value)) )
 		 (and (eq? '##core#lambda (node-class val))
 		      (let ((llist (third (node-parameters val))))
 			(and (proper-list? llist)
@@ -1085,19 +1084,19 @@
   (define (rewrite-call/cc db classargs cont callargs)
     ;; (call/cc <var>), <var> = (lambda (kont k) ... k is never used ...) -> (<var> #f)
     (and (= 1 (length callargs))
-	 (let ([val (first callargs)])
+	 (let ((val (first callargs)))
 	   (and (eq? '##core#variable (node-class val))
-		(and-let* ([proc (get db (first (node-parameters val)) 'value)]
-			   [(eq? '##core#lambda (node-class proc))] )
-		  (let ([llist (third (node-parameters proc))])
+		(and-let* ((proc (db-get db (first (node-parameters val)) 'value))
+			   ((eq? '##core#lambda (node-class proc))) )
+		  (let ((llist (third (node-parameters proc))))
 		    (##sys#decompose-lambda-list 
 		     llist
 		     (lambda (vars argc rest)
 		       (and (= argc 2)
-			    (let ([var (or rest (second llist))])
-			      (and (not (get db var 'references))
-				   (not (get db var 'assigned)) 
-				   (not (get db var 'inline-transient))
+			    (let ((var (or rest (second llist))))
+			      (and (not (db-get db var 'references))
+				   (not (db-get db var 'assigned)) 
+				   (not (db-get db var 'inline-transient))
 				   (make-node
 				    '##core#call (list #t)
 				    (list val cont (qnode #f)) ) ) ) ) ) ) ) ) ) ) ) )
@@ -1161,7 +1160,7 @@
 	   '##core#call (list #t) 
 	   (list cont
 		 (if (and (eq? '##core#variable (node-class arg))
-			  (not (get db (car (node-parameters arg)) 'global)) )
+			  (not (db-get db (car (node-parameters arg)) 'global)) )
 		     (qnode #t)
 		     (make-node 
 		      '##core#inline '("C_anyp")

@@ -42,8 +42,7 @@
      ;; For "foreign" (aka chicken-ffi-syntax):
      foreign-type-declaration)
 
-(import (except chicken put! get syntax-error) scheme foreign
-	srfi-1 data-structures
+(import chicken scheme foreign srfi-1 data-structures
 	c-platform support)
 
 ;;; Write atoms to output-port:

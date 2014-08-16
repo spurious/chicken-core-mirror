@@ -44,7 +44,7 @@
 (module lfa2
     (perform-secondary-flow-analysis)
 
-(import (except chicken put! get syntax-error) scheme srfi-1
+(import chicken scheme srfi-1
 	support)
 
 (include "tweaks")
@@ -191,14 +191,14 @@
 	    (else (set! stats (alist-cons elim 1 stats)))))
  
     (define (assigned? var)
-      (get db var 'assigned))
+      (db-get db var 'assigned))
 
     (define (droppable? n)
       (or (memq (node-class n) 
 		'(quote ##core#undefined ##core#primitive ##core#lambda))
 	  (and (eq? '##core#variable (node-class n))
 	       (let ((var (first (node-parameters n))))
-		 (or (not (get db var 'global))
+		 (or (not (db-get db var 'global))
 		     (variable-mark var '##compiler#always-bound))))))
 
     (define (drop! n)

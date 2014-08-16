@@ -37,8 +37,7 @@
     (scrutinize load-type-database emit-type-file
      validate-type check-and-validate-type install-specializations)
 
-(import (except chicken put! get syntax-error) scheme
-	srfi-1 data-structures extras ports files
+(import chicken scheme srfi-1 data-structures extras ports files
 	support)
 
 (include "tweaks")
@@ -192,7 +191,7 @@
     (define (variable-result id e loc flow)
       (cond ((blist-type id flow) => list)
 	    ((and (not strict-variable-types)
-		  (get db id 'assigned) 
+		  (db-get db id 'assigned) 
 		  (not (variable-mark id '##compiler#declared-type)))
 	     '(*))
 	    ((assq id e) =>
@@ -550,9 +549,9 @@
 				   (walk val e loc var #f flow #f) 
 				   loc)))
 			  (when (and (eq? (node-class val) '##core#variable)
-				     (not (get db var 'assigned)))
+				     (not (db-get db var 'assigned)))
 			    (let ((var2 (first (node-parameters val))))
-			      (unless (get db var2 'assigned) ;XXX too conservative?
+			      (unless (db-get db var2 'assigned) ;XXX too conservative?
 				(set! aliased (alist-cons var var2 aliased)))))
 			  (loop (cdr vars) (cdr body) (alist-cons (car vars) t e2))))))
 		 ((##core#lambda lambda)
@@ -593,7 +592,7 @@
 			     (list
 			      (let loop ((argc argc) (vars vars) (args args))
 				(cond ((zero? argc) args)
-				      ((and (not (get db (car vars) 'assigned))
+				      ((and (not (db-get db (car vars) 'assigned))
 					    (assoc (cons (car vars) initial-tag) blist))
 				       =>
 				       (lambda (a)
@@ -634,9 +633,9 @@
 		    (when (and (not type) ;XXX global declaration could allow this
 			       (not b)
 			       (not (eq? '* rt))
-			       (not (get db var 'unknown)))
-		      (and-let* ((val (or (get db var 'value)
-					  (get db var 'local-value))))
+			       (not (db-get db var 'unknown)))
+		      (and-let* ((val (or (db-get db var 'value)
+					  (db-get db var 'local-value))))
 			(when (and (eq? val (first subs))
 				   (or (not (variable-visible? var))
 				       (not (eq? (variable-mark var '##compiler#inline) 
@@ -666,7 +665,7 @@
 				  #t)))))
 		      ;; don't use "add-to-blist" since the current operation does not affect aliases
 		      (let ((t (if (or strict-variable-types
-				       (not (get db var 'captured)))
+				       (not (db-get db var 'captured)))
 				   rt 
 				   '*))
 			    (fl (car flow)))
@@ -737,7 +736,7 @@
 					 (oparg? (eq? arg (first subs)))
 					 (pred (and pt
 						    ctags
-						    (not (get db var 'assigned)) 
+						    (not (db-get db var 'assigned)) 
 						    (not oparg?))))
 				    (cond (pred
 					   ;;XXX is this needed? "typeenv" is the te of "args",
@@ -766,7 +765,7 @@
 								(if (type<=? t argr)
 								    t
 								    argr)))
-							     ((get db var 'assigned) '*)
+							     ((db-get db var 'assigned) '*)
 							     ((type<=? (cdr a) argr) (cdr a))
 							     (else argr))))
 					       (d "  assuming: ~a -> ~a (flow: ~a)" 

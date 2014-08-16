@@ -35,16 +35,17 @@
 
 (module support
     (compiler-cleanup-hook bomb collected-debugging-output debugging
-     with-debugging-output quit-compiling emit-syntax-trace-info
-     check-signature posq posv stringify symbolify
+     debugging-chicken with-debugging-output quit-compiling
+     emit-syntax-trace-info check-signature posq posv stringify symbolify
      build-lambda-list string->c-identifier c-ify-string valid-c-identifier?
      bytes->words words->bytes
      check-and-open-input-file close-checked-input-file fold-inner
      constant? collapsable-literal? immediate? basic-literal?
      canonicalize-begin-body string->expr llist-length llist-match?
-     expand-profile-lambda initialize-analysis-database get get-all put!
-     collect! get-list get-line get-line-2 display-line-number-database
-     display-analysis-database make-node node? node-class node-class-set!
+     expand-profile-lambda initialize-analysis-database db-get db-get-all
+     db-put! collect! db-get-list get-line get-line-2
+     display-line-number-database display-analysis-database
+     make-node node? node-class node-class-set!
      node-parameters node-parameters-set!
      node-subexpressions node-subexpressions-set! varnode qnode
      build-node-graph build-expression-tree fold-boolean inline-lambda-bindings
@@ -65,8 +66,7 @@
      mark-variable variable-mark intrinsic? foldable? load-identifier-database
      print-version print-usage print-debug-options)
 
-(import (except chicken put! get syntax-error) scheme foreign
-	data-structures srfi-1 files extras ports)
+(import chicken scheme foreign data-structures srfi-1 files extras ports)
 
 (include "tweaks")
 (include "banner")
@@ -409,21 +409,19 @@
 	 internal-bindings))
       (set! initial #f))))
 
-;; TODO: Rename this to avoid conflict/confusion with the one from scheme
-(define (get db key prop)
+(define (db-get db key prop)
   (let ((plist (##sys#hash-table-ref db key)))
     (and plist
 	 (let ([a (assq prop plist)])
 	   (and a (##sys#slot a 1)) ) ) ) )
 
-(define (get-all db key . props)
+(define (db-get-all db key . props)
   (let ((plist (##sys#hash-table-ref db key)))
     (if plist
 	(filter-map (lambda (prop) (assq prop plist)) props)
 	'() ) ) )
 
-;; TODO: Rename this to avoid conflict/confusion with the one from scheme
-(define (put! db key prop val)
+(define (db-put! db key prop val)
   (let ([plist (##sys#hash-table-ref db key)])
     (if plist
 	(let ([a (assq prop plist)])
@@ -439,15 +437,15 @@
 		[else (##sys#setslot plist 1 (alist-cons prop (list val) (##sys#slot plist 1)))] ) )
 	(##sys#hash-table-set! db key (list (list prop val)))) ) )
 
-(define (get-list db key prop)		; returns '() if not set
-  (let ((x (get db key prop)))
+(define (db-get-list db key prop)		; returns '() if not set
+  (let ((x (db-get db key prop)))
     (or x '())))
 
 
 ;;; Line-number database management:
 
 (define (get-line exp)
-  (get ##sys#line-number-database (car exp) exp) )
+  (db-get ##sys#line-number-database (car exp) exp) )
 
 (define (get-line-2 exp)
   (let* ((name (car exp))
@@ -739,40 +737,40 @@
 
 ;; Copy along with the above
 (define (copy-node-tree-and-rename node vars aliases db cfk)
-  (let ([rlist (map cons vars aliases)])
+  (let ((rlist (map cons vars aliases)))
     (define (rename v rl) (alist-ref v rl eq? v))
     (define (walk n rl)
-      (let ([subs (node-subexpressions n)]
-	    [params (node-parameters n)]
-	    [class (node-class n)] )
+      (let ((subs (node-subexpressions n))
+	    (params (node-parameters n))
+	    (class (node-class n)) )
 	(case class
 	  ((quote)
 	   (make-node class params '()))
-	  [(##core#variable) 
+	  ((##core#variable) 
 	   (let ((var (first params)))
-	     (when (get db var 'contractable)
+	     (when (db-get db var 'contractable)
 	       (cfk var))
-	     (varnode (rename var rl))) ]
-	  [(set!) 
+	     (varnode (rename var rl))) )
+	  ((set!) 
 	   (make-node
 	    'set! (list (rename (first params) rl))
-	    (list (walk (first subs) rl)) ) ]
-	  [(let) 
+	    (list (walk (first subs) rl)) ) )
+	  ((let) 
 	   (let* ((v (first params))
 		  (val1 (walk (first subs) rl))
 		  (a (gensym v))
 		  (rl2 (alist-cons v a rl)) )
-	     (put! db a 'inline-transient #t)
+	     (db-put! db a 'inline-transient #t)
 	     (make-node 
 	      'let (list a)
-	      (list val1 (walk (second subs) rl2)))) ]
-	  [(##core#lambda)
+	      (list val1 (walk (second subs) rl2)))) )
+	  ((##core#lambda)
 	   (##sys#decompose-lambda-list
 	    (third params)
 	    (lambda (vars argc rest)
 	      (let* ((as (map (lambda (v)
 				(let ((a (gensym v)))
-				  (put! db v 'inline-transient #t)
+				  (db-put! db v 'inline-transient #t)
 				  a))
 			      vars) )
 		     (rl2 (append (map cons vars as) rl)) )
@@ -781,8 +779,9 @@
 		 (list (gensym 'f) (second params) ; new function-id
 		       (build-lambda-list as argc (and rest (rename rest rl2)))
 		       (fourth params) )
-		 (map (cut walk <> rl2) subs) ) ) ) ) ]
-	  [else (make-node class (tree-copy params) (map (cut walk <> rl) subs))] ) ) )
+		 (map (cut walk <> rl2) subs) ) ) ) ) )
+	  (else (make-node class (tree-copy params)
+			   (map (cut walk <> rl) subs))) ) ) )
     (walk node rlist) ) )
 
 ;; Maybe move to scrutinizer.  It's generic enough to keep it here though
@@ -822,7 +821,7 @@
 			   (not (eq? 'unknown (cdr val))))))
 		    ((assq 'inlinable plist))
 		    (lparams (node-parameters (cdr val)))
-		    ((not (get db sym 'hidden-refs)))
+		    ((not (db-get db sym 'hidden-refs)))
 		    ((case (variable-mark sym '##compiler#inline)
 		       ((yes) #t)
 		       ((no) #f)
@@ -1442,30 +1441,30 @@
 
 (define (real-name var . db)
   (define (resolve n)
-    (let ([n2 (##sys#hash-table-ref real-name-table n)])
+    (let ((n2 (##sys#hash-table-ref real-name-table n)))
       (if n2
 	  (or (##sys#hash-table-ref real-name-table n2)
 	      n2) 
 	  n) ) )
-  (let ([rn (resolve var)])
-    (cond [(not rn) (##sys#symbol->qualified-string var)]
-	  [(pair? db)
-	   (let ([db (car db)])
-	     (let loop ([nesting (list (##sys#symbol->qualified-string rn))]
-                        [depth 0]
-			[container (get db var 'contained-in)] )
+  (let ((rn (resolve var)))
+    (cond ((not rn) (##sys#symbol->qualified-string var))
+	  ((pair? db)
+	   (let ((db (car db)))
+	     (let loop ((nesting (list (##sys#symbol->qualified-string rn)))
+			(depth 0)
+			(container (db-get db var 'contained-in)) )
 	       (cond
-                ((> depth real-name-max-depth)
-                 (string-intersperse (reverse (cons "..." nesting)) " in "))
-                (container
-                 (let ([rc (resolve container)])
-                   (if (eq? rc container)
-                       (string-intersperse (reverse nesting) " in ")
-                       (loop (cons (symbol->string rc) nesting)
-                             (fx+ depth 1)
-                             (get db container 'contained-in) ) ) ))
-                (else (string-intersperse (reverse nesting) " in "))) ) ) ]
-	  [else (##sys#symbol->qualified-string rn)] ) ) )
+		((> depth real-name-max-depth)
+		 (string-intersperse (reverse (cons "..." nesting)) " in "))
+		(container
+		 (let ((rc (resolve container)))
+		   (if (eq? rc container)
+		       (string-intersperse (reverse nesting) " in ")
+		       (loop (cons (symbol->string rc) nesting)
+			     (fx+ depth 1)
+			     (db-get db container 'contained-in) ) ) ))
+		(else (string-intersperse (reverse nesting) " in "))) ) ) )
+	  (else (##sys#symbol->qualified-string rn)) ) ) )
 
 (define (real-name2 var db)		; Used only in c-backend.scm
   (and-let* ([rn (##sys#hash-table-ref real-name-table var)])

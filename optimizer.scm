@@ -40,8 +40,7 @@
      eq-inline-operator membership-test-operators membership-unfold-limit
      default-optimization-passes rewrite)
 
-(import (except chicken put! get syntax-error) scheme
-	srfi-1 data-structures
+(import chicken scheme srfi-1 data-structures
 	support)
 
 (include "tweaks")
@@ -150,14 +149,14 @@
 (define simplified-ops '())
 
 (define (perform-high-level-optimizations node db)
-  (let ([removed-lets 0]
-	[removed-ifs 0]
-	[replaced-vars 0]
-	[rest-consers '()]
-	[simplified-classes '()]
-	[dirty #f] )
+  (let ((removed-lets 0)
+	(removed-ifs 0)
+	(replaced-vars 0)
+	(rest-consers '())
+	(simplified-classes '())
+	(dirty #f) )
 
-    (define (test sym item) (get db sym item))
+    (define (test sym item) (db-get db sym item))
     (define (constant-node? n) (eq? 'quote (node-class n)))
     (define (node-value n) (first (node-parameters n)))
     (define (touch) (set! dirty #t))
@@ -234,7 +233,7 @@
              (lambda (rvar)
                (let ((final-var (replace-var rvar)))
                  ;; Store intermediate vars to avoid recurring same chain again
-                 (put! db var 'replacable final-var)
+                 (db-put! db var 'replacable final-var)
                  final-var)))
             (else var)))
     
@@ -341,7 +340,7 @@
 			   (check-signature var args llist)
 			   (debugging 'o "contracted procedure" info)
 			   (touch)
-			   (for-each (cut put! db <> 'inline-target #t) fids)
+			   (for-each (cut db-put! db <> 'inline-target #t) fids)
 			   (walk
 			    (inline-lambda-bindings
 			     llist args (first (node-subexpressions lval)) #f db
@@ -393,7 +392,7 @@
 					    "global inlining" 	
 					    "inlining")
 					info ifid (fourth lparams))
-				       (for-each (cut put! db <> 'inline-target #t) fids)
+				       (for-each (cut db-put! db <> 'inline-target #t) fids)
 				       (check-signature var args llist)
 				       (debugging 'o "inlining procedure" info)
 				       (call/cc
@@ -569,7 +568,7 @@
 	(removed-nots 0) )
 
     (define (touch) (set! dirty #t) #t)
-    (define (test sym prop) (get db sym prop))
+    (define (test sym prop) (db-get db sym prop))
 
     (debugging 'p "pre-optimization phase...")
 
@@ -581,7 +580,7 @@
 		  (subs (node-subexpressions n))
 		  (kont (first (node-parameters (second subs))))
 		  (lnode (and (not (test kont 'unknown)) (test kont 'value)))
-		  (krefs (get-list db kont 'references)) )
+		  (krefs (db-get-list db kont 'references)) )
 	     ;; Call-site has one argument and a known continuation (which is a ##core#lambda)
 	     ;;  that has only one use:
 	     (when (and lnode krefs (= 1 (length krefs)) (= 3 (length subs))
@@ -592,7 +591,7 @@
 		 ;; Continuation has one parameter?
 		 (if (and (proper-list? llist) (null? (cdr llist)))
 		     (let* ((var (car llist))
-			    (refs (get-list db var 'references)) )
+			    (refs (db-get-list db var 'references)) )
 		       ;; Parameter is only used once?
 		       (if (and refs (= 1 (length refs)) (eq? 'if (node-class body)))
 			   ;; Continuation contains an 'if' node?
@@ -662,8 +661,8 @@
       (and (equal? op (eq-inline-operator))
 	   (immediate? const1)
 	   (immediate? const2)
-	   (= 1 (length (get-list db var1 'references)))
-	   (= 1 (length (get-list db var2 'references)))
+	   (= 1 (length (db-get-list db var1 'references)))
+	   (= 1 (length (db-get-list db var2 'references)))
 	   (make-node
 	    '##core#switch
 	    '(2)
@@ -688,7 +687,7 @@
    ,(lambda (db var op var0 const d body n clauses)
       (and (equal? op (eq-inline-operator))
 	   (immediate? const)
-	   (= 1 (length (get-list db var 'references)))
+	   (= 1 (length (db-get-list db var 'references)))
 	   (make-node
 	    '##core#switch
 	    (list (add1 n))
@@ -710,46 +709,46 @@
 	more)
    (var1 more)
    ,(lambda (db var1 more)
-      (let loop1 ([vars (list var1)] 
-		  [body more] )
-	(let ([c (node-class body)]
-	      [params (node-parameters body)] 
-	      [subs (node-subexpressions body)] )
+      (let loop1 ((vars (list var1)) 
+		  (body more) )
+	(let ((c (node-class body))
+	      (params (node-parameters body)) 
+	      (subs (node-subexpressions body)) )
 	  (and (eq? c 'let)
 	       (null? (cdr params))
-               (not (get db (first params) 'inline-transient))
-               (not (get db (first params) 'references))
-	       (let* ([val (first subs)]
-		      [valparams (node-parameters val)]
-		      [valsubs (node-subexpressions val)] )
+               (not (db-get db (first params) 'inline-transient))
+               (not (db-get db (first params) 'references))
+	       (let* ((val (first subs))
+		      (valparams (node-parameters val))
+		      (valsubs (node-subexpressions val)) )
 		 (case (node-class val)
-		   [(##core#undefined) (loop1 (cons (first params) vars) (second subs))]
-		   [(set!)
-		    (let ([allvars (reverse vars)])
+		   ((##core#undefined) (loop1 (cons (first params) vars) (second subs)))
+		   ((set!)
+		    (let ((allvars (reverse vars)))
 		      (and (pair? allvars)
 			   (eq? (first valparams) (first allvars))
-			   (let loop2 ([vals (list (first valsubs))]
-				       [vars (cdr allvars)] 
-				       [body (second subs)] )
-			     (let ([c (node-class body)]
-				   [params (node-parameters body)]
-				   [subs (node-subexpressions body)] )
-			       (cond [(and (eq? c 'let)
+			   (let loop2 ((vals (list (first valsubs)))
+				       (vars (cdr allvars)) 
+				       (body (second subs)) )
+			     (let ((c (node-class body))
+				   (params (node-parameters body))
+				   (subs (node-subexpressions body)) )
+			       (cond ((and (eq? c 'let)
 					   (null? (cdr params))
-					   (not (get db (first params) 'inline-transient))
-					   (not (get db (first params) 'references))
+					   (not (db-get db (first params) 'inline-transient))
+					   (not (db-get db (first params) 'references))
 					   (pair? vars)
 					   (eq? 'set! (node-class (first subs)))
 					   (eq? (car vars) (first (node-parameters (first subs)))) )
 				      (loop2 (cons (first (node-subexpressions (first subs))) vals)
 					     (cdr vars)
-					     (second subs) ) ]
-				     [(null? vars)
+					     (second subs) ) )
+				     ((null? vars)
 				      (receive (n progress) 
 					  (reorganize-recursive-bindings allvars (reverse vals) body) 
-					(and progress n) ) ]
-				     [else #f] ) ) ) ) ) ]
-		   [else #f] ) ) ) ) ) ) )
+					(and progress n) ) )
+				     (else #f) ) ) ) ) ) )
+		   (else #f) ) ) ) ) ) ) )
 
  ;; (let ((<var1> <var2>))
  ;;   (<var1> ...) )
@@ -760,7 +759,7 @@
 	(##core#call p (##core#variable (var1)) . more) ) ; `p' was `#t', bombed also
    (var1 var2 p more)
    ,(lambda (db var1 var2 p more)
-      (and (= 1 (length (get-list db var1 'references)))
+      (and (= 1 (length (db-get-list db var1 'references)))
 	   (make-node
 	    '##core#call p
 	    (cons (varnode var2) more) ) ) ) )
@@ -778,7 +777,7 @@
    (var op args d x y)
    ,(lambda (db var op args d x y)
       (and (not (equal? op (eq-inline-operator)))
-	   (= 1 (length (get-list db var 'references)))
+	   (= 1 (length (db-get-list db var 'references)))
 	   (make-node
 	    'if d
 	    (list (make-node '##core#inline (list op) args)
@@ -935,7 +934,7 @@
     (##sys#hash-table-set! substitution-table name (append old (list class-and-args))) ) )
 
 (define (simplify-named-call db params name cont class classargs callargs)
-  (define (test sym prop) (get db sym prop))
+  (define (test sym prop) (db-get db sym prop))
   (define (defarg x)
     (cond ((symbol? x) (varnode x))
 	  ((and (pair? x) (eq? 'quote (car x))) (qnode (cadr x)))
@@ -1339,10 +1338,10 @@
 ;;; Optimize direct leaf routines:
 
 (define (transform-direct-lambdas! node db)
-  (let ([dirty #f]
-	[inner-ks '()] 
-	[hoistable '()] 
-	[allocated 0] )
+  (let ((dirty #f)
+	(inner-ks '()) 
+	(hoistable '()) 
+	(allocated 0) )
 
     ;; Process node tree and walk lambdas that meet the following constraints:
     ;;  - Only external lambdas (no CPS redexes),
@@ -1352,18 +1351,18 @@
     ;;  - The lambda is not marked as a callback lambda
 
     (define (walk d n dn)
-      (let ([params (node-parameters n)]
-	    [subs (node-subexpressions n)] )
+      (let ((params (node-parameters n))
+	    (subs (node-subexpressions n)) )
 	(case (node-class n)
-	  [(##core#lambda)
-	   (let ([llist (third params)])
+	  ((##core#lambda)
+	   (let ((llist (third params)))
 	     (if (and d
 		      (second params)
-		      (not (get db d 'unknown))
+		      (not (db-get db d 'unknown))
 		      (proper-list? llist)
-		      (and-let* ([val (get db d 'value)]
-				 [refs (get-list db d 'references)]
-				 [sites (get-list db d 'call-sites)] )
+		      (and-let* ((val (db-get db d 'value))
+				 (refs (db-get-list db d 'references))
+				 (sites (db-get-list db d 'call-sites)) )
 			;; val must be lambda, since `sites' is set
 			(and (eq? n val)
 			     (not (variable-mark
@@ -1372,87 +1371,87 @@
 			     (= (length refs) (length sites))
 			     (scan (first subs) (first llist) d dn (cons d llist)) ) ) )
 		 (transform n d inner-ks hoistable dn allocated) 
-		 (walk #f (first subs) #f) ) ) ]
-	  [(set!) (walk (first params) (first subs) #f)]
-	  [(let)
+		 (walk #f (first subs) #f) ) ) )
+	  ((set!) (walk (first params) (first subs) #f))
+	  ((let)
 	   (walk (first params) (first subs) n)
-	   (walk #f (second subs) #f) ]
-	  [else (for-each (lambda (x) (walk #f x #f)) subs)] ) ) )
+	   (walk #f (second subs) #f) )
+	  (else (for-each (lambda (x) (walk #f x #f)) subs)) ) ) )
 
     (define (scan n kvar fnvar destn env)
-      (let ([closures '()]
-	    [recursive #f] )
+      (let ((closures '())
+	    (recursive #f) )
 	(define (rec n v vn e)
-	  (let ([params (node-parameters n)]
-		[subs (node-subexpressions n)] )
+	  (let ((params (node-parameters n))
+		(subs (node-subexpressions n)) )
 	    (case (node-class n)
-	      [(##core#variable)
-	       (let ([v (first params)])
-		 (or (not (get db v 'boxed))
+	      ((##core#variable)
+	       (let ((v (first params)))
+		 (or (not (db-get db v 'boxed))
 		     (not (memq v env))
 		     (and (not recursive)
 			  (begin
 			    (set! allocated (+ allocated 2))
-			    #t) ) ) ) ]
-	      [(##core#lambda)
+			    #t) ) ) ) )
+	      ((##core#lambda)
 	       (and v
 		    (##sys#decompose-lambda-list
 		     (third params)
 		     (lambda (vars argc rest)
 		       (set! closures (cons v closures))
-		       (rec (first subs) #f #f (append vars e)) ) ) ) ]
-	      [(##core#inline_allocate)
+		       (rec (first subs) #f #f (append vars e)) ) ) ) )
+	      ((##core#inline_allocate)
 	       (and (not recursive)
 		    (begin
 		      (set! allocated (+ allocated (second params)))
-		      (every (lambda (x) (rec x #f #f e)) subs) ) ) ]
-	      [(##core#direct_lambda)
+		      (every (lambda (x) (rec x #f #f e)) subs) ) ) )
+	      ((##core#direct_lambda)
 	       (and vn destn
 		    (null? (scan-used-variables (first subs) e)) 
 		    (begin
 		      (set! hoistable (alist-cons v vn hoistable))
-		      #t) ) ]
-	      [(##core#inline_ref)
-	       (and (let ([n (estimate-foreign-result-size (second params))])
+		      #t) ) )
+	      ((##core#inline_ref)
+	       (and (let ((n (estimate-foreign-result-size (second params))))
 		      (or (zero? n)
 			  (and (not recursive)
 			       (begin
 				 (set! allocated (+ allocated n))
 				 #t) ) ) )
-		    (every (lambda (x) (rec x #f #f e)) subs) ) ]
-	      [(##core#inline_loc_ref)
-	       (and (let ([n (estimate-foreign-result-size (first params))])
+		    (every (lambda (x) (rec x #f #f e)) subs) ) )
+	      ((##core#inline_loc_ref)
+	       (and (let ((n (estimate-foreign-result-size (first params))))
 		      (or (zero? n)
 			  (and (not recursive)
 			       (begin
 				 (set! allocated (+ allocated n))
 				 #t) ) ) )
-		    (every (lambda (x) (rec x #f #f e)) subs) ) ]
-	      [(##core#call)
-	       (let ([fn (first subs)])
+		    (every (lambda (x) (rec x #f #f e)) subs) ) )
+	      ((##core#call)
+	       (let ((fn (first subs)))
 		 (and (eq? '##core#variable (node-class fn))
-		      (let ([v (first (node-parameters fn))])
-			(cond [(eq? v fnvar)
+		      (let ((v (first (node-parameters fn))))
+			(cond ((eq? v fnvar)
 			       (and (zero? allocated)
-				    (let ([k (second subs)])
+				    (let ((k (second subs)))
 				      (when (eq? '##core#variable (node-class k))
 					(set! inner-ks (cons (first (node-parameters k)) inner-ks)) )
 				      (set! recursive #t)
-				      #t) ) ]
-			      [else (eq? v kvar)] ) )
-		      (every (lambda (x) (rec x #f #f e)) (cdr subs)) ) ) ]
-	      [(##core#direct_call)
-	       (let ([n (fourth params)])
+				      #t) ) )
+			      (else (eq? v kvar)) ) )
+		      (every (lambda (x) (rec x #f #f e)) (cdr subs)) ) ) )
+	      ((##core#direct_call)
+	       (let ((n (fourth params)))
 		 (or (zero? n)
 		     (and (not recursive)
 			  (begin
 			    (set! allocated (+ allocated n))
-			    (every (lambda (x) (rec x #f #f e)) subs) ) ) ) ) ]
-	      [(set!) (rec (first subs) (first params) #f e)]
-	      [(let)
+			    (every (lambda (x) (rec x #f #f e)) subs) ) ) ) ) )
+	      ((set!) (rec (first subs) (first params) #f e))
+	      ((let)
 	       (and (rec (first subs) (first params) n e)
-		    (rec (second subs) #f #f (append params e)) ) ]
-	      [else (every (lambda (x) (rec x #f #f e)) subs)] ) ) )
+		    (rec (second subs) #f #f (append params e)) ) )
+	      (else (every (lambda (x) (rec x #f #f e)) subs)) ) ) )
 	(set! inner-ks '())
 	(set! hoistable '())
 	(set! allocated 0)
@@ -1464,11 +1463,11 @@
 	  (debugging 'o "direct leaf routine with hoistable closures/allocation" fnvar (delay (unzip1 hoistable)) allocated)
 	  (debugging 'o "direct leaf routine/allocation" fnvar allocated) )
       (set! dirty #t)
-      (let* ([params (node-parameters n)]
-	     [argc (length (third params))]
-	     [klambdas '()] 
-	     [sites (or (get db fnvar 'call-sites) '())]
-	     [ksites '()] )
+      (let* ((params (node-parameters n))
+	     (argc (length (third params)))
+	     (klambdas '()) 
+	     (sites (or (db-get db fnvar 'call-sites) '()))
+	     (ksites '()) )
 	(if (and (list? params) (= (length params) 4) (list? (caddr params)))
 	    (let ((id (car params))
 		  (kvar (caaddr params))

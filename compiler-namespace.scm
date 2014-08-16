@@ -47,7 +47,6 @@
  debug-info-vector-name
  debug-lambda-list
  debug-variable-list
- debugging-chicken
  debugging-executable
  default-default-target-heap-size
  default-extended-bindings

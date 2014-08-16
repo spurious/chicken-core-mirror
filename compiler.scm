@@ -1860,9 +1860,9 @@
 	     (unless (memq var localenv)
 	       (grow 1)
 	       (cond ((memq var env) 
-		      (put! db var 'captured #t))
-		     ((not (get db var 'global)) 
-		      (put! db var 'global #t) ) ) ) ) )
+		      (db-put! db var 'captured #t))
+		     ((not (db-get db var 'global)) 
+		      (db-put! db var 'global #t) ) ) ) ) )
 	  
 	  ((##core#callunit ##core#recurse)
 	   (grow 1)
@@ -1884,7 +1884,7 @@
 		   (walk (car vals) env (append params localenv) env2 here #f)
 		   (let ([var (car vars)]
 			 [val (car vals)] )
-		     (put! db var 'home here)
+		     (db-put! db var 'home here)
 		     (assign var val env2 here)
 		     (walk val env localenv fullenv here #f) 
 		     (loop (cdr vars) (cdr vals)) ) ) ) ) )
@@ -1895,7 +1895,7 @@
 	    (first params)
 	    (lambda (vars argc rest)
 	      (for-each 
-	       (lambda (var) (put! db var 'unknown #t))
+	       (lambda (var) (db-put! db var 'unknown #t))
 	       vars)
 	      (let ([tl toplevel-scope])
 		(set! toplevel-scope #f)
@@ -1911,15 +1911,15 @@
 		    [size0 current-program-size] )
 		(when here
 		  (collect! db here 'contains id)
-		  (put! db id 'contained-in here) )
+		  (db-put! db id 'contained-in here) )
 		(for-each 
 		 (lambda (var)
-		   (put! db var 'home here)
-		   (put! db var 'unknown #t) )
+		   (db-put! db var 'home here)
+		   (db-put! db var 'unknown #t) )
 		 vars)
 		(when rest
-		  (put! db rest 'rest-parameter 'list) )
-		(when (simple-lambda-node? n) (put! db id 'simple #t))
+		  (db-put! db rest 'rest-parameter 'list) )
+		(when (simple-lambda-node? n) (db-put! db id 'simple #t))
 		(let ([tl toplevel-scope])
 		  (unless toplevel-lambda-id (set! toplevel-lambda-id id))
 		  (when (and (second params) (not (eq? toplevel-lambda-id id)))
@@ -1938,16 +1938,16 @@
 		  (warning "redefinition of standard binding" var) )
 		 ((extended)
 		  (warning "redefinition of extended binding" var) ) ))
-	     (put! db var 'potential-value val)
+	     (db-put! db var 'potential-value val)
 	     (unless (memq var localenv)
 	       (grow 1)
 	       (cond ((memq var env) 
-		      (put! db var 'captured #t))
-		     ((not (get db var 'global)) 
-		      (put! db var 'global #t) ) ) )
+		      (db-put! db var 'captured #t))
+		     ((not (db-get db var 'global)) 
+		      (db-put! db var 'global #t) ) ) )
 	     (assign var val fullenv here)
-	     (unless toplevel-scope (put! db var 'assigned-locally #t))
-	     (put! db var 'assigned #t)
+	     (unless toplevel-scope (db-put! db var 'assigned-locally #t))
+	     (db-put! db var 'assigned #t)
 	     (walk (car subs) env localenv fullenv here #f) ) )
 
 	  ((##core#primitive ##core#inline)
@@ -1963,30 +1963,30 @@
 
     (define (assign var val env here)
       (cond ((eq? '##core#undefined (node-class val))
-	     (put! db var 'undefined #t) )
+	     (db-put! db var 'undefined #t) )
 	    ((and (eq? '##core#variable (node-class val)) ; assignment to itself
 		  (eq? var (first (node-parameters val))) ) )
 	    ((or (memq var env)
 		 (variable-mark var '##compiler#constant)
 		 (not (variable-visible? var)))
-	     (let ((props (get-all db var 'unknown 'value))
-		   (home (get db var 'home)) )
+	     (let ((props (db-get-all db var 'unknown 'value))
+		   (home (db-get db var 'home)) )
 	       (unless (assq 'unknown props)
 		 (if (assq 'value props)
-		     (put! db var 'unknown #t)
+		     (db-put! db var 'unknown #t)
 		     (if (or (not home) (eq? here home))
-			 (put! db var 'value val)
-			 (put! db var 'unknown #t) ) ) ) ) )
+			 (db-put! db var 'value val)
+			 (db-put! db var 'unknown #t) ) ) ) ) )
 	    ((and (or local-definitions
 		      (variable-mark var '##compiler#local))
-		  (not (get db var 'unknown)))
-	     (let ((home (get db var 'home)))
-	       (cond ((get db var 'local-value)
-		      (put! db var 'unknown #t))
+		  (not (db-get db var 'unknown)))
+	     (let ((home (db-get db var 'home)))
+	       (cond ((db-get db var 'local-value)
+		      (db-put! db var 'unknown #t))
 		     ((or (not home) (eq? here home))
-		      (put! db var 'local-value val)	       )
-		     (else (put! db var 'unknown #t)))))
-	    (else (put! db var 'unknown #t)) ) )
+		      (db-put! db var 'local-value val)	       )
+		     (else (db-put! db var 'unknown #t)))))
+	    (else (db-put! db var 'unknown #t)) ) )
     
     (define (ref var node)
       (collect! db var 'references node) )
@@ -2078,7 +2078,7 @@
 		  (when (and (eq? '##core#lambda (node-class value))
 			     (or (not (second valparams))
 				 (every 
-				  (lambda (v) (get db v 'global))
+				  (lambda (v) (db-get db v 'global))
 				  (nth-value 0 (scan-free-variables value)) ) ) )
 		    (if (and (= 1 nreferences) (= 1 ncall-sites))
 			(quick-put! plist 'contractable #t)
@@ -2088,12 +2088,12 @@
 		(let ((valparams (node-parameters local-value)))
 		  (when (eq? '##core#lambda (node-class local-value))
 		    (let-values (((vars hvars) (scan-free-variables local-value)))
-		      (when (and (get db sym 'global)
+		      (when (and (db-get db sym 'global)
 				 (pair? hvars))
 			(quick-put! plist 'hidden-refs #t))
 		      (when (or (not (second valparams))
 				(every 
-				 (lambda (v) (get db v 'global)) 
+				 (lambda (v) (db-get db v 'global)) 
 				 vars))
 			(quick-put! plist 'inlinable #t) ) ) ) ) )
 	       ((variable-mark sym '##compiler#inline-global) =>
@@ -2127,10 +2127,10 @@
 	 ;;  - if the procedure is internal (a continuation) do NOT mark unused parameters.
 	 ;;  - also: if procedure has rest-parameter and no unused params, mark f-id as 'explicit-rest.
 	 (when value
-	   (let ([has #f])
+	   (let ((has #f))
 	     (when (and (eq? '##core#lambda (node-class value))
 			(= nreferences ncall-sites) )
-	       (let ([lparams (node-parameters value)])
+	       (let ((lparams (node-parameters value)))
 		 (when (second lparams)
 		   (##sys#decompose-lambda-list
 		    (third lparams)
@@ -2138,17 +2138,17 @@
 		      (unless rest
 			(for-each
 			 (lambda (var)
-			   (cond [(and (not (get db var 'references))
-				       (not (get db var 'assigned)) )
-				  (put! db var 'unused #t)
+			   (cond ((and (not (db-get db var 'references))
+				       (not (db-get db var 'assigned)) )
+				  (db-put! db var 'unused #t)
 				  (set! has #t)
-				  #t]
-				 [else #f] ) )
+				  #t)
+				 (else #f) ) )
 			 vars) )
-		      (cond [(and has (not (rassoc sym callback-names eq?)))
-			     (put! db (first lparams) 'has-unused-parameters #t) ]
-			    [rest
-			     (put! db (first lparams) 'explicit-rest #t) ] ) ) ) ) ) ) ) )
+		      (cond ((and has (not (rassoc sym callback-names eq?)))
+			     (db-put! db (first lparams) 'has-unused-parameters #t) )
+			    (rest
+			     (db-put! db (first lparams) 'explicit-rest #t) ) ) ) ) ) ) ) ) )
 
 	 ;; Make 'removable, if it has no references and is not assigned to, and if it 
 	 ;; has either a value that does not cause any side-effects or if it is 'undefined:
@@ -2157,7 +2157,7 @@
 		    (or (and value
 			     (if (eq? '##core#variable (node-class value))
 				 (let ((varname (first (node-parameters value))))
-				   (or (not (get db varname 'global))
+				   (or (not (db-get db varname 'global))
 				       (variable-mark varname '##core#always-bound)
 				       (intrinsic? varname)))
 				 (not (expression-has-side-effects? value db)) ))
@@ -2173,40 +2173,41 @@
 	 ;;    it was contracted).
 	 (when (and value (not global))
 	   (when (eq? '##core#variable (node-class value))
-	     (let* ([name (first (node-parameters value))]
-		    [nrefs (get db name 'references)] )
+	     (let* ((name (first (node-parameters value)))
+		    (nrefs (db-get db name 'references)) )
 	       (when (and (not captured)
-			  (or (and (not (get db name 'unknown)) (get db name 'value))
-			      (and (not (get db name 'captured))
+			  (or (and (not (db-get db name 'unknown))
+				   (db-get db name 'value))
+			      (and (not (db-get db name 'captured))
 				   nrefs
 				   (= 1 (length nrefs))
 				   (not assigned)
-				   (not (get db name 'assigned)) 
+				   (not (db-get db name 'assigned)) 
 				   (or (not (variable-visible? name))
-				       (not (get db name 'global))) ) ))
+				       (not (db-get db name 'global))) ) ))
 		 (quick-put! plist 'replacable name) 
-		 (put! db name 'replacing #t) ) ) ) )
+		 (db-put! db name 'replacing #t) ) ) ) )
 
 	 ;; Make 'replacable, if it has a known value of the form: '(lambda (<xvar>) (<kvar> <xvar>))' and
 	 ;;  is an internally created procedure: (See above for 'replacing)
 	 (when (and value (eq? '##core#lambda (node-class value)))
-	   (let ([params (node-parameters value)])
+	   (let ((params (node-parameters value)))
 	     (when (not (second params))
-	       (let ([llist (third params)]
-		     [body (first (node-subexpressions value))] )
+	       (let ((llist (third params))
+		     (body (first (node-subexpressions value))) )
 		 (when (and (pair? llist) 
 			    (null? (cdr llist))
 			    (eq? '##core#call (node-class body)) )
-		   (let ([subs (node-subexpressions body)])
+		   (let ((subs (node-subexpressions body)))
 		     (when (= 2 (length subs))
-		       (let ([v1 (first subs)]
-			     [v2 (second subs)] )
+		       (let ((v1 (first subs))
+			     (v2 (second subs)) )
 			 (when (and (eq? '##core#variable (node-class v1))
 				    (eq? '##core#variable (node-class v2))
 				    (eq? (first llist) (first (node-parameters v2))) )
-			   (let ([kvar (first (node-parameters v1))])
+			   (let ((kvar (first (node-parameters v1))))
 			     (quick-put! plist 'replacable kvar)
-			     (put! db kvar 'replacing #t) ) ) ) ) ) ) ) ) ) ) ) )
+			     (db-put! db kvar 'replacing #t) ) ) ) ) ) ) ) ) ) ) ) )
 
      db)
 
@@ -2228,11 +2229,11 @@
 	(customizable '())
 	(lexicals '()))
 
-    (define (test sym item) (get db sym item))
+    (define (test sym item) (db-get db sym item))
   
     (define (register-customizable! var id)
       (set! customizable (lset-adjoin eq? customizable var)) 
-      (put! db id 'customizable #t) )
+      (db-put! db id 'customizable #t) )
 
     (define (register-direct-call! id)
       (set! direct-calls (add1 direct-calls))
@@ -2320,8 +2321,8 @@
 	      (let ((id (if here (first params) 'toplevel)))
 		(fluid-let ((lexicals (append locals lexicals)))
 		  (let ((c (delete-duplicates (gather (first subs) id vars) eq?)))
-		    (put! db id 'closure-size (length c))
-		    (put! db id 'captured-variables c)
+		    (db-put! db id 'closure-size (length c))
+		    (db-put! db id 'captured-variables c)
 		    (lset-difference eq? c locals vars)))))))
 	
 	  (else (concatenate (map (lambda (n) (gather n here locals)) subs)) ) ) ))
@@ -2366,24 +2367,24 @@
 		  (maptransform subs here closure) ) ) ) )
 
 	  ((##core#lambda ##core#direct_lambda)
-	   (let ([llist (third params)])
+	   (let ((llist (third params)))
 	     (##sys#decompose-lambda-list
 	      llist
 	      (lambda (vars argc rest)
-		(let* ([boxedvars (filter (lambda (v) (test v 'boxed)) vars)]
-		       [boxedaliases (map cons boxedvars (map gensym boxedvars))]
-		       [cvar (gensym 'c)]
-		       [id (if here (first params) 'toplevel)]
-		       [capturedvars (or (test id 'captured-variables) '())]
-		       [csize (or (test id 'closure-size) 0)] 
-		       [info (and emit-closure-info (second params) (pair? llist))] )
+		(let* ((boxedvars (filter (lambda (v) (test v 'boxed)) vars))
+		       (boxedaliases (map cons boxedvars (map gensym boxedvars)))
+		       (cvar (gensym 'c))
+		       (id (if here (first params) 'toplevel))
+		       (capturedvars (or (test id 'captured-variables) '()))
+		       (csize (or (test id 'closure-size) 0)) 
+		       (info (and emit-closure-info (second params) (pair? llist))) )
 		  ;; If rest-parameter is boxed: mark it as 'boxed-rest
 		  ;;  (if we don't do this than preparation will think the (boxed) alias
 		  ;;  of the rest-parameter is never used)
-		  (and-let* ([rest]
-			     [(test rest 'boxed)]
-			     [rp (test rest 'rest-parameter)] )
-		    (put! db (cdr (assq rest boxedaliases)) 'boxed-rest #t) )
+		  (and-let* ((rest)
+			     ((test rest 'boxed))
+			     (rp (test rest 'rest-parameter)) )
+		    (db-put! db (cdr (assq rest boxedaliases)) 'boxed-rest #t) )
 		  (make-node
 		   '##core#closure (list (+ csize (if info 2 1)))
 		   (cons
@@ -2540,7 +2541,7 @@
 		       unsafe
 		       (variable-mark var '##compiler#always-bound)
 		       (intrinsic? var))]
-	     [blockvar (and (get db var 'assigned)
+	     [blockvar (and (db-get db var 'assigned)
 			    (not (variable-visible? var)))])
 	(when blockvar (set! fastrefs (add1 fastrefs)))
 	(make-node
@@ -2615,23 +2616,24 @@
 	     (##sys#decompose-lambda-list
 	      (third params)
 	      (lambda (vars argc rest)
-		(let* ([id (first params)]
-		       [rest-mode
+		(let* ((id (first params))
+		       (rest-mode
 			(and rest
-			     (let ([rrefs (get db rest 'references)])
-			       (cond [(get db rest 'assigned) 'list]
-				     [(and (not (get db rest 'boxed-rest)) (or (not rrefs) (null? rrefs))) 'none] 
-				     [else (get db rest 'rest-parameter)] ) ) ) ]
-		       [body (walk 
+			     (let ((rrefs (db-get db rest 'references)))
+			       (cond ((db-get db rest 'assigned) 'list)
+				     ((and (not (db-get db rest 'boxed-rest))
+					   (or (not rrefs) (null? rrefs))) 'none) 
+				     (else (db-get db rest 'rest-parameter)) ) ) ) )
+		       (body (walk 
 			      (car subs)
 			      (##sys#fast-reverse (if (eq? 'none rest-mode)
-                                                      (butlast vars)
-                                                      vars))
-                              (if (eq? 'none rest-mode)
+						      (butlast vars)
+						      vars))
+			      (if (eq? 'none rest-mode)
 				  (fx- (length vars) 1)
 				  (length vars))
 			      id
-			      '()) ] )
+			      '()) ) )
 		  (when (eq? rest-mode 'none)
 		    (debugging 'o "unused rest argument" rest id))
 		  (when (and direct rest)
@@ -2650,13 +2652,13 @@
                     signatures
                     allocated
                     (or direct (memq id direct-call-ids))
-                    (or (get db id 'closure-size) 0)
+                    (or (db-get db id 'closure-size) 0)
                     (and (not rest)
                          (> looping 0)
                          (begin
                            (debugging 'o "identified direct recursive calls" id looping)
                            #t) )
-                    (or direct (get db id 'customizable))
+                    (or direct (db-get db id 'customizable))
                     rest-mode
                     body
                     direct) )

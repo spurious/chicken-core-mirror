@@ -43,8 +43,7 @@
      user-options-pass user-read-pass user-preprocessor-pass user-pass
      user-post-analysis-pass)
 
-(import (except chicken put! get syntax-error) scheme
-	extras data-structures files srfi-1
+(import chicken scheme extras data-structures files srfi-1
 	support lfa2 compiler-syntax optimizer scrutinizer c-platform c-backend)
 
 (include "tweaks")
@@ -177,8 +176,8 @@
         (let ((db (analyze-expression node)))
 	  (when upap
 	    (upap pass db node
-		  (cut get db <> <>)
-		  (cut put! db <> <> <>)
+		  (cut db-get db <> <>)
+		  (cut db-put! db <> <> <>)
 		  no contf) )
 	  db) ) )
 

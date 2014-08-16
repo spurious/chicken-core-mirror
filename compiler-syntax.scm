@@ -36,7 +36,7 @@
 (module compiler-syntax
     (compiler-syntax-statistics)
 
-(import (except chicken put! get syntax-error) scheme srfi-1 data-structures
+(import chicken scheme srfi-1 data-structures
 	support)
 
 (include "tweaks.scm")
