@@ -147,6 +147,7 @@
 
 (define simplifications (make-vector 301 '()))
 (define simplified-ops '())
+(define broken-constant-nodes '())
 
 (define (perform-high-level-optimizations node db)
   (let ((removed-lets 0)

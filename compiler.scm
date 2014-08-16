@@ -264,11 +264,59 @@
 
 (declare
  (unit compiler)
- (uses scrutinizer support) )
+ (uses srfi-1 extras data-structures
+       scrutinizer support) )
 
 (import scrutinizer support)
 
+;; TODO: Remove these once everything's converted to modules
+(include "private-namespace")
 (include "compiler-namespace")
+
+(module compiler
+    (analyze-expression canonicalize-expression compute-database-statistics
+     initialize-compiler perform-closure-conversion perform-cps-conversion
+     prepare-for-code-generation
+
+     ;; These are both exported for use in eval.scm (which is a bit of
+     ;; a hack). file-requirements is also used by batch-driver
+     process-declaration file-requirements
+
+     ;; Various ugly global boolean flags that get set by the (batch) driver
+     all-import-libraries bootstrap-mode compiler-syntax-enabled
+     emit-closure-info emit-profile enable-inline-files explicit-use-flag
+     first-analysis no-bound-checks enable-module-registration
+     optimize-leaf-routines standalone-executable undefine-shadowed-macros
+     verbose-mode local-definitions
+
+     ;; These are set by the (batch) driver, and read by the (c) backend
+     disable-stack-overflow-checking emit-trace-info external-protos-first
+     external-variables insert-timer-checks no-argc-checks
+     no-global-procedure-checks no-procedure-checks
+
+     ;; Other, non-boolean, flags set by (batch) driver
+     profiled-procedures import-libraries
+
+     ;; non-booleans set by the (batch) driver, and read by the (c) backend
+     target-heap-size target-stack-size unit-name used-units
+
+     ;; Only read or called by the (c) backend
+     foreign-declarations foreign-lambda-stubs foreign-stub-argument-types
+     foreign-stub-argument-names foreign-stub-body foreign-stub-callback
+     foreign-stub-cps foreign-stub-id foreign-stub-name foreign-stub-return-type
+     lambda-literal-id lambda-literal-external lambda-literal-argument-count
+     lambda-literal-rest-argument lambda-literal-rest-argument-mode
+     lambda-literal-temporaries lambda-literal-unboxed-temporaries
+     lambda-literal-callee-signatures lambda-literal-allocated
+     lambda-literal-closure-size lambda-literal-looping
+     lambda-literal-customizable lambda-literal-body lambda-literal-direct
+
+     ;; Tables and databases that really should not be exported
+     constant-table immutable-constants inline-table line-number-database-2
+     line-number-database-size)
+
+(import chicken scheme foreign srfi-1 extras data-structures
+	scrutinizer support)
 
 (define (d arg1 . more)
   (when (##sys#fudge 13)		; debug mode?
@@ -284,7 +332,6 @@
 (define-inline (gensym-f-id) (gensym 'f_))
 
 (define-foreign-variable installation-home c-string "C_INSTALL_SHARE_HOME")
-(define-foreign-variable default-target-heap-size int "C_DEFAULT_TARGET_HEAP_SIZE")
 
 (define-constant foreign-type-table-size 301)
 (define-constant initial-analysis-database-size 3001)
@@ -292,7 +339,6 @@
 (define-constant inline-table-size 301)
 (define-constant constant-table-size 301)
 (define-constant file-requirements-size 301)
-(define-constant real-name-table-size 997)
 (define-constant default-inline-max-size 20)
 
 
@@ -321,7 +367,6 @@
 (define safe-globals-flag #f)
 (define explicit-use-flag #f)
 (define disable-stack-overflow-checking #f)
-(define require-imports-flag #f)
 (define external-protos-first #f)
 (define inline-max-size default-inline-max-size)
 (define emit-closure-info #t)
@@ -351,7 +396,6 @@
 (define inline-table-used #f)
 (define constant-table #f)
 (define constants-used #f)
-(define broken-constant-nodes '())
 (define inline-substitutions-enabled #f)
 (define direct-call-ids '())
 (define first-analysis #t)
@@ -361,21 +405,17 @@
 (define foreign-callback-stubs '())
 (define external-variables '())
 (define profile-lambda-list '())
-(define profile-lambda-index 0)
 (define profile-info-vector-name #f)
 (define external-to-pointer '())
-(define real-name-table #f)
 (define location-pointer-map '())
 (define pending-canonicalizations '())
 (define defconstant-bindings '())
 (define callback-names '())
 (define toplevel-scope #t)
 (define toplevel-lambda-id #f)
-(define csc-control-file #f)
-(define data-declarations '())
 (define file-requirements #f)
-(define postponed-initforms '())
 
+(define unlikely-variables '(unquote unquote-splicing))
 
 ;;; Initialize globals:
 
@@ -390,7 +430,7 @@
       (vector-fill! constant-table '())
       (set! constant-table (make-vector constant-table-size '())) )
   (set! profile-info-vector-name (make-random-name 'profile-info))
-  (set! real-name-table (make-vector real-name-table-size '()))
+  (clear-real-name-table!)
   (if file-requirements
       (vector-fill! file-requirements '())
       (set! file-requirements (make-vector file-requirements-size '())) )
@@ -398,6 +438,47 @@
       (vector-fill! foreign-type-table '())
       (set! foreign-type-table (make-vector foreign-type-table-size '())) ) )
 
+
+;;; Compute general statistics from analysis database:
+;
+; - Returns:
+;
+;   current-program-size
+;   original-program-size
+;   number of known variables
+;   number of known procedures
+;   number of global variables
+;   number of known call-sites
+;   number of database entries
+;   average bucket load
+
+(define (compute-database-statistics db)
+  (let ((nprocs 0)
+	(nvars 0)
+	(nglobs 0)
+	(entries 0)
+	(nsites 0) )
+    (##sys#hash-table-for-each
+     (lambda (sym plist)
+       (for-each
+	(lambda (prop)
+	  (set! entries (+ entries 1))
+	  (case (car prop)
+	    ((global) (set! nglobs (+ nglobs 1)))
+	    ((value)
+	     (set! nvars (+ nvars 1))
+	     (if (eq? '##core#lambda (node-class (cdr prop)))
+		 (set! nprocs (+ nprocs 1)) ) )
+	    ((call-sites) (set! nsites (+ nsites (length (cdr prop))))) ) )
+	plist) )
+     db)
+    (values current-program-size
+	    original-program-size
+	    nvars
+	    nprocs
+	    nglobs
+	    nsites
+	    entries) ) )
 
 ;;; Expand macros and canonicalize expressions:
 
@@ -1952,7 +2033,7 @@
 
 	  ((##core#primitive ##core#inline)
 	   (let ((id (first params)))
-	     (when (and first-analysis here (symbol? id) (##sys#hash-table-ref real-name-table id))
+	     (when (and first-analysis here (symbol? id) (get-real-name id))
 	       (set-real-name! id here) )
 	     (walkeach subs env localenv fullenv here #f) ) )
 
@@ -2497,6 +2578,7 @@
   lambda-literal?
   (id lambda-literal-id)			       ; symbol
   (external lambda-literal-external)		       ; boolean
+  ;; lambda-literal-arguments is used nowhere
   (arguments lambda-literal-arguments)		       ; (symbol ...)
   (argument-count lambda-literal-argument-count)       ; integer
   (rest-argument lambda-literal-rest-argument)	       ; symbol | #f
@@ -2504,6 +2586,7 @@
   (unboxed-temporaries lambda-literal-unboxed-temporaries) ; ((sym . utype) ...)
   (callee-signatures lambda-literal-callee-signatures) ; (integer ...)
   (allocated lambda-literal-allocated)		       ; integer
+  ;; lambda-literal-directly-called is used nowhere
   (directly-called lambda-literal-directly-called)     ; boolean
   (closure-size lambda-literal-closure-size)	       ; integer
   (looping lambda-literal-looping)		       ; boolean
@@ -2824,3 +2907,4 @@
 	(debugging 'o "fast global assignments" fastsets))
       (values node2 (##sys#fast-reverse literals)
               (##sys#fast-reverse lambda-info-literals) lambda-table) ) ) )
+)

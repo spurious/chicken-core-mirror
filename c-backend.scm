@@ -43,7 +43,7 @@
      foreign-type-declaration)
 
 (import chicken scheme foreign srfi-1 data-structures
-	c-platform support)
+	compiler c-platform support)
 
 ;;; Write atoms to output-port:
 

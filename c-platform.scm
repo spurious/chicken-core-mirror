@@ -81,8 +81,6 @@
 (define words-per-flonum 4)
 (define parameter-limit 1024)
 (define small-parameter-limit 128)
-;; TODO: export this and remove it from compiler-namespace
-(define unlikely-variables '(unquote unquote-splicing))
 
 (eq-inline-operator "C_eqp")
 (membership-test-operators

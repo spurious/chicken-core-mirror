@@ -30,8 +30,9 @@
 (declare
   (unit batch-driver)
   (uses extras data-structures files srfi-1
+	support compiler-syntax compiler optimizer
 	;; TODO: Backend should be configurable
-	support lfa2 compiler-syntax optimizer scrutinizer c-platform c-backend) )
+	scrutinizer lfa2 c-platform c-backend) )
 
 ;; TODO: Remove these once everything's converted to modules
 (include "private-namespace")
@@ -44,7 +45,8 @@
      user-post-analysis-pass)
 
 (import chicken scheme extras data-structures files srfi-1
-	support lfa2 compiler-syntax optimizer scrutinizer c-platform c-backend)
+	support compiler-syntax compiler optimizer scrutinizer lfa2
+	c-platform c-backend)
 
 (include "tweaks")
 
@@ -56,6 +58,18 @@
 (define user-pass (make-parameter #f))
 (define user-post-analysis-pass (make-parameter #f))
 
+;;; Emit collected information from various statistics about the program
+
+(define (print-program-statistics db)
+  (receive
+   (size osize kvars kprocs globs sites entries) (compute-database-statistics db)
+   (when (debugging 's "program statistics:")
+     (printf ";   program size: \t~s \toriginal program size: \t~s\n" size osize)
+     (printf ";   variables with known values: \t~s\n" kvars)
+     (printf ";   known procedures: \t~s\n" kprocs)
+     (printf ";   global variables: \t~s\n" globs)
+     (printf ";   known call sites: \t~s\n" sites) 
+     (printf ";   database entries: \t~s\n" entries) ) ) )
 
 ;;; Compile a complete source file:
 
@@ -340,9 +354,6 @@
     (set! ##sys#features (cons '#:compiling ##sys#features))
     (set! upap (user-post-analysis-pass))
 
-    ;; Insert postponed initforms:
-    (set! initforms (append initforms postponed-initforms))
-
     ;; Append required extensions to initforms:
     (set! initforms
           (append 
@@ -583,6 +594,7 @@
 		     (print-node "specialization" '|P| node0))
 		   (set! first-analysis #t) ) )
 
+	       ;; TODO: Move this so that we don't need to export these
 	       (set! ##sys#line-number-database #f)
 	       (set! constant-table #f)
 	       (set! inline-table #f)

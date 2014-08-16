@@ -52,14 +52,15 @@
      tree-copy copy-node! emit-global-inline-file load-inline-file
      match-node expression-has-side-effects? simple-lambda-node?
      dump-undefined-globals dump-defined-globals dump-global-refs
-     print-program-statistics foreign-type-check foreign-type-convert-result
+     foreign-type-check foreign-type-convert-result
      foreign-type-convert-argument final-foreign-type
      estimate-foreign-result-size estimate-foreign-result-location-size
      finish-foreign-result foreign-type->scrutiny-type scan-used-variables
      scan-free-variables chop-separator
      make-block-variable-literal block-variable-literal?
      block-variable-literal-name make-random-name
-     set-real-name! real-name real-name2 display-real-name-table
+     clear-real-name-table! get-real-name set-real-name!
+     real-name real-name2 display-real-name-table
      source-info->string source-info->line call-info constant-form-eval
      dump-nodes read-info-hook read/source-info big-fixnum?
      hide-variable export-variable variable-visible?
@@ -367,6 +368,7 @@
 
 
 ;;; Profiling instrumentation:
+(define profile-lambda-index 0)
 
 (define (expand-profile-lambda name llist body)
   (let ([index profile-lambda-index] 
@@ -971,60 +973,6 @@
       (debugging 'o "hiding nonexported module bindings" sym)
       (hide-variable sym))))
 
-
-;;; Compute general statistics from analysis database:
-;
-; - Returns:
-;
-;   current-program-size
-;   original-program-size
-;   number of known variables
-;   number of known procedures
-;   number of global variables
-;   number of known call-sites
-;   number of database entries
-;   average bucket load
-
-(define (compute-database-statistics db)
-  (let ((nprocs 0)
-	(nvars 0)
-	(nglobs 0)
-	(entries 0)
-	(nsites 0) )
-    (##sys#hash-table-for-each
-     (lambda (sym plist)
-       (for-each
-	(lambda (prop)
-	  (set! entries (+ entries 1))
-	  (case (car prop)
-	    ((global) (set! nglobs (+ nglobs 1)))
-	    ((value)
-	     (set! nvars (+ nvars 1))
-	     (if (eq? '##core#lambda (node-class (cdr prop)))
-		 (set! nprocs (+ nprocs 1)) ) )
-	    ((call-sites) (set! nsites (+ nsites (length (cdr prop))))) ) )
-	plist) )
-     db)
-    (values current-program-size
-	    original-program-size
-	    nvars
-	    nprocs
-	    nglobs
-	    nsites
-	    entries) ) )
-
-(define (print-program-statistics db)	; Used only in batch-driver.scm
-  (receive
-   (size osize kvars kprocs globs sites entries) (compute-database-statistics db)
-   (when (debugging 's "program statistics:")
-     (printf ";   program size: \t~s \toriginal program size: \t~s\n" size osize)
-     (printf ";   variables with known values: \t~s\n" kvars)
-     (printf ";   known procedures: \t~s\n" kprocs)
-     (printf ";   global variables: \t~s\n" globs)
-     (printf ";   known call sites: \t~s\n" sites) 
-     (printf ";   database entries: \t~s\n" entries) ) ) )
-
-
 ;;; Create foreign type checking expression:
 
 (define foreign-type-check		; Used only in compiler.scm
@@ -1433,8 +1381,20 @@
 ;     <variable-alias> -> <variable>
 ;     <lambda-id> -> <variable> or <variable-alias>
 
+(define-constant real-name-table-size 997)
+
+(define real-name-table #f)
+
+(define (clear-real-name-table!)
+  (set! real-name-table (make-vector real-name-table-size '())))
+
 (define (set-real-name! name rname)	; Used only in compiler.scm
   (##sys#hash-table-set! real-name-table name rname) )
+
+;; TODO: Find out why there are so many lookup functions for this and
+;; reduce them to the minimum.
+(define (get-real-name name)
+  (##sys#hash-table-ref real-name-table name))
 
 ;; Arbitrary limit to prevent runoff into exponential behavior
 (define real-name-max-depth 20)
@@ -1470,8 +1430,7 @@
   (and-let* ([rn (##sys#hash-table-ref real-name-table var)])
     (real-name rn db) ) )
 
-;; TODO: real-name-table is defined in compiler.scm; move it here?
-(define (display-real-name-table)	; Used only in batch-driver.scm
+(define (display-real-name-table)
   (##sys#hash-table-for-each
    (lambda (key val)
      (printf "~S\t~S~%" key val) )

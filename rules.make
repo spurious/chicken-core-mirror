@@ -492,22 +492,24 @@ endef
 $(foreach lib, $(SETUP_API_OBJECTS_1),\
           $(eval $(call declare-emitted-import-lib-dependency,$(lib))))
 
-$(foreach lib, batch-driver lfa2 compiler-syntax optimizer scrutinizer c-platform c-backend support,\
+$(foreach lib, $(filter-out chicken,$(COMPILER_OBJECTS_1)),\
           $(eval $(call declare-emitted-import-lib-dependency,$(lib))))
 
 chicken.c: chicken.scm batch-driver.import.scm batch-driver.scm \
 		c-platform.scm c-platform.import.scm
-batch-driver.c: batch-driver.scm lfa2.import.scm lfa2.scm \
+batch-driver.c: batch-driver.scm compiler.scm compiler.import.scm \
 		compiler-syntax.scm compiler-syntax.import.scm \
 		optimizer.scm optimizer.import.scm \
 		scrutinizer.scm scrutinizer.import.scm \
 		c-platform.scm c-platform.import.scm \
+		lfa2.import.scm lfa2.scm \
 		c-backend.scm c-backend.import.scm \
 		support.scm support.import.scm
 c-platform.c: c-platform.scm optimizer.scm optimizer.import.scm \
 		support.scm support.import.scm
 c-backend.c: c-backend.scm c-platform.scm c-platform.import.scm \
-		support.scm support.import.scm compiler.scm
+		support.scm support.import.scm \
+		compiler.scm compiler.import.scm
 compiler.c: compiler.scm scrutinizer.scm scrutinizer.import.scm \
 		support.scm support.import.scm
 optimizer.c: optimizer.scm support.scm support.import.scm
