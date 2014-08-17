@@ -495,30 +495,20 @@ $(foreach lib, $(SETUP_API_OBJECTS_1),\
 $(foreach lib, $(filter-out chicken,$(COMPILER_OBJECTS_1)),\
           $(eval $(call declare-emitted-import-lib-dependency,$(lib))))
 
-chicken.c: chicken.scm batch-driver.import.scm batch-driver.scm \
-		c-platform.scm c-platform.import.scm
-batch-driver.c: batch-driver.scm compiler.scm compiler.import.scm \
-		compiler-syntax.scm compiler-syntax.import.scm \
-		optimizer.scm optimizer.import.scm \
-		scrutinizer.scm scrutinizer.import.scm \
-		c-platform.scm c-platform.import.scm \
-		lfa2.import.scm lfa2.scm \
-		c-backend.scm c-backend.import.scm \
-		support.scm support.import.scm
-c-platform.c: c-platform.scm optimizer.scm optimizer.import.scm \
-		support.scm support.import.scm \
-		compiler.scm compiler.import.scm
-c-backend.c: c-backend.scm c-platform.scm c-platform.import.scm \
-		support.scm support.import.scm \
-		compiler.scm compiler.import.scm
-compiler.c: compiler.scm scrutinizer.scm scrutinizer.import.scm \
-		support.scm support.import.scm
-optimizer.c: optimizer.scm support.scm support.import.scm
-scrutinizer.c: scrutinizer.scm support.scm support.import.scm
-lfa2.c: lfa2.scm support.scm support.import.scm
-compiler-syntax.c: compiler-syntax.scm \
-		support.scm support.import.scm \
-		compiler.scm compiler.import.scm
+chicken.c: chicken.scm batch-driver.import.scm c-platform.import.scm
+batch-driver.c: batch-driver.scm compiler.import.scm \
+		compiler-syntax.import.scm optimizer.import.scm \
+		scrutinizer.import.scm c-platform.import.scm \
+		lfa2.import.scm c-backend.import.scm support.import.scm
+c-platform.c: c-platform.scm optimizer.import.scm support.import.scm \
+		compiler.import.scm
+c-backend.c: c-backend.scm c-platform.import.scm support.import.scm \
+		compiler.import.scm
+compiler.c: compiler.scm scrutinizer.import.scm support.import.scm
+optimizer.c: optimizer.scm support.import.scm
+scrutinizer.c: scrutinizer.scm support.import.scm
+lfa2.c: lfa2.scm support.import.scm
+compiler-syntax.c: compiler-syntax.scm support.import.scm compiler.import.scm
 
 define profile-flags
 $(if $(filter $(basename $(1)),$(PROFILE_OBJECTS)),-profile)
@@ -594,9 +584,8 @@ $(foreach obj, $(IMPORT_LIBRARIES),\
 # Bootstrap compiler objects
 
 define declare-bootstrap-compiler-object
-$(1).c: $$(SRCDIR)$(1).scm $$(SRCDIR)compiler-namespace.scm \
-	  $$(SRCDIR)private-namespace.scm $$(SRCDIR)tweaks.scm
-	$$(CHICKEN) $$< $$(CHICKEN_COMPILER_OPTIONS) -emit-import-library $(1) -output-file $$@ 
+$(1).c: $$(SRCDIR)$(1).scm $$(SRCDIR)tweaks.scm
+	$$(CHICKEN) $$< $$(CHICKEN_PROGRAM_OPTIONS) -emit-import-library $(1) -output-file $$@ 
 endef
 
 $(foreach obj, $(COMPILER_OBJECTS_1),\

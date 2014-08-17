@@ -29,10 +29,6 @@
   (uses srfi-1 data-structures
 	support compiler) )
 
-;; TODO: Remove these once everything's converted to modules
-(include "private-namespace")
-(include "compiler-namespace")
-
 (module compiler-syntax
     (compiler-syntax-statistics)
 

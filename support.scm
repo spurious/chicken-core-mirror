@@ -29,10 +29,6 @@
 	 (not inline ##sys#user-read-hook) ; XXX: Is this needed?
 	 (uses data-structures srfi-1 files extras ports) )
 
-;; TODO: Remove these once everything's converted to modules
-(include "private-namespace")
-(include "compiler-namespace")
-
 (module support
     (compiler-cleanup-hook bomb collected-debugging-output debugging
      debugging-chicken with-debugging-output quit-compiling

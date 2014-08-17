@@ -267,12 +267,6 @@
  (uses srfi-1 extras data-structures
        scrutinizer support) )
 
-(import scrutinizer support)
-
-;; TODO: Remove these once everything's converted to modules
-(include "private-namespace")
-(include "compiler-namespace")
-
 (module compiler
     (analyze-expression canonicalize-expression compute-database-statistics
      initialize-compiler perform-closure-conversion perform-cps-conversion

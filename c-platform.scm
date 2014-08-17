@@ -33,10 +33,6 @@
   (uses srfi-1 data-structures
 	optimizer support compiler))
 
-;; TODO: Remove these once everything's converted to modules
-(include "private-namespace")
-(include "compiler-namespace")
-
 (module c-platform
     (default-declarations default-profiling-declarations
      units-used-by-default

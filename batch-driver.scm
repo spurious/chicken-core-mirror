@@ -34,10 +34,6 @@
 	;; TODO: Backend should be configurable
 	scrutinizer lfa2 c-platform c-backend) )
 
-;; TODO: Remove these once everything's converted to modules
-(include "private-namespace")
-(include "compiler-namespace")
-
 (module batch-driver
     (compile-source-file
 

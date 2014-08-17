@@ -29,10 +29,6 @@
   (uses srfi-1 data-structures extras ports files
 	support) )
 
-;; TODO: Remove these once everything's converted to modules
-(include "private-namespace")
-(include "compiler-namespace")
-
 (module scrutinizer
     (scrutinize load-type-database emit-type-file
      validate-type check-and-validate-type install-specializations)

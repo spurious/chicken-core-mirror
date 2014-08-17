@@ -30,10 +30,6 @@
   (uses srfi-1 data-structures
 	support) )
 
-;; TODO: Remove these once everything's converted to modules
-(include "private-namespace")
-(include "compiler-namespace")
-
 (module optimizer
     (scan-toplevel-assignments perform-high-level-optimizations
      transform-direct-lambdas! determine-loop-and-dispatch

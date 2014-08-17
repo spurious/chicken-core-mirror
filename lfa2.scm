@@ -37,10 +37,6 @@
   (uses srfi-1
 	support) )
 
-;; TODO: Remove these once everything's converted to modules
-(include "private-namespace")
-(include "compiler-namespace")
-
 (module lfa2
     (perform-secondary-flow-analysis)
 

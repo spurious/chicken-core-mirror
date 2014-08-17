@@ -34,7 +34,6 @@
 	srfi-69))
 
 
-(include "compiler-namespace")
 (include "tweaks")
 (import batch-driver c-platform)
 

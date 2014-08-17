@@ -33,10 +33,6 @@
   (uses srfi-1 data-structures
 	c-platform compiler support))
 
-;; TODO: Remove these once everything's converted to modules
-(include "private-namespace")
-(include "compiler-namespace")
-
 (module c-backend
     (generate-code
      ;; For "foreign" (aka chicken-ffi-syntax):
