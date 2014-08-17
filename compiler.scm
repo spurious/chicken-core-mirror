@@ -297,9 +297,14 @@
 
      ;; Other, non-boolean, flags set by (batch) driver
      profiled-procedures import-libraries inline-max-size
+     extended-bindings standard-bindings
 
      ;; non-booleans set by the (batch) driver, and read by the (c) backend
      target-heap-size target-stack-size unit-name used-units
+
+     ;; bindings, set by the (c) platform
+     default-extended-bindings default-standard-bindings
+     internal-bindings foldable-bindings
 
      ;; Only read or called by the (c) backend
      foreign-declarations foreign-lambda-stubs foreign-stub-argument-types
@@ -411,6 +416,12 @@
 (define file-requirements #f)
 
 (define unlikely-variables '(unquote unquote-splicing))
+
+;;; Initial bindings.  These are supplied (set!) by the (c-)platform
+(define default-extended-bindings '())
+(define default-standard-bindings '())
+(define internal-bindings '())
+(define foldable-bindings '())
 
 ;;; Initialize globals:
 

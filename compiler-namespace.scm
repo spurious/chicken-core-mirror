@@ -26,11 +26,5 @@
 
 (private
  compiler
- default-extended-bindings
- default-standard-bindings
- extended-bindings
- foldable-bindings
- internal-bindings
  number-type
- standard-bindings
  unsafe) 

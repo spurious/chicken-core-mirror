@@ -31,7 +31,7 @@
 (declare
   (unit c-platform)
   (uses srfi-1 data-structures
-	optimizer support))
+	optimizer support compiler))
 
 ;; TODO: Remove these once everything's converted to modules
 (include "private-namespace")
@@ -47,7 +47,7 @@
      parameter-limit small-parameter-limit)
 
 (import chicken scheme srfi-1 data-structures
-	optimizer support)
+	optimizer support compiler)
 
 (include "tweaks")
 
@@ -120,8 +120,7 @@
 
 ;;; Standard and extended bindings:
 
-;; TODO: export this and remove it from compiler-namespace
-(define default-standard-bindings
+(set! default-standard-bindings
   '(not boolean? apply call-with-current-continuation eq? eqv? equal? pair? cons car cdr caar cadr
     cdar cddr caaar caadr cadar caddr cdaar cdadr cddar cdddr caaaar caaadr caadar caaddr cadaar
     cadadr caddar cadddr cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr set-car! set-cdr!
@@ -142,8 +141,7 @@
     list-ref abs char-ready? peek-char list->string string->list
     current-input-port current-output-port) )
 
-;; TODO: export this and remove it from compiler-namespace
-(define default-extended-bindings
+(set! default-extended-bindings
   '(bitwise-and alist-cons xcons
     bitwise-ior bitwise-xor bitwise-not add1 sub1 fx+ fx- fx* fx/
     fx+? fx-? fx*? fx/? fxmod o fp/?
@@ -179,8 +177,7 @@
     current-error-port current-thread
     printf sprintf format fprintf get-keyword) )
 
-;; TODO: export this and remove it from compiler-namespace
-(define internal-bindings
+(set! internal-bindings
   '(##sys#slot ##sys#setslot ##sys#block-ref ##sys#block-set!
     ##sys#call-with-current-continuation ##sys#size ##sys#byte ##sys#setbyte
     ##sys#pointer? ##sys#generic-structure? ##sys#structure? ##sys#check-structure
@@ -234,8 +231,7 @@
     pointer-f32-ref pointer-f32-set!
     pointer-f64-ref pointer-f64-set!))
 
-;; TODO: export this and remove it from compiler-namespace
-(define foldable-bindings
+(set! foldable-bindings
   (lset-difference 
    eq?
    (lset-union eq? default-standard-bindings default-extended-bindings)

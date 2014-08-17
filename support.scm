@@ -43,9 +43,8 @@
      constant? collapsable-literal? immediate? basic-literal?
      canonicalize-begin-body string->expr llist-length llist-match?
      expand-profile-lambda reset-profile-info-vector-name!
-     profiling-prelude-exps initialize-analysis-database
-     db-get db-get-all db-put! collect! db-get-list get-line get-line-2
-     display-line-number-database display-analysis-database
+     profiling-prelude-exps db-get db-get-all db-put! collect! db-get-list
+     get-line get-line-2 display-line-number-database
      make-node node? node-class node-class-set!
      node-parameters node-parameters-set!
      node-subexpressions node-subexpressions-set! varnode qnode
@@ -407,33 +406,6 @@
 	   profile-lambda-list)))
 
 ;;; Database operations:
-;
-; - 'get' and 'put' shadow the routines in the extras-unit, we use low-level
-;   symbol-keyed hash-tables here.
-; - does currently nothing after the first invocation, but we leave it
-;   this way to have the option to add default entries for each new db.
-
-(define initialize-analysis-database
-  (let ((initial #t))
-    (lambda ()
-      (when initial
-	(for-each
-	 (lambda (s)
-	   (mark-variable s '##compiler#intrinsic 'standard)
-	   (when (memq s foldable-bindings)
-	     (mark-variable s '##compiler#foldable #t)))
-	 standard-bindings)
-	(for-each
-	 (lambda (s)
-	   (mark-variable s '##compiler#intrinsic 'extended)
-	   (when (memq s foldable-bindings)
-	     (mark-variable s '##compiler#foldable #t)))
-	 extended-bindings)
-	(for-each
-	 (lambda (s)
-	   (mark-variable s '##compiler#intrinsic 'internal))
-	 internal-bindings))
-      (set! initial #f))))
 
 (define (db-get db key prop)
   (let ((plist (##sys#hash-table-ref db key)))
@@ -485,72 +457,6 @@
    (lambda (key val)
      (when val (printf "~S ~S~%" key (map cdr val))) )
    ##sys#line-number-database) )
-
-
-;;; Display analysis database:
-
-(define display-analysis-database
-  (let ((names '((captured . cpt) (assigned . set) (boxed . box) (global . glo)
-		 (assigned-locally . stl)
-		 (contractable . con) (standard-binding . stb) (simple . sim)
-		 (inlinable . inl)
-		 (collapsable . col) (removable . rem) (constant . con)
-		 (inline-target . ilt) (inline-transient . itr)
-		 (undefined . und) (replacing . rpg) (unused . uud) (extended-binding . xtb)
-		 (inline-export . ilx) (hidden-refs . hrf)
-		 (value-ref . vvf)
-		 (customizable . cst) (has-unused-parameters . hup) (boxed-rest . bxr) ) ) 
-	(omit #f))
-    (lambda (db)
-      (unless omit
-	(set! omit 
-	  (append default-standard-bindings
-		  default-extended-bindings
-		  internal-bindings) ) )
-      (##sys#hash-table-for-each
-       (lambda (sym plist)
-	 (let ([val #f]
-	       (lval #f)
-	       [pval #f]
-	       [csites '()]
-	       [refs '()] )
-	   (unless (memq sym omit)
-	     (write sym)
-	     (let loop ((es plist))
-	       (if (pair? es)
-		   (begin
-		     (case (caar es)
-		       ((captured assigned boxed global contractable standard-binding assigned-locally
-				  collapsable removable undefined replacing unused simple inlinable inline-export
-				  has-unused-parameters extended-binding customizable constant boxed-rest hidden-refs)
-			(printf "\t~a" (cdr (assq (caar es) names))) )
-		       ((unknown)
-			(set! val 'unknown) )
-		       ((value)
-			(unless (eq? val 'unknown) (set! val (cdar es))) )
-		       ((local-value)
-			(unless (eq? val 'unknown) (set! lval (cdar es))) )
-		       ((potential-value)
-			(set! pval (cdar es)) )
-		       ((replacable home contains contained-in use-expr closure-size rest-parameter
-				    captured-variables explicit-rest)
-			(printf "\t~a=~s" (caar es) (cdar es)) )
-		       ((references)
-			(set! refs (cdar es)) )
-		       ((call-sites)
-			(set! csites (cdar es)) )
-		       (else (bomb "Illegal property" (car es))) )
-		     (loop (cdr es)) ) ) )
-	     (cond [(and val (not (eq? val 'unknown)))
-		    (printf "\tval=~s" (cons (node-class val) (node-parameters val))) ]
-		   [(and lval (not (eq? val 'unknown)))
-		    (printf "\tlval=~s" (cons (node-class lval) (node-parameters lval))) ]
-		   [(and pval (not (eq? val 'unknown)))
-		    (printf "\tpval=~s" (cons (node-class pval) (node-parameters pval)))] )
-	     (when (pair? refs) (printf "\trefs=~s" (length refs)))
-	     (when (pair? csites) (printf "\tcss=~s" (length csites)))
-	     (newline) ) ) )
-       db) ) ) )       
 
 
 ;;; Node creation and -manipulation:

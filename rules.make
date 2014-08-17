@@ -506,7 +506,8 @@ batch-driver.c: batch-driver.scm compiler.scm compiler.import.scm \
 		c-backend.scm c-backend.import.scm \
 		support.scm support.import.scm
 c-platform.c: c-platform.scm optimizer.scm optimizer.import.scm \
-		support.scm support.import.scm
+		support.scm support.import.scm \
+		compiler.scm compiler.import.scm
 c-backend.c: c-backend.scm c-platform.scm c-platform.import.scm \
 		support.scm support.import.scm \
 		compiler.scm compiler.import.scm
@@ -515,7 +516,9 @@ compiler.c: compiler.scm scrutinizer.scm scrutinizer.import.scm \
 optimizer.c: optimizer.scm support.scm support.import.scm
 scrutinizer.c: scrutinizer.scm support.scm support.import.scm
 lfa2.c: lfa2.scm support.scm support.import.scm
-compiler-syntax.c: compiler-syntax.scm support.scm support.import.scm
+compiler-syntax.c: compiler-syntax.scm \
+		support.scm support.import.scm \
+		compiler.scm compiler.import.scm
 
 define profile-flags
 $(if $(filter $(basename $(1)),$(PROFILE_OBJECTS)),-profile)
