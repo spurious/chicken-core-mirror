@@ -350,12 +350,10 @@
 ;;; Global variables containing compilation parameters:
 
 (define unit-name #f)
-(define number-type 'generic)
 (define standard-bindings '())
 (define extended-bindings '())
 (define insert-timer-checks #t)
 (define used-units '())
-(define unsafe #f)
 (define foreign-declarations '())
 (define emit-trace-info #f)
 (define block-compilation #f)

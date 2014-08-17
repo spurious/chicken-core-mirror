@@ -25,6 +25,4 @@
 
 
 (private
- compiler
- number-type
- unsafe) 
+ compiler) 

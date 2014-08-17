@@ -71,12 +71,21 @@
      dump-nodes read-info-hook read/source-info big-fixnum?
      hide-variable export-variable variable-visible?
      mark-variable variable-mark intrinsic? foldable? load-identifier-database
-     print-version print-usage print-debug-options)
+     print-version print-usage print-debug-options
+
+     ;; XXX: These are evil globals that were too hairy to get rid of.
+     ;; These values are set! by compiler and batch-driver, and read
+     ;; in a lot of other places.
+     number-type unsafe)
 
 (import chicken scheme foreign data-structures srfi-1 files extras ports)
 
 (include "tweaks")
 (include "banner")
+
+;; Evil globals
+(define number-type 'generic)
+(define unsafe #f)
 
 ;;; Debugging and error-handling stuff:
 
