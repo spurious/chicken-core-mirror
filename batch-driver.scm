@@ -475,29 +475,18 @@
 						     (import scheme chicken)
 						     ,@forms))
 				    forms))))
-		  [pvec (gensym)]
-		  [plen (length profile-lambda-list)]
-		  [exps (append
+		  (exps (append
 			 (map (lambda (ic) `(set! ,(cdr ic) ',(car ic))) immutable-constants)
 			 (map (lambda (n) `(##core#callunit ,n)) used-units)
 			 (if emit-profile
-			     `((set! ,profile-info-vector-name 
-				 (##sys#register-profile-info
-				  ',plen
-				  ',(and (not unit-name)
-					 (or profile-name #t)))))
+			     (profiling-prelude-exps (and (not unit-name)
+							  (or profile-name #t)))
 			     '() )
-			 (map (lambda (pl)
-				`(##sys#set-profile-info-vector!
-				  ,profile-info-vector-name
-				  ',(car pl)
-				  ',(cdr pl) ) )
-			      profile-lambda-list)
 			 exps0
 			 (if (and (not unit-name) (not dynamic))
 			     cleanup-forms
 			     '() )
-			 '((##core#undefined))) ] )
+			 '((##core#undefined))) ) )
 
 	     (when (pair? compiler-syntax-statistics)
 	       (with-debugging-output

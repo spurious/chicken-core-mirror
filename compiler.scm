@@ -403,8 +403,6 @@
 (define foreign-lambda-stubs '())
 (define foreign-callback-stubs '())
 (define external-variables '())
-(define profile-lambda-list '())
-(define profile-info-vector-name #f)
 (define external-to-pointer '())
 (define location-pointer-map '())
 (define pending-canonicalizations '())
@@ -428,7 +426,7 @@
   (if constant-table
       (vector-fill! constant-table '())
       (set! constant-table (make-vector constant-table-size '())) )
-  (set! profile-info-vector-name (make-random-name 'profile-info))
+  (reset-profile-info-vector-name!)
   (clear-real-name-table!)
   (if file-requirements
       (vector-fill! file-requirements '())

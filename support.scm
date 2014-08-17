@@ -42,8 +42,9 @@
      check-and-open-input-file close-checked-input-file fold-inner
      constant? collapsable-literal? immediate? basic-literal?
      canonicalize-begin-body string->expr llist-length llist-match?
-     expand-profile-lambda initialize-analysis-database db-get db-get-all
-     db-put! collect! db-get-list get-line get-line-2
+     expand-profile-lambda reset-profile-info-vector-name!
+     profiling-prelude-exps initialize-analysis-database
+     db-get db-get-all db-put! collect! db-get-list get-line get-line-2
      display-line-number-database display-analysis-database
      make-node node? node-class node-class-set!
      node-parameters node-parameters-set!
@@ -368,6 +369,11 @@
 
 
 ;;; Profiling instrumentation:
+(define profile-info-vector-name #f)
+(define (reset-profile-info-vector-name!)
+  (set! profile-info-vector-name (make-random-name 'profile-info)))
+
+(define profile-lambda-list '())
 (define profile-lambda-index 0)
 
 (define (expand-profile-lambda name llist body)
@@ -381,6 +387,18 @@
 	(##core#lambda () (##sys#apply (##core#lambda ,llist ,body) ,args))
 	(##core#lambda () (##sys#profile-exit ',index ,profile-info-vector-name)) ) ) ) )
 
+;; Get expressions which initialize and populate the profiling vector
+(define (profiling-prelude-exps profile-name)
+  `((set! ,profile-info-vector-name 
+      (##sys#register-profile-info
+       ',(length profile-lambda-list)
+       ',profile-name))
+    ,@(map (lambda (pl)
+	     `(##sys#set-profile-info-vector!
+	       ,profile-info-vector-name
+	       ',(car pl)
+	       ',(cdr pl) ) )
+	   profile-lambda-list)))
 
 ;;; Database operations:
 ;

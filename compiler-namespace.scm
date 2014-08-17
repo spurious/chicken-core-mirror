@@ -44,8 +44,6 @@
  inline-substitutions-enabled
  internal-bindings
  number-type
- profile-info-vector-name
- profile-lambda-list
  standard-bindings
  strict-variable-types
  unsafe) 
