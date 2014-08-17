@@ -73,6 +73,7 @@
 ;;; Run compiler with command-line options:
 
 (receive (filename options) ((or (user-options-pass) process-command-line) compiler-arguments)
+  ;; TODO: Perhaps option parsing should be moved to batch-driver?
   (let loop ((os options))
     (unless (null? os)
       (let ((o (car os))
@@ -150,5 +151,5 @@
 		"invalid compiler option (ignored)" 
 		(if (string? o) o (conc "-" o)) )
 	       (loop rest) ) ) ) ) )
-  (apply compile-source-file filename options)
+  (apply compile-source-file filename compiler-arguments options)
   (exit) )

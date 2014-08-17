@@ -73,7 +73,7 @@
 
 ;;; Compile a complete source file:
 
-(define (compile-source-file filename . options)
+(define (compile-source-file filename user-suppplied-options . options)
   (define (option-arg p)
     (if (null? (cdr p))
 	(quit-compiling "missing argument to `-~A' option" (car p))
@@ -418,7 +418,6 @@
 
 	   ;; Display header:
 	   (dribble "compiling `~a' ..." filename)
-	   (set! source-filename filename)
 	   (debugging 'r "options" options)
 	   (debugging 'r "debugging options" debugging-chicken)
 	   (debugging 'r "target heap size" target-heap-size)
@@ -627,7 +626,7 @@
 		       ;; do this here, because we must make sure we have a db
 		       (when type-output-file
 			 (dribble "generating type file `~a' ..." type-output-file)
-			 (emit-type-file type-output-file db)))
+			 (emit-type-file filename type-output-file db)))
 		     (set! first-analysis #f)
 		     (end-time "analysis")
 		     (print-db "analysis" '|4| db i)
@@ -683,7 +682,7 @@
 			    (when (and inline-output-file insert-timer-checks)
 			      (let ((f inline-output-file))
 				(dribble "generating global inline file `~a' ..." f)
-				(emit-global-inline-file f db) ) )
+				(emit-global-inline-file filename f db) ) )
 			    (begin-time)
 			    ;; Closure conversion
 			    (set! node2 (perform-closure-conversion node2 db))
@@ -704,7 +703,7 @@
 			     ;; Code generation
 			     (let ((out (if outfile (open-output-file outfile) (current-output-port))) )
 			       (dribble "generating `~A' ..." outfile)
-			       (generate-code literals lliterals lambda-table out filename dynamic db)
+			       (generate-code literals lliterals lambda-table out filename user-suppplied-options dynamic db)
 			       (when outfile
 				 (close-output-port out)))
 			     (end-time "code generation")

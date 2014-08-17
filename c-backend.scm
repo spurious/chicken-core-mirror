@@ -69,7 +69,7 @@
 
 ;;; Generate target code:
 
-(define (generate-code literals lliterals lambda-table out source-file dynamic db)
+(define (generate-code literals lliterals lambda-table out source-file user-supplied-options dynamic db)
   ;; Don't truncate floating-point precision!
   (flonum-print-precision (+ flonum-maximum-decimal-exponent 1))
   (let ()
@@ -487,7 +487,7 @@
 		   (string-split (chicken-version #t) "\n") ) 
 	      "")
 	     "   command line: ")
-	(gen-list compiler-arguments)
+	(gen-list user-supplied-options)
 	(gen #t)
 	(cond [unit-name (gen "   unit: " unit-name)]
 	      [else 

@@ -363,7 +363,6 @@
 (define no-argc-checks #f)
 (define no-procedure-checks #f)
 (define no-global-procedure-checks #f)
-(define source-filename #f)
 (define safe-globals-flag #f)
 (define explicit-use-flag #f)
 (define disable-stack-overflow-checking #f)

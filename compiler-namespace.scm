@@ -27,7 +27,6 @@
 (private
  compiler
  block-compilation
- compiler-arguments
  default-extended-bindings
  default-standard-bindings
  enable-specialization
@@ -48,7 +47,6 @@
  parenthesis-synonyms
  profile-info-vector-name
  profile-lambda-list
- source-filename
  standard-bindings
  strict-variable-types
  unsafe) 
