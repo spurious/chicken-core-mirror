@@ -30,14 +30,6 @@
  default-standard-bindings
  extended-bindings
  foldable-bindings
- foreign-callback-stubs
- foreign-callback-stub-argument-types
- foreign-callback-stub-id
- foreign-callback-stub-name
- foreign-callback-stub-qualifiers
- foreign-callback-stub-return-type
- foreign-type-table
- around more options.
  internal-bindings
  number-type
  standard-bindings

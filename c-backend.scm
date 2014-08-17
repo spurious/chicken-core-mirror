@@ -1085,41 +1085,40 @@
 (define (generate-foreign-callback-stubs stubs db)
   (for-each
    (lambda (stub)
-     (let* ([id (foreign-callback-stub-id stub)]
-	    [rname (real-name2 id db)]
-	    [rtype (foreign-callback-stub-return-type stub)]
-	    [argtypes (foreign-callback-stub-argument-types stub)]
-	    [n (length argtypes)]
-	    [vlist (make-argument-list n "t")] )
+     (let* ((id (foreign-callback-stub-id stub))
+	    (rname (real-name2 id db))
+	    (rtype (foreign-callback-stub-return-type stub))
+	    (argtypes (foreign-callback-stub-argument-types stub))
+	    (n (length argtypes))
+	    (vlist (make-argument-list n "t")) )
 
        (define (compute-size type var ns)
 	 (case type
-	   [(char int int32 short bool void unsigned-short scheme-object unsigned-char unsigned-int unsigned-int32
+	   ((char int int32 short bool void unsigned-short scheme-object unsigned-char unsigned-int unsigned-int32
 		  byte unsigned-byte)
-	    ns]
-	   [(float double c-pointer unsigned-integer unsigned-integer32 long integer integer32 
+	    ns)
+	   ((float double c-pointer unsigned-integer unsigned-integer32 long integer integer32 
 		   unsigned-long size_t
 		   nonnull-c-pointer number unsigned-integer64 integer64 c-string-list
 		   c-string-list*)
-	    (string-append ns "+3") ]
-	   [(c-string c-string* unsigned-c-string unsigned-c-string unsigned-c-string*)
-	    (string-append ns "+2+(" var "==NULL?1:C_bytestowords(C_strlen(" var ")))") ]
-	   [(nonnull-c-string nonnull-c-string* nonnull-unsigned-c-string nonnull-unsigned-c-string* symbol)
-	    (string-append ns "+2+C_bytestowords(C_strlen(" var "))") ]
-	   [else
-	    (cond [(and (symbol? type) (##sys#hash-table-ref foreign-type-table type)) 
-		   => (lambda (t)
-			(compute-size (if (vector? t) (vector-ref t 0) t) var ns) ) ]
-		  [(pair? type)
+	    (string-append ns "+3") )
+	   ((c-string c-string* unsigned-c-string unsigned-c-string unsigned-c-string*)
+	    (string-append ns "+2+(" var "==NULL?1:C_bytestowords(C_strlen(" var ")))") )
+	   ((nonnull-c-string nonnull-c-string* nonnull-unsigned-c-string nonnull-unsigned-c-string* symbol)
+	    (string-append ns "+2+C_bytestowords(C_strlen(" var "))") )
+	   (else
+	    (cond ((and (symbol? type) (lookup-foreign-type type)) 
+		   => (lambda (t) (compute-size (vector-ref t 0) var ns) ) )
+		  ((pair? type)
 		   (case (car type)
-		     [(ref pointer c-pointer nonnull-pointer nonnull-c-pointer function instance 
+		     ((ref pointer c-pointer nonnull-pointer nonnull-c-pointer function instance 
 			   nonnull-instance instance-ref)
-		      (string-append ns "+3") ]
-		     [(const) (compute-size (cadr type) var ns)]
-		     [else ns] ) ]
-		  [else ns] ) ] ) )
+		      (string-append ns "+3") )
+		     ((const) (compute-size (cadr type) var ns))
+		     (else ns) ) )
+		  (else ns) ) ) ) )
 
-       (let ([sizestr (fold compute-size "0" argtypes vlist)])
+       (let ((sizestr (fold compute-size "0" argtypes vlist)))
 	 (gen #t)
 	 (when rname
 	   (gen #t "/* from " (cleanup rname) " */") )
@@ -1141,12 +1140,12 @@
    stubs) )
 
 (define (generate-foreign-callback-header cls stub)
-  (let* ([name (foreign-callback-stub-name stub)]
-	 [quals (foreign-callback-stub-qualifiers stub)]
-	 [rtype (foreign-callback-stub-return-type stub)]
-	 [argtypes (foreign-callback-stub-argument-types stub)]
-	 [n (length argtypes)]
-	 [vlist (make-argument-list n "t")] )
+  (let* ((name (foreign-callback-stub-name stub))
+	 (quals (foreign-callback-stub-qualifiers stub))
+	 (rtype (foreign-callback-stub-return-type stub))
+	 (argtypes (foreign-callback-stub-argument-types stub))
+	 (n (length argtypes))
+	 (vlist (make-argument-list n "t")) )
     (gen #t cls #\space (foreign-type-declaration rtype "") quals #\space name #\()
     (pair-for-each
      (lambda (vs ts)
@@ -1195,9 +1194,9 @@
        (str "unsigned char *"))
       ((void) (str "void"))
       (else
-       (cond ((and (symbol? type) (##sys#hash-table-ref foreign-type-table type))
+       (cond ((and (symbol? type) (lookup-foreign-type type))
 	      => (lambda (t)
-		   (foreign-type-declaration (if (vector? t) (vector-ref t 0) t) target)) )
+		   (foreign-type-declaration (vector-ref t 0) target)) )
 	     ((string? type) (str type))
 	     ((list? type)
 	      (let ((len (length type)))
@@ -1300,27 +1299,27 @@
 			 nonnull-unsigned-c-string* symbol) "C_c_string(")
       ((bool) "C_truep(")
       (else
-       (cond [(and (symbol? type) (##sys#hash-table-ref foreign-type-table type))
+       (cond ((and (symbol? type) (lookup-foreign-type type))
 	      => (lambda (t)
-		   (foreign-argument-conversion (if (vector? t) (vector-ref t 0) t)) ) ]
-	     [(and (list? type) (>= (length type) 2))
+		   (foreign-argument-conversion (vector-ref t 0)) ) )
+	     ((and (list? type) (>= (length type) 2))
 	      (case (car type)
-	       ((c-pointer) "C_c_pointer_or_null(")
-	       ((nonnull-c-pointer) "C_c_pointer_nn(")
-	       ((instance) "C_c_pointer_or_null(")
-	       ((nonnull-instance) "C_c_pointer_nn(")
-	       ((scheme-pointer) "C_data_pointer_or_null(")
-	       ((nonnull-scheme-pointer) "C_data_pointer(")
-	       ((function) "C_c_pointer_or_null(")
-	       ((const) (foreign-argument-conversion (cadr type)))
-	       ((enum) "C_num_to_int(")
-	       ((ref)
-		(string-append "*(" (foreign-type-declaration (cadr type) "*")
-			       ")C_c_pointer_nn("))
-	       ((instance-ref)
-		(string-append "*(" (cadr type) "*)C_c_pointer_nn("))
-	       (else (err)) ) ]
-	     [else (err)] ) ) ) ) )
+		((c-pointer) "C_c_pointer_or_null(")
+		((nonnull-c-pointer) "C_c_pointer_nn(")
+		((instance) "C_c_pointer_or_null(")
+		((nonnull-instance) "C_c_pointer_nn(")
+		((scheme-pointer) "C_data_pointer_or_null(")
+		((nonnull-scheme-pointer) "C_data_pointer(")
+		((function) "C_c_pointer_or_null(")
+		((const) (foreign-argument-conversion (cadr type)))
+		((enum) "C_num_to_int(")
+		((ref)
+		 (string-append "*(" (foreign-type-declaration (cadr type) "*")
+				")C_c_pointer_nn("))
+		((instance-ref)
+		 (string-append "*(" (cadr type) "*)C_c_pointer_nn("))
+		(else (err)) ) )
+	     (else (err)) ) ) ) ) )
 
 
 ;; Generate suitable conversion of a result value into Scheme data
@@ -1352,10 +1351,10 @@
       ((bool) "C_mk_bool(")
       ((void scheme-object) "((C_word)")
       (else
-       (cond [(and (symbol? type) (##sys#hash-table-ref foreign-type-table type))
+       (cond ((and (symbol? type) (lookup-foreign-type type))
 	      => (lambda (x)
-		   (foreign-result-conversion (if (vector? x) (vector-ref x 0) x) dest)) ]
-	     [(and (list? type) (>= (length type) 2))
+		   (foreign-result-conversion (vector-ref x 0) dest)) )
+	     ((and (list? type) (>= (length type) 2))
 	      (case (car type)
 		((nonnull-pointer nonnull-c-pointer)
 		 (sprintf "C_mpointer(&~A,(void*)" dest) )
@@ -1372,8 +1371,8 @@
 		 (sprintf "C_mpointer_or_false(&~a,(void*)" dest) )
 		((function) (sprintf "C_mpointer(&~a,(void*)" dest))
 		((enum) (sprintf "C_int_to_num(&~a," dest))
-		(else (err)) ) ]
-	     [else (err)] ) ) ) ) )
+		(else (err)) ) )
+	     (else (err)) ) ) ) ) )
 
 
 ;;; Encoded literals as strings, to be decoded by "C_decode_literal()"

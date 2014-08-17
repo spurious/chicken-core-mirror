@@ -53,8 +53,14 @@
      tree-copy copy-node! emit-global-inline-file load-inline-file
      match-node expression-has-side-effects? simple-lambda-node?
      dump-undefined-globals dump-defined-globals dump-global-refs
+     make-foreign-callback-stub foreign-callback-stub?
+     foreign-callback-stub-id foreign-callback-stub-name
+     foreign-callback-stub-qualifiers foreign-callback-stub-return-type
+     foreign-callback-stub-argument-types register-foreign-callback-stub!
+     foreign-callback-stubs 		; should not be exported
      foreign-type-check foreign-type-convert-result
      foreign-type-convert-argument final-foreign-type
+     register-foreign-type! lookup-foreign-type clear-foreign-type-table!
      estimate-foreign-result-size estimate-foreign-result-location-size
      finish-foreign-result foreign-type->scrutiny-type scan-used-variables
      scan-free-variables chop-separator
@@ -992,6 +998,50 @@
       (debugging 'o "hiding nonexported module bindings" sym)
       (hide-variable sym))))
 
+;;; Foreign callback stub and type tables:
+
+(define foreign-callback-stubs '())
+
+(define-record-type foreign-callback-stub
+  (make-foreign-callback-stub id name qualifiers return-type argument-types)
+  foreign-callback-stub?
+  (id foreign-callback-stub-id)		; symbol
+  (name foreign-callback-stub-name)	; string
+  (qualifiers foreign-callback-stub-qualifiers)	; string
+  (return-type foreign-callback-stub-return-type) ; type-specifier
+  (argument-types foreign-callback-stub-argument-types)) ; (type-specifier ...)
+
+(define (register-foreign-callback-stub! id params)
+  (set! foreign-callback-stubs
+    (cons (apply make-foreign-callback-stub id params) foreign-callback-stubs) )
+  ;; mark to avoid leaf-routine optimization
+  (mark-variable id '##compiler#callback-lambda))
+
+(define-constant foreign-type-table-size 301)
+
+(define foreign-type-table #f)
+
+(define (clear-foreign-type-table!)
+  (if foreign-type-table
+      (vector-fill! foreign-type-table '())
+      (set! foreign-type-table (make-vector foreign-type-table-size '())) ))
+
+;; Register a foreign type under the given alias.  type is the foreign
+;; type's name, arg and ret are the *names* of conversion procedures
+;; when this type is used as argument or return value, respectively.
+;; The latter two must either both be supplied, or neither.
+;; TODO: Maybe create a separate record type for foreign types?
+(define (register-foreign-type! alias type #!optional arg ret)
+  (##sys#hash-table-set! foreign-type-table alias
+			 (vector type (and ret arg) (and arg ret))))
+
+;; Returns either #f (if t does not exist) or a vector with the type,
+;; the *name* of the argument conversion procedure and the *name* of
+;; the return value conversion procedure.  If no conversion procedures
+;; have been supplied, the corresponding slots will be #f.
+(define (lookup-foreign-type t)
+  (##sys#hash-table-ref foreign-type-table t))
+
 ;;; Create foreign type checking expression:
 
 (define foreign-type-check		; Used only in compiler.scm
@@ -1003,27 +1053,27 @@
       (follow-without-loop
        type
        (lambda (t next)
-	 (let repeat ([t t])
+	 (let repeat ((t t))
 	   (case t
-	     [(char unsigned-char) (if unsafe param `(##sys#foreign-char-argument ,param))]
-	     [(int unsigned-int short unsigned-short byte unsigned-byte int32 unsigned-int32)
-	      (if unsafe param `(##sys#foreign-fixnum-argument ,param))]
-	     [(float double number) (if unsafe param `(##sys#foreign-flonum-argument ,param))]
-	     [(blob scheme-pointer)
-	      (let ([tmp (gensym)])
-		`(let ([,tmp ,param])
+	     ((char unsigned-char) (if unsafe param `(##sys#foreign-char-argument ,param)))
+	     ((int unsigned-int short unsigned-short byte unsigned-byte int32 unsigned-int32)
+	      (if unsafe param `(##sys#foreign-fixnum-argument ,param)))
+	     ((float double number) (if unsafe param `(##sys#foreign-flonum-argument ,param)))
+	     ((blob scheme-pointer)
+	      (let ((tmp (gensym)))
+		`(let ((,tmp ,param))
 		   (if ,tmp
 		       ,(if unsafe
 			    tmp
 			    `(##sys#foreign-block-argument ,tmp) )
-		       '#f) ) ) ]
-	     [(nonnull-scheme-pointer nonnull-blob)
+		       '#f) ) ) )
+	     ((nonnull-scheme-pointer nonnull-blob)
 	      (if unsafe
 		  param
-		  `(##sys#foreign-block-argument ,param) ) ]
+		  `(##sys#foreign-block-argument ,param) ) )
 	     ((pointer-vector)
-	      (let ([tmp (gensym)])
-		`(let ([,tmp ,param])
+	      (let ((tmp (gensym)))
+		`(let ((,tmp ,param))
 		   (if ,tmp
 		       ,(if unsafe
 			    tmp
@@ -1033,96 +1083,95 @@
 	      (if unsafe
 		  param
 		  `(##sys#foreign-struct-wrapper-argument 'pointer-vector ,param) ) )
-	     [(u8vector u16vector s8vector s16vector u32vector s32vector f32vector f64vector)
-	      (let ([tmp (gensym)])
-		`(let ([,tmp ,param])
+	     ((u8vector u16vector s8vector s16vector u32vector s32vector f32vector f64vector)
+	      (let ((tmp (gensym)))
+		`(let ((,tmp ,param))
 		   (if ,tmp
 		       ,(if unsafe
 			    tmp
 			    `(##sys#foreign-struct-wrapper-argument ',t ,tmp) )
-		       '#f) ) ) ]
-	     [(nonnull-u8vector nonnull-u16vector nonnull-s8vector nonnull-s16vector nonnull-u32vector nonnull-s32vector 
+		       '#f) ) ) )
+	     ((nonnull-u8vector nonnull-u16vector nonnull-s8vector nonnull-s16vector nonnull-u32vector nonnull-s32vector 
 				nonnull-f32vector nonnull-f64vector)
 	      (if unsafe
 		  param
 		  `(##sys#foreign-struct-wrapper-argument 
 		    ',(##sys#slot (assq t tmap) 1)
-		    ,param) ) ]
-	     [(integer long size_t integer32)
-	      (if unsafe param `(##sys#foreign-integer-argument ,param))]
-	     [(integer64)
-	      (if unsafe param `(##sys#foreign-integer64-argument ,param))]
-	     [(unsigned-integer unsigned-integer32 unsigned-long)
+		    ,param) ) )
+	     ((integer long size_t integer32)
+	      (if unsafe param `(##sys#foreign-integer-argument ,param)))
+	     ((integer64)
+	      (if unsafe param `(##sys#foreign-integer64-argument ,param)))
+	     ((unsigned-integer unsigned-integer32 unsigned-long)
 	      (if unsafe
 		  param
-		  `(##sys#foreign-unsigned-integer-argument ,param) ) ]
-	     [(unsigned-integer64)
+		  `(##sys#foreign-unsigned-integer-argument ,param) ) )
+	     ((unsigned-integer64)
 	      (if unsafe
 		  param
-		  `(##sys#foreign-unsigned-integer64-argument ,param) ) ]
-	     [(c-pointer c-string-list c-string-list*)
-	      (let ([tmp (gensym)])
-		`(let ([,tmp ,param])
+		  `(##sys#foreign-unsigned-integer64-argument ,param) ) )
+	     ((c-pointer c-string-list c-string-list*)
+	      (let ((tmp (gensym)))
+		`(let ((,tmp ,param))
 		   (if ,tmp
 		       (##sys#foreign-pointer-argument ,tmp)
-		       '#f) ) ) ]
-	     [(nonnull-c-pointer)
-	      `(##sys#foreign-pointer-argument ,param) ]
-	     [(c-string c-string* unsigned-c-string unsigned-c-string*)
-	      (let ([tmp (gensym)])
-		`(let ([,tmp ,param])
+		       '#f) ) ) )
+	     ((nonnull-c-pointer)
+	      `(##sys#foreign-pointer-argument ,param) )
+	     ((c-string c-string* unsigned-c-string unsigned-c-string*)
+	      (let ((tmp (gensym)))
+		`(let ((,tmp ,param))
 		   (if ,tmp
 		       ,(if unsafe 
 			    `(##sys#make-c-string ,tmp)
 			    `(##sys#make-c-string (##sys#foreign-string-argument ,tmp)) )
-		       '#f) ) ) ]
-	     [(nonnull-c-string nonnull-c-string* nonnull-unsigned-c-string*)
+		       '#f) ) ) )
+	     ((nonnull-c-string nonnull-c-string* nonnull-unsigned-c-string*)
 	      (if unsafe 
 		  `(##sys#make-c-string ,param)
-		  `(##sys#make-c-string (##sys#foreign-string-argument ,param)) ) ]
-	     [(symbol)
+		  `(##sys#make-c-string (##sys#foreign-string-argument ,param)) ) )
+	     ((symbol)
 	      (if unsafe 
 		  `(##sys#make-c-string (##sys#symbol->string ,param))
-		  `(##sys#make-c-string (##sys#foreign-string-argument (##sys#symbol->string ,param))) ) ]
-	     [else
-	      (cond [(and (symbol? t) (##sys#hash-table-ref foreign-type-table t))
-		     => (lambda (t)
-			  (next (if (vector? t) (vector-ref t 0) t)) ) ]
-		    [(pair? t)
+		  `(##sys#make-c-string (##sys#foreign-string-argument (##sys#symbol->string ,param))) ) )
+	     (else
+	      (cond ((and (symbol? t) (lookup-foreign-type t))
+		     => (lambda (t) (next (vector-ref t 0)) ) )
+		    ((pair? t)
 		     (case (car t)
-		       [(ref pointer function c-pointer)
-			(let ([tmp (gensym)])
-			  `(let ([,tmp ,param])
+		       ((ref pointer function c-pointer)
+			(let ((tmp (gensym)))
+			  `(let ((,tmp ,param))
 			     (if ,tmp
 				 (##sys#foreign-pointer-argument ,tmp)
-				 '#f) ) )  ]
-		       [(instance instance-ref)
-			(let ([tmp (gensym)])
-			  `(let ([,tmp ,param])
+				 '#f) ) )  )
+		       ((instance instance-ref)
+			(let ((tmp (gensym)))
+			  `(let ((,tmp ,param))
 			     (if ,tmp
 				 (slot-ref ,param 'this)
-				 '#f) ) ) ]
-		       [(scheme-pointer)
-			(let ([tmp (gensym)])
-			  `(let ([,tmp ,param])
+				 '#f) ) ) )
+		       ((scheme-pointer)
+			(let ((tmp (gensym)))
+			  `(let ((,tmp ,param))
 			     (if ,tmp
 				 ,(if unsafe
 				      tmp
 				      `(##sys#foreign-block-argument ,tmp) )
-				 '#f) ) ) ]
-		       [(nonnull-scheme-pointer)
+				 '#f) ) ) )
+		       ((nonnull-scheme-pointer)
 			(if unsafe
 			    param
-			    `(##sys#foreign-block-argument ,param) ) ]
-		       [(nonnull-instance)
-			`(slot-ref ,param 'this) ]
-		       [(const) (repeat (cadr t))]
-		       [(enum)
-			(if unsafe param `(##sys#foreign-integer-argument ,param))]
-		       [(nonnull-pointer nonnull-c-pointer)
-			`(##sys#foreign-pointer-argument ,param) ]
-		       [else param] ) ]
-		    [else param] ) ] ) ) )
+			    `(##sys#foreign-block-argument ,param) ) )
+		       ((nonnull-instance)
+			`(slot-ref ,param 'this) )
+		       ((const) (repeat (cadr t)))
+		       ((enum)
+			(if unsafe param `(##sys#foreign-integer-argument ,param)))
+		       ((nonnull-pointer nonnull-c-pointer)
+			`(##sys#foreign-pointer-argument ,param) )
+		       (else param) ) )
+		    (else param) ) ) ) ) )
        (lambda ()
 	 (quit-compiling "foreign type `~S' refers to itself" type)) ) ) ) )
 
@@ -1130,27 +1179,26 @@
 ;;; Compute foreign-type conversions:
 
 (define (foreign-type-convert-result r t) ; Used only in compiler.scm
-  (or (and-let* ([(symbol? t)]
-		 [ft (##sys#hash-table-ref foreign-type-table t)] 
-		 [(vector? ft)] )
-	(list (vector-ref ft 2) r) )
+  (or (and-let* (((symbol? t))
+		 (ft (lookup-foreign-type t)) 
+		 (retconv (vector-ref ft 2)) )
+	(list retconv r) )
       r) )
 
 (define (foreign-type-convert-argument a t) ; Used only in compiler.scm
-  (or (and-let* ([(symbol? t)]
-		 [ft (##sys#hash-table-ref foreign-type-table t)] 
-		 [(vector? ft)] )
-	(list (vector-ref ft 1) a) )
+  (or (and-let* (((symbol? t))
+		 (ft (lookup-foreign-type t))
+		 (argconv (vector-ref ft 1)) )
+	(list argconv a) )
       a) )
 
 (define (final-foreign-type t0)		; Used only in compiler.scm
   (follow-without-loop
    t0
    (lambda (t next)
-     (cond [(and (symbol? t) (##sys#hash-table-ref foreign-type-table t))
-	    => (lambda (t2)
-		 (next (if (vector? t2) (vector-ref t2 0) t2)) ) ]
-	   [else t] ) )
+     (cond ((and (symbol? t) (lookup-foreign-type t))
+	    => (lambda (t2) (next (vector-ref t2 0)) ) )
+	   (else t) ) )
    (lambda () (quit-compiling "foreign type `~S' refers to itself" t0)) ) )
 
 
@@ -1173,15 +1221,14 @@
        ((float double number integer64 unsigned-integer64) 
 	(words->bytes 4) )		; possibly 8-byte aligned 64-bit double
        (else
-	(cond [(and (symbol? t) (##sys#hash-table-ref foreign-type-table t))
-	       => (lambda (t2)
-		    (next (if (vector? t2) (vector-ref t2 0) t2)) ) ]
-	      [(pair? t)
+	(cond ((and (symbol? t) (lookup-foreign-type t))
+	       => (lambda (t2) (next (vector-ref t2 0)) ) )
+	      ((pair? t)
 	       (case (car t)
-		 [(ref nonnull-pointer pointer c-pointer nonnull-c-pointer function instance instance-ref nonnull-instance) 
-		  (words->bytes 3) ]
-		 [else 0] ) ]
-	      [else 0] ) ) ) )
+		 ((ref nonnull-pointer pointer c-pointer nonnull-c-pointer function instance instance-ref nonnull-instance) 
+		  (words->bytes 3) )
+		 (else 0) ) )
+	      (else 0) ) ) ) )
    (lambda () (quit-compiling "foreign type `~S' refers to itself" type)) ) )
 
 (define (estimate-foreign-result-location-size type) ; Used only in compiler.scm
@@ -1200,16 +1247,15 @@
        ((double number integer64 unsigned-integer64)
 	(words->bytes 2) )
        (else
-	(cond [(and (symbol? t) (##sys#hash-table-ref foreign-type-table t))
-	       => (lambda (t2)
-		    (next (if (vector? t2) (vector-ref t2 0) t2)) ) ]
-	      [(pair? t)
+	(cond ((and (symbol? t) (lookup-foreign-type t))
+	       => (lambda (t2) (next (vector-ref t2 0)) ) )
+	      ((pair? t)
 	       (case (car t)
-		 [(ref nonnull-pointer pointer c-pointer nonnull-c-pointer function
+		 ((ref nonnull-pointer pointer c-pointer nonnull-c-pointer function
 		       scheme-pointer nonnull-scheme-pointer)
-		  (words->bytes 1)]
-		 [else (err t)] ) ]
-	      [else (err t)] ) ) ) )
+		  (words->bytes 1))
+		 (else (err t)) ) )
+	      (else (err t)) ) ) ) )
    (lambda () (quit-compiling "foreign type `~S' refers to itself" type)) ) )
 
 

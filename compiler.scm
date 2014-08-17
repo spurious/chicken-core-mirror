@@ -334,7 +334,6 @@
 
 (define-foreign-variable installation-home c-string "C_INSTALL_SHARE_HOME")
 
-(define-constant foreign-type-table-size 301)
 (define-constant initial-analysis-database-size 3001)
 (define-constant default-line-number-database-size 997)
 (define-constant inline-table-size 301)
@@ -399,10 +398,8 @@
 (define inline-substitutions-enabled #f)
 (define direct-call-ids '())
 (define first-analysis #t)
-(define foreign-type-table #f)
 (define foreign-variables '())
 (define foreign-lambda-stubs '())
-(define foreign-callback-stubs '())
 (define external-variables '())
 (define external-to-pointer '())
 (define location-pointer-map '())
@@ -432,9 +429,7 @@
   (if file-requirements
       (vector-fill! file-requirements '())
       (set! file-requirements (make-vector file-requirements-size '())) )
-  (if foreign-type-table
-      (vector-fill! foreign-type-table '())
-      (set! foreign-type-table (make-vector foreign-type-table-size '())) ) )
+  (clear-foreign-type-table!) )
 
 
 ;;; Compute general statistics from analysis database:
@@ -1135,7 +1130,7 @@
 			   (cond [(pair? conv)
 				  (let ([arg (gensym)]
 					[ret (gensym)] )
-				    (##sys#hash-table-set! foreign-type-table name (vector type arg ret))
+				    (register-foreign-type! name type arg ret)
 				    (mark-variable arg '##compiler#always-bound)
 				    (mark-variable ret '##compiler#always-bound)
 				    (hide-variable arg)
@@ -1148,7 +1143,7 @@
 					 ,(if (pair? (cdr conv)) (second conv) '##sys#values)) ) 
 				     e se dest ldest h ln) ) ]
 				 [else
-				  (##sys#hash-table-set! foreign-type-table name type)
+				  (register-foreign-type! name type)
 				  '(##core#undefined) ] ) ) )
 
 			((##core#define-external-variable)
@@ -1824,12 +1819,9 @@
 				     (list (make-node 'set! (list (first params)) (list r))
 					   (k (varnode t1)) ) ) ) ) ) )
 	((##core#foreign-callback-wrapper)
-	 (let ([id (gensym-f-id)]
-	       [lam (first subs)] )
-	   (set! foreign-callback-stubs
-	     (cons (apply make-foreign-callback-stub id params) foreign-callback-stubs) )
-	   ;; mark to avoid leaf-routine optimization
-	   (mark-variable id '##compiler#callback-lambda)
+	 (let ((id (gensym-f-id))
+	       (lam (first subs)) )
+	   (register-foreign-callback-stub! id params)
 	   (cps-lambda id (first (node-parameters lam)) (node-subexpressions lam) k) ) )
 	((##core#inline ##core#inline_allocate ##core#inline_ref ##core#inline_update ##core#inline_loc_ref 
 			##core#inline_loc_update)
@@ -1899,18 +1891,6 @@
 	       (every atomic? (node-subexpressions n)) ) ) ) )
   
   (walk node values) )
-
-
-;;; Foreign callback stub type:
-
-(define-record-type foreign-callback-stub
-  (make-foreign-callback-stub id name qualifiers return-type argument-types)
-  foreign-callback-stub?
-  (id foreign-callback-stub-id)		; symbol
-  (name foreign-callback-stub-name)	; string
-  (qualifiers foreign-callback-stub-qualifiers)	; string
-  (return-type foreign-callback-stub-return-type) ; type-specifier
-  (argument-types foreign-callback-stub-argument-types)) ; (type-specifier ...)
 
 
 ;;; Perform source-code analysis:
