@@ -149,7 +149,8 @@
 (define simplified-ops '())
 (define broken-constant-nodes '())
 
-(define (perform-high-level-optimizations node db)
+(define (perform-high-level-optimizations
+	 node db block-compilation may-inline inline-limit may-rewrite)
   (let ((removed-lets 0)
 	(removed-ifs 0)
 	(replaced-vars 0)
@@ -166,14 +167,15 @@
       (for-each (cut set-cdr! <> #f) gae))
 
     (define (simplify n)
-      (or (and-let* ([entry (##sys#hash-table-ref simplifications (node-class n))])
+      (or (and-let* ((entry (##sys#hash-table-ref
+			     simplifications (node-class n))))
 	    (any (lambda (s)
-		   (and-let* ([vars (second s)]
-			      [env (match-node n (first s) vars)] 
-			      [n2 (apply (third s) db
-					 (map (lambda (v) (cdr (assq v env))) vars) ) ] )
-		     (let* ([name (caar s)]
-			    [counter (assq name simplified-classes)] )
+		   (and-let* ((vars (second s))
+			      (env (match-node n (first s) vars)) 
+			      (n2 (apply (third s) db may-rewrite
+					 (map (lambda (v) (cdr (assq v env))) vars) ) ) )
+		     (let* ((name (caar s))
+			    (counter (assq name simplified-classes)) )
 		       (if counter
 			   (set-cdr! counter (add1 (cdr counter)))
 			   (set! simplified-classes (alist-cons name 1 simplified-classes)) )
@@ -379,14 +381,14 @@
 			    (lambda (vars argc rest)
 			      (let ((ifid (first lparams))
 				    (external (node? (variable-mark var '##compiler#inline-global))))
-				(cond ((and inline-locally 
+				(cond ((and may-inline 
 					    (test var 'inlinable)
 					    (not (test ifid 'inline-target)) ; inlinable procedure has changed
 					    (not (test ifid 'explicit-rest))
 					    (case (variable-mark var '##compiler#inline) 
 					      ((no) #f)
 					      (else 
-					       (or external (< (fourth lparams) inline-max-size)))))
+					       (or external (< (fourth lparams) inline-limit)))))
 				       (debugging 
 					'i
 					(if external
@@ -498,7 +500,7 @@
 		    (touch)
 		    (make-node '##core#undefined '() '()) )
 		   ((and (or (not (test var 'global))
-			     (not (variable-visible? var)))
+			     (not (variable-visible? var block-compilation)))
 			 (not (test var 'inline-transient))
 			 (not (test var 'references)) 
 			 (not (expression-has-side-effects? (first subs) db)) )
@@ -627,10 +629,11 @@
  ;; (<named-call> ...) -> (<primitive-call/inline> ...)
  `((##core#call d (##core#variable (a)) b . c)
    (a b c d)
-   ,(lambda (db a b c d)
+   ,(lambda (db may-rewrite a b c d)
       (let loop ((entries (or (##sys#hash-table-ref substitution-table a) '())))
 	(cond ((null? entries) #f)
-	      ((simplify-named-call db d a b (caar entries) (cdar entries) c)
+	      ((simplify-named-call db may-rewrite d a b
+				    (caar entries) (cdar entries) c)
 	       => (lambda (r)
 		    (let ((as (assq a simplified-ops)))
 		      (if as 
@@ -658,7 +661,7 @@
 		     body2
 		     rest) ) ) )
    (var0 var1 var2 op const1 const2 body1 body2 d1 d2 rest)
-   ,(lambda (db var0 var1 var2 op const1 const2 body1 body2 d1 d2 rest)
+   ,(lambda (db may-rewrite var0 var1 var2 op const1 const2 body1 body2 d1 d2 rest)
       (and (equal? op (eq-inline-operator))
 	   (immediate? const1)
 	   (immediate? const2)
@@ -685,7 +688,7 @@
 	    body
 	    (##core#switch (n) (##core#variable (var0)) . clauses) ) )
    (var op var0 const d body n clauses)
-   ,(lambda (db var op var0 const d body n clauses)
+   ,(lambda (db may-rewrite var op var0 const d body n clauses)
       (and (equal? op (eq-inline-operator))
 	   (immediate? const)
 	   (= 1 (length (db-get-list db var 'references)))
@@ -709,7 +712,7 @@
  `((let (var1) (##core#undefined ())
 	more)
    (var1 more)
-   ,(lambda (db var1 more)
+   ,(lambda (db may-rewrite var1 more)
       (let loop1 ((vars (list var1)) 
 		  (body more) )
 	(let ((c (node-class body))
@@ -759,7 +762,7 @@
  `((let (var1) (##core#variable (var2))
 	(##core#call p (##core#variable (var1)) . more) ) ; `p' was `#t', bombed also
    (var1 var2 p more)
-   ,(lambda (db var1 var2 p more)
+   ,(lambda (db may-rewrite var1 var2 p more)
       (and (= 1 (length (db-get-list db var1 'references)))
 	   (make-node
 	    '##core#call p
@@ -776,7 +779,7 @@
 	    x
 	    y) ) 
    (var op args d x y)
-   ,(lambda (db var op args d x y)
+   ,(lambda (db may-rewrite var op args d x y)
       (and (not (equal? op (eq-inline-operator)))
 	   (= 1 (length (db-get-list db var 'references)))
 	   (make-node
@@ -797,8 +800,8 @@
        (##core#call d2 (##core#variable (var)) y)
        (##core#call d3 (##core#variable (var)) z) )
    (d1 d2 d3 x y z var)
-   ,(lambda (db d1 d2 d3 x y z var)
-      (and inline-substitutions-enabled
+   ,(lambda (db may-rewrite d1 d2 d3 x y z var)
+      (and may-rewrite
 	   (make-node
 	    '##core#call d2
 	    (list (varnode var)
@@ -812,7 +815,7 @@
        y
        z)
    (d1 op x clist y z)
-   ,(lambda (db d1 op x clist y z)
+   ,(lambda (db may-rewrite d1 op x clist y z)
       (and-let* ([opa (assoc op (membership-test-operators))]
 		 [(proper-list? clist)]
 		 [(< (length clist) (membership-unfold-limit))] )
@@ -934,7 +937,8 @@
   (let ((old (or (##sys#hash-table-ref substitution-table name) '())))
     (##sys#hash-table-set! substitution-table name (append old (list class-and-args))) ) )
 
-(define (simplify-named-call db params name cont class classargs callargs)
+(define (simplify-named-call db may-rewrite params name cont
+			     class classargs callargs)
   (define (test sym prop) (db-get db sym prop))
   (define (defarg x)
     (cond ((symbol? x) (varnode x))
@@ -954,7 +958,7 @@
 			  (eq? '##core#variable (node-class arg2))
 			  (equal? (node-parameters arg1) (node-parameters arg2))
 			  (make-node '##core#call (list #t) (list cont (qnode #t))) ) ) )
-	      (and inline-substitutions-enabled
+	      (and may-rewrite
 		   (make-node
 		    '##core#call (list #t) 
 		    (list cont (make-node '##core#inline (list (second classargs)) callargs)) ) ) ) ) )
@@ -962,7 +966,7 @@
     ;; (<op> ...) -> (##core#inline <iop> ...)
     ((2) ; classargs = (<argc> <iop> <safe>)
      ;; - <safe> by be 'specialized (see rule #16 below)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (= (length callargs) (first classargs))
 	  (intrinsic? name)
 	  (or (third classargs) unsafe)
@@ -976,7 +980,7 @@
     ;; (<op> ...) -> <var>
     ((3) ; classargs = (<var> <argc>)
      ;; - <argc> may be #f
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (intrinsic? name)
 	  (or (not (second classargs)) (= (length callargs) (second classargs)))
 	  (fold-right
@@ -987,7 +991,7 @@
 
     ;; (<op> a b) -> (<primitiveop> a (quote <i>) b)
     ((4) ; classargs = (<primitiveop> <i>)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  unsafe
 	  (= 2 (length callargs))
 	  (intrinsic? name)
@@ -1001,7 +1005,7 @@
     ;; (<op> a) -> (##core#inline <iop> a (quote <x>))
     ((5) ; classargs = (<iop> <x> <numtype>)
      ;; - <numtype> may be #f
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (intrinsic? name)
 	  (= 1 (length callargs))
 	  (let ((ntype (third classargs)))
@@ -1015,7 +1019,7 @@
     ;; (<op> a) -> (##core#inline <iop1> (##core#inline <iop2> a))
     ((6) ; classargs = (<iop1> <iop2> <safe>)
       (and (or (third classargs) unsafe)
-	   inline-substitutions-enabled
+	   may-rewrite
 	   (= 1 (length callargs))
 	   (intrinsic? name)
 	   (make-node '##core#call (list #t)
@@ -1027,7 +1031,7 @@
     ;; (<op> ...) -> (##core#inline <iop> ... (quote <x>))
     ((7) ; classargs = (<argc> <iop> <x> <safe>)
      (and (or (fourth classargs) unsafe)
-	  inline-substitutions-enabled
+	  may-rewrite
 	  (= (length callargs) (first classargs))
 	  (intrinsic? name)
 	  (make-node '##core#call (list #t)
@@ -1038,32 +1042,32 @@
 
     ;; (<op> ...) -> <<call procedure <proc> with <classargs>, <cont> and <callargs> >>
     ((8) ; classargs = (<proc> ...)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (intrinsic? name)
 	  ((first classargs) db classargs cont callargs) ) )
 
     ;; (<op> <x1> ...) -> (##core#inline "C_and" (##core#inline <iop> <x1> <x2>) ...)
     ;; (<op> [<x>]) -> (quote #t)
     ((9) ; classargs = (<iop-fixnum> <iop-flonum> <fixnum-safe> <flonum-safe>)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (intrinsic? name)
 	  (if (< (length callargs) 2)
 	      (make-node '##core#call (list #t) (list cont (qnode #t)))
 	      (and (or (and unsafe (not (eq? number-type 'generic)))
 		       (and (eq? number-type 'fixnum) (third classargs))
 		       (and (eq? number-type 'flonum) (fourth classargs)) )
-		   (let* ([names (map (lambda (z) (gensym)) callargs)]
-			  [vars (map varnode names)] )
+		   (let* ((names (map (lambda (z) (gensym)) callargs))
+			  (vars (map varnode names)) )
 		     (fold-right
 		      (lambda (x n y) (make-node 'let (list n) (list x y)))
 		      (make-node
 		       '##core#call (list #t)
 		       (list 
 			cont
-			(let ([op (list
+			(let ((op (list
 				   (if (eq? number-type 'fixnum)
 				       (first classargs)
-				       (second classargs) ) ) ] )
+				       (second classargs) ) ) ) )
 			  (fold-boolean
 			   (lambda (x y) (make-node '##core#inline op (list x y))) 
 			   vars) ) ) )
@@ -1071,7 +1075,7 @@
 
     ;; (<op> a [b]) -> (<primitiveop> a (quote <i>) b)
     ((10) ; classargs = (<primitiveop> <i> <bvar> <safe>)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (or (fourth classargs) unsafe)
 	  (intrinsic? name)
 	  (let ((n (length callargs)))
@@ -1088,10 +1092,10 @@
     ;; (<op> ...) -> (<primitiveop> ...)
     ((11) ; classargs = (<argc> <primitiveop> <safe>)
      ;; <argc> may be #f.
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (or (third classargs) unsafe)
 	  (intrinsic? name)
-	  (let ([argc (first classargs)])
+	  (let ((argc (first classargs)))
 	    (and (or (not argc)
 		     (= (length callargs) (first classargs)) )
 		 (make-node '##core#call (list #t (second classargs))
@@ -1102,7 +1106,7 @@
     ;; (<op> a) -> a
     ;; (<op> ...) -> (<primitiveop> ...)
     ((12) ; classargs = (<primitiveop> <safe> <maxargc>)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (intrinsic? name)
 	  (or (second classargs) unsafe)
 	  (let ((n (length callargs)))
@@ -1115,7 +1119,7 @@
 
     ;; (<op> ...) -> ((##core#proc <primitiveop>) ...)
     ((13) ; classargs = (<primitiveop> <safe>)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (intrinsic? name)
 	  (or (second classargs) unsafe)
 	  (let ((pname (first classargs)))
@@ -1125,7 +1129,7 @@
 
     ;; (<op> <x> ...) -> (##core#inline <iop-safe>/<iop-unsafe> <x> ...)
     ((14) ; classargs = (<numtype> <argc> <iop-safe> <iop-unsafe>)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (= (second classargs) (length callargs))
 	  (intrinsic? name)
 	  (eq? number-type (first classargs))
@@ -1141,7 +1145,7 @@
     ;; (<op> <x>) -> (<primitiveop> <x>)   - if numtype1
     ;;             | <x>                   - if numtype2
     ((15) ; classargs = (<numtype1> <numtype2> <primitiveop> <safe>)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (= 1 (length callargs))
 	  (or unsafe (fourth classargs))
 	  (intrinsic? name)
@@ -1166,7 +1170,7 @@
 	   (safe (third classargs))
 	   (w (fourth classargs))
 	   (counted (and (pair? (cddddr classargs)) (fifth classargs))))
-       (and inline-substitutions-enabled
+       (and may-rewrite
 	    (or (not argc) (= rargc argc))
 	    (intrinsic? name)
 	    (or unsafe safe)
@@ -1178,14 +1182,14 @@
 		    (list (if (and counted (positive? rargc) (<= rargc 8))
 			      (conc (second classargs) rargc)
 			      (second classargs) )
-			  (cond [(eq? #t w) (add1 rargc)]
-				[(pair? w) (* rargc (car w))]
-				[else w] ) )
+			  (cond ((eq? #t w) (add1 rargc))
+				((pair? w) (* rargc (car w)))
+				(else w) ) )
 		    callargs) ) ) ) ) )
 
     ;; (<op> ...) -> (##core#inline <iop>/<unsafe-iop> ...)
     ((17) ; classargs = (<argc> <iop-safe> [<iop-unsafe>])
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (= (length callargs) (first classargs))
 	  (intrinsic? name)
 	  (make-node
@@ -1199,7 +1203,7 @@
 
     ;; (<op>) -> (quote <null>)
     ((18) ; classargs = (<null>)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (null? callargs)
 	  (intrinsic? name)
 	  (make-node '##core#call (list #t) (list cont (qnode (first classargs))) ) ) )
@@ -1210,20 +1214,20 @@
     ;; (<op> <x1> ...) -> (##core#inline <ufixop> <x1> (##core#inline <ufixop> ...)) [fixnum-mode + unsafe]
     ;; - Remove "<id>" from arguments.
     ((19) ; classargs = (<id> <fixop> <ufixop> <fixmode>)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (intrinsic? name)
-	  (let* ([id (first classargs)]
-		 [fixop (if unsafe (third classargs) (second classargs))]
-		 [callargs 
+	  (let* ((id (first classargs))
+		 (fixop (if unsafe (third classargs) (second classargs)))
+		 (callargs 
 		  (remove
 		   (lambda (x)
 		     (and (eq? 'quote (node-class x))
 			  (eq? id (first (node-parameters x))) ) ) 
-		   callargs) ] )
-	    (cond [(null? callargs) (make-node '##core#call (list #t) (list cont (qnode id)))]
-		  [(null? (cdr callargs))
-		   (make-node '##core#call (list #t) (list cont (first callargs))) ]
-		  [(or (fourth classargs) (eq? number-type 'fixnum))
+		   callargs) ) )
+	    (cond ((null? callargs) (make-node '##core#call (list #t) (list cont (qnode id))))
+		  ((null? (cdr callargs))
+		   (make-node '##core#call (list #t) (list cont (first callargs))) )
+		  ((or (fourth classargs) (eq? number-type 'fixnum))
 		   (make-node
 		    '##core#call (list #t)
 		    (list
@@ -1231,14 +1235,14 @@
 		     (fold-inner
 		      (lambda (x y)
 			(make-node '##core#inline (list fixop) (list x y)) )
-		      callargs) ) ) ]
-		  [else #f] ) ) ) )
+		      callargs) ) ) )
+		  (else #f) ) ) ) )
 
     ;; (<op> ...) -> (##core#inline <iop> <arg1> ... (quote <x>) <argN>)
     ((20) ; classargs = (<argc> <iop> <x> <safe>)
-     (let ([n (length callargs)])
+     (let ((n (length callargs)))
        (and (or (fourth classargs) unsafe)
-	    inline-substitutions-enabled
+	    may-rewrite
 	    (= n (first classargs))
 	    (intrinsic? name)
 	    (make-node
@@ -1246,7 +1250,7 @@
 	     (list cont
 		   (make-node 
 		    '##core#inline (list (second classargs))
-		    (let-values ([(head tail) (split-at callargs (sub1 n))])
+		    (let-values (((head tail) (split-at callargs (sub1 n))))
 		      (append head
 			      (list (qnode (third classargs)))
 			      tail) ) ) ) ) ) ) )
@@ -1257,22 +1261,22 @@
     ;; (<op> <x1> ...) -> (##core#inline <[u]fixop> <x1> (##core#inline <[u]fixop> ...)) [fixnum-mode (perhaps unsafe)]
     ;; - Remove "<id>" from arguments.
     ((21) ; classargs = (<id> <fixop> <ufixop> <genop> <words>)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (intrinsic? name)
-	  (let* ([id (first classargs)]
-		 [words (fifth classargs)]
-		 [genop (fourth classargs)]
-		 [fixop (if unsafe (third classargs) (second classargs))]
-		 [callargs 
+	  (let* ((id (first classargs))
+		 (words (fifth classargs))
+		 (genop (fourth classargs))
+		 (fixop (if unsafe (third classargs) (second classargs)))
+		 (callargs 
 		  (remove
 		   (lambda (x)
 		     (and (eq? 'quote (node-class x))
 			  (eq? id (first (node-parameters x))) ) ) 
-		   callargs) ] )
-	    (cond [(null? callargs) (make-node '##core#call (list #t) (list cont (qnode id)))]
-		  [(null? (cdr callargs))
-		   (make-node '##core#call (list #t) (list cont (first callargs))) ]
-		  [else
+		   callargs) ) )
+	    (cond ((null? callargs) (make-node '##core#call (list #t) (list cont (qnode id))))
+		  ((null? (cdr callargs))
+		   (make-node '##core#call (list #t) (list cont (first callargs))) )
+		  (else
 		   (make-node
 		    '##core#call (list #t)
 		    (list
@@ -1282,15 +1286,15 @@
 			(if (eq? number-type 'fixnum)
 			    (make-node '##core#inline (list fixop) (list x y))
 			    (make-node '##core#inline_allocate (list genop words) (list x y)) ) )
-		      callargs) ) ) ] ) ) ) )
+		      callargs) ) ) ) ) ) ) )
 
     ;; (<alloc-op> ...) -> (##core#inline_allocate (<aiop> <words>) ...)
     ;; (<alloc-op> ...) -> (##core#inline <fxop> ...) [fixnum mode]
     ((22) ; classargs = (<argc> <aiop> <safe> <words> <fxop>)
-     (let ([argc (first classargs)]
-	   [rargc (length callargs)]
-	   [w (fourth classargs)] )
-       (and inline-substitutions-enabled
+     (let ((argc (first classargs))
+	   (rargc (length callargs))
+	   (w (fourth classargs)) )
+       (and may-rewrite
 	    (= rargc argc)
 	    (intrinsic? name)
 	    (or (third classargs) unsafe)
@@ -1312,7 +1316,7 @@
     ;; - default args in classargs should be either symbol or (optionally) 
     ;;   quoted literal
     ((23) ; classargs = (<minargc> <primitiveop> <literal1>|<varable1> ...)
-     (and inline-substitutions-enabled
+     (and may-rewrite
 	  (intrinsic? name)
 	  (let ([argc (first classargs)])
 	    (and (>= (length callargs) (first classargs))

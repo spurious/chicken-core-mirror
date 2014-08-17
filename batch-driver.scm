@@ -557,17 +557,20 @@
 		 (when (or do-scrutinize enable-specialization)
 		   ;;XXX hardcoded database file name
 		   (unless (memq 'ignore-repository options)
-		     (unless (load-type-database "types.db")
+		     (unless (load-type-database "types.db"
+						 enable-specialization)
 		       (quit-compiling
 			"default type-database `types.db' not found")))
 		   (for-each 
 		    (lambda (fn)
-		      (or (load-type-database fn #f)
+		      (or (load-type-database fn enable-specialization #f)
 			  (quit-compiling "type-database `~a' not found" fn)))
 		    (collect-options 'types))
 		   (for-each
 		    (lambda (id)
-		      (load-type-database (make-pathname #f (symbol->string id) "types")))
+		      (load-type-database
+		       (make-pathname #f (symbol->string id) "types")
+		       enable-specialization))
 		    mreq)
 		   (begin-time)
 		   (set! first-analysis #f)
@@ -576,7 +579,9 @@
 		   (end-time "pre-analysis (scrutiny)")
 		   (begin-time)
 		   (debugging 'p "performing scrutiny")
-		   (scrutinize node0 db do-scrutinize enable-specialization)
+		   (scrutinize node0 db
+			       do-scrutinize enable-specialization
+			       strict-variable-types block-compilation)
 		   (end-time "scrutiny")
 		   (when enable-specialization
 		     (print-node "specialization" '|P| node0))
@@ -615,7 +620,7 @@
 		       ;; do this here, because we must make sure we have a db
 		       (when type-output-file
 			 (dribble "generating type file `~a' ..." type-output-file)
-			 (emit-type-file filename type-output-file db)))
+			 (emit-type-file filename type-output-file db block-compilation)))
 		     (set! first-analysis #f)
 		     (end-time "analysis")
 		     (print-db "analysis" '|4| db i)
@@ -630,7 +635,10 @@
 			    (receive (node2 progress-flag)
 				(if l/d
 				    (determine-loop-and-dispatch node2 db)
-				    (perform-high-level-optimizations node2 db))
+				    (perform-high-level-optimizations
+				     node2 db block-compilation
+				     inline-locally inline-max-size
+				     inline-substitutions-enabled))
 			      (end-time "optimization")
 			      (print-node "optimized-iteration" '|5| node2)
 			      (cond (progress-flag
@@ -671,7 +679,9 @@
 			    (when (and inline-output-file insert-timer-checks)
 			      (let ((f inline-output-file))
 				(dribble "generating global inline file `~a' ..." f)
-				(emit-global-inline-file filename f db) ) )
+				(emit-global-inline-file
+				 filename f db block-compilation
+				 inline-max-size) ) )
 			    (begin-time)
 			    ;; Closure conversion
 			    (set! node2 (perform-closure-conversion node2 db))

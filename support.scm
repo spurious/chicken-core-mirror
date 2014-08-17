@@ -828,12 +828,13 @@
     (make-node (car x) (cadr x) (map walk (cddr x)))))
 
 ;; Only used in batch-driver.scm
-(define (emit-global-inline-file source-file inline-file db)
+(define (emit-global-inline-file source-file inline-file db
+				 block-compilation inline-limit)
   (let ((lst '())
 	(out '()))
     (##sys#hash-table-for-each
      (lambda (sym plist)
-       (when (variable-visible? sym)
+       (when (variable-visible? sym block-compilation)
 	 (and-let* ((val (assq 'local-value plist))
 		    ((not (node? (variable-mark sym '##compiler#inline-global))))
 		    ((let ((val (assq 'value plist)))
@@ -846,7 +847,7 @@
 		       ((yes) #t)
 		       ((no) #f)
 		       (else 
-			(< (fourth lparams) inline-max-size) ) ) ) )
+			(< (fourth lparams) inline-limit) ) ) ) )
 	   (set! lst (cons sym lst))
 	   (set! out (cons (list sym (node->sexpr (cdr val))) out)))))
      db)
@@ -1328,7 +1329,7 @@
 
 ;;; Scan expression-node for free variables (that are not in env):
 
-(define (scan-free-variables node)
+(define (scan-free-variables node block-compilation)
   (let ((vars '())
 	(hvars '()))
 
@@ -1341,7 +1342,7 @@
 	   (let ((var (first params)))
 	     (unless (memq var e)
 	       (set! vars (lset-adjoin eq? vars var))
-	       (unless (variable-visible? var) 
+	       (unless (variable-visible? var block-compilation) 
 		 (set! hvars (lset-adjoin eq? hvars var))))))
 	  ((set!)
 	   (let ((var (first params)))
@@ -1584,7 +1585,7 @@
 (define (export-variable sym)		; Used only in compiler.scm
   (mark-variable sym '##compiler#visibility 'exported))
 
-(define (variable-visible? sym)
+(define (variable-visible? sym block-compilation)
   (let ((p (##sys#get sym '##compiler#visibility)))
     (case p
       ((hidden) #f)

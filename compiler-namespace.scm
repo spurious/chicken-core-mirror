@@ -26,10 +26,8 @@
 
 (private
  compiler
- block-compilation
  default-extended-bindings
  default-standard-bindings
- enable-specialization
  extended-bindings
  foldable-bindings
  foreign-callback-stubs
@@ -39,11 +37,8 @@
  foreign-callback-stub-qualifiers
  foreign-callback-stub-return-type
  foreign-type-table
- inline-locally
- inline-max-size
- inline-substitutions-enabled
+ around more options.
  internal-bindings
  number-type
  standard-bindings
- strict-variable-types
  unsafe) 

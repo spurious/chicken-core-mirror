@@ -287,7 +287,8 @@
      emit-closure-info emit-profile enable-inline-files explicit-use-flag
      first-analysis no-bound-checks enable-module-registration
      optimize-leaf-routines standalone-executable undefine-shadowed-macros
-     verbose-mode local-definitions
+     verbose-mode local-definitions enable-specialization block-compilation
+     inline-locally inline-substitutions-enabled strict-variable-types
 
      ;; These are set by the (batch) driver, and read by the (c) backend
      disable-stack-overflow-checking emit-trace-info external-protos-first
@@ -295,7 +296,7 @@
      no-global-procedure-checks no-procedure-checks
 
      ;; Other, non-boolean, flags set by (batch) driver
-     profiled-procedures import-libraries
+     profiled-procedures import-libraries inline-max-size
 
      ;; non-booleans set by the (batch) driver, and read by the (c) backend
      target-heap-size target-stack-size unit-name used-units
@@ -2046,7 +2047,7 @@
 		  (eq? var (first (node-parameters val))) ) )
 	    ((or (memq var env)
 		 (variable-mark var '##compiler#constant)
-		 (not (variable-visible? var)))
+		 (not (variable-visible? var block-compilation)))
 	     (let ((props (db-get-all db var 'unknown 'value))
 		   (home (db-get db var 'home)) )
 	       (unless (assq 'unknown props)
@@ -2137,7 +2138,7 @@
 		    global
 		    (null? references)
 		    (not (variable-mark sym '##compiler#unused))
-		    (not (variable-visible? sym))
+		    (not (variable-visible? sym block-compilation))
 		    (not (variable-mark sym '##compiler#constant)) )
 	   (##sys#notice 
 	    (sprintf "global variable `~S' is only locally visible and never used"
@@ -2157,7 +2158,8 @@
 			     (or (not (second valparams))
 				 (every 
 				  (lambda (v) (db-get db v 'global))
-				  (nth-value 0 (scan-free-variables value)) ) ) )
+				  (nth-value 0 (scan-free-variables
+						value block-compilation)) ) ) )
 		    (if (and (= 1 nreferences) (= 1 ncall-sites))
 			(quick-put! plist 'contractable #t)
 			(quick-put! plist 'inlinable #t) ) ) ) )
@@ -2165,7 +2167,8 @@
 		;; Make 'inlinable, if it is declared local and has a value
 		(let ((valparams (node-parameters local-value)))
 		  (when (eq? '##core#lambda (node-class local-value))
-		    (let-values (((vars hvars) (scan-free-variables local-value)))
+		    (let-values (((vars hvars) (scan-free-variables
+						local-value block-compilation)))
 		      (when (and (db-get db sym 'global)
 				 (pair? hvars))
 			(quick-put! plist 'hidden-refs #t))
@@ -2261,7 +2264,8 @@
 				   (= 1 (length nrefs))
 				   (not assigned)
 				   (not (db-get db name 'assigned)) 
-				   (or (not (variable-visible? name))
+				   (or (not (variable-visible?
+					     name block-compilation))
 				       (not (db-get db name 'global))) ) ))
 		 (quick-put! plist 'replacable name) 
 		 (db-put! db name 'replacing #t) ) ) ) )
@@ -2622,7 +2626,7 @@
 		       (variable-mark var '##compiler#always-bound)
 		       (intrinsic? var))]
 	     [blockvar (and (db-get db var 'assigned)
-			    (not (variable-visible? var)))])
+			    (not (variable-visible? var block-compilation)))])
 	(when blockvar (set! fastrefs (add1 fastrefs)))
 	(make-node
 	 '##core#global
@@ -2771,18 +2775,19 @@
 		    (walk (second subs) e e-count here boxes) ) ) ) )
 
 	  ((set!)
-	   (let ([var (first params)]
-		 [val (first subs)] )
+	   (let ((var (first params))
+		 (val (first subs)) )
 	     (cond ((posq var e)
 		    => (lambda (i)
                          (make-node '##core#setlocal
                                     (list (fx- e-count (fx+ i 1)))
                                     (list (walk val e e-count here boxes)) ) ) )
 		   (else
-		    (let* ([cval (node-class val)]
-			   [blockvar (not (variable-visible? var))]
-			   [immf (or (and (eq? cval 'quote) (immediate? (first (node-parameters val))))
-				     (eq? '##core#undefined cval) ) ] )
+		    (let* ((cval (node-class val))
+			   (blockvar (not (variable-visible?
+					   var block-compilation)))
+			   (immf (or (and (eq? cval 'quote) (immediate? (first (node-parameters val))))
+				     (eq? '##core#undefined cval) ) ) )
 		      (when blockvar (set! fastsets (add1 fastsets)))
 		      (make-node
 		       (if immf '##core#setglobal_i '##core#setglobal)
@@ -2794,7 +2799,7 @@
 		       (list (walk (car subs) e e-count here boxes)) ) ) ) ) ) )
 
 	  ((##core#call) 
-	   (let ([len (length (cdr subs))])
+	   (let ((len (length (cdr subs))))
 	     (set! signatures (lset-adjoin = signatures len)) 
 	     (when (and (>= (length params) 3) (eq? here (third params)))
 	       (set! looping (add1 looping)) )
