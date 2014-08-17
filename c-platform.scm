@@ -101,7 +101,7 @@
     emit-external-prototypes-first release local inline-global
     analyze-only dynamic 
     scrutinize 				; OBSOLETE
-    no-argc-checks no-procedure-checks
+    no-argc-checks no-procedure-checks no-parentheses-synonyms
     no-procedure-checks-for-toplevel-bindings module
     no-bound-checks no-procedure-checks-for-usual-bindings no-compiler-syntax
     no-parentheses-synonyms no-symbol-escape r5rs-syntax emit-all-import-libraries
@@ -112,7 +112,6 @@
   '(debug 
     output-file include-path heap-size stack-size unit uses keyword-style require-extension 
     inline-limit profile-name 
-    parenthesis-synonyms
     prelude postlude prologue epilogue nursery extend feature no-feature types
     emit-import-library emit-inline-file static-extension consult-inline-file
     emit-type-file

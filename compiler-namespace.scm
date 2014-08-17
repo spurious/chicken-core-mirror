@@ -44,7 +44,6 @@
  inline-substitutions-enabled
  internal-bindings
  number-type
- parenthesis-synonyms
  profile-info-vector-name
  profile-lambda-list
  standard-bindings

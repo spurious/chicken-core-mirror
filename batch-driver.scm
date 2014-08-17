@@ -288,9 +288,9 @@
 	      [(string=? "suffix" val) (keyword-style #:suffix)]
 	      [else (quit-compiling
 		     "invalid argument to `-keyword-style' option")] ) ) )
-    (when (memq 'no-parenthesis-synonyms options)
-      (dribble "Disabled support for parenthesis synonyms")
-      (parenthesis-synonyms #f) )
+    (when (memq 'no-parentheses-synonyms options)
+      (dribble "Disabled support for parentheses synonyms")
+      (parentheses-synonyms #f) )
     (when (memq 'no-symbol-escape options) 
       (dribble "Disabled support for escaped symbols")
       (symbol-escape #f) )
