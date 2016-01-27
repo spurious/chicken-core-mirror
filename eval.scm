@@ -1288,14 +1288,13 @@
 ;;   - a requirement type (e.g. 'dynamic) or #f if provided statically
 ;;
 (define (##sys#expand-require lib #!optional (static-units '()))
-  (let ((id (library-id lib))
-	(compiling? (feature? #:compiling)))
+  (let loop ((id (library-id lib)))
     (cond
       ((assq id core-chicken-modules) =>
-       (lambda (mod)
-	 (##sys#expand-require (cdr mod) static-units)))
+       (lambda (mod) (loop (cdr mod))))
       ((or (memq id builtin-features)
-	   (and compiling? (memq id builtin-features/compiled)))
+	   (and (feature? #:compiling)
+		(memq id builtin-features/compiled)))
        (values '(##core#undefined) id #f))
       ((memq id static-units)
        (values '(##core#undefined) id #f))
@@ -1303,7 +1302,7 @@
        (values '(##core#undefined) id #f))
       ((memq id core-library-units)
        (values
-	(if compiling?
+	(if (feature? #:compiling)
 	    `(##core#declare (uses ,id))
 	    `(##sys#load-library (##core#quote ,id) #f))
 	id #f))
