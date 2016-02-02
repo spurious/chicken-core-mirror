@@ -27,7 +27,7 @@
 
 (declare
   (unit library)
-  (uses units build-version)
+  (uses build-version)
   (disable-interrupts)
   (hide ##sys#dynamic-unwind
 	##sys#vector-resize ##sys#default-parameter-vector 
@@ -162,6 +162,7 @@ EOF
 (define-constant default-parameter-vector-size 16)
 (define maximal-string-length (foreign-value "C_HEADER_SIZE_MASK" unsigned-long))
 
+(provide* library) ; TODO remove after snapshot release
 
 ;;; System routines:
 
