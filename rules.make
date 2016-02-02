@@ -37,7 +37,7 @@ SETUP_API_OBJECTS_1 = setup-api setup-download
 
 LIBCHICKEN_SCHEME_OBJECTS_1 = \
        library eval read-syntax repl data-structures ports files extras lolevel utils \
-       tcp srfi-4 continuation $(POSIXFILE) units internal irregex scheduler build-version \
+       tcp srfi-4 continuation $(POSIXFILE) internal irregex scheduler build-version \
        debugger-client profiler stub expand modules chicken-syntax chicken-ffi-syntax
 LIBCHICKEN_OBJECTS_1 = $(LIBCHICKEN_SCHEME_OBJECTS_1) runtime
 LIBCHICKEN_SHARED_OBJECTS = $(LIBCHICKEN_OBJECTS_1:=$(O))
@@ -814,8 +814,6 @@ profiler.c: $(SRCDIR)profiler.scm $(SRCDIR)common-declarations.scm
 stub.c: $(SRCDIR)stub.scm $(SRCDIR)common-declarations.scm
 	$(bootstrap-lib) 
 debugger-client.c: $(SRCDIR)debugger-client.scm $(SRCDIR)common-declarations.scm dbg-stub.c
-	$(bootstrap-lib)
-units.c: $(SRCDIR)units.scm $(SRCDIR)common-declarations.scm
 	$(bootstrap-lib)
 build-version.c: $(SRCDIR)build-version.scm $(SRCDIR)buildversion buildbranch buildid buildtag.h
 	$(bootstrap-lib)
