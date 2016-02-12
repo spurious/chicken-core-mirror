@@ -269,7 +269,7 @@
 
 (declare
  (unit compiler)
- (uses eval extras data-structures scrutinizer support))
+ (uses eval extras data-structures scrutinizer support user-pass))
 
 (module chicken.compiler.core
     (analyze-expression canonicalize-expression compute-database-statistics
@@ -321,6 +321,7 @@
 (import chicken scheme
 	chicken.compiler.scrutinizer
 	chicken.compiler.support
+	chicken.compiler.user-pass
 	chicken.data-structures
 	chicken.eval
 	chicken.expand

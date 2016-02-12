@@ -37,7 +37,7 @@
      bytes->words words->bytes
      check-and-open-input-file close-checked-input-file fold-inner
      constant? collapsable-literal? immediate? basic-literal?
-     canonicalize-begin-body string->expr llist-length llist-match?
+     canonicalize-begin-body llist-length llist-match?
      expand-profile-lambda reset-profile-info-vector-name!
      profiling-prelude-exps db-get db-get-all db-put! collect! db-get-list
      get-line get-line-2 display-line-number-database
@@ -64,7 +64,7 @@
      clear-real-name-table! get-real-name set-real-name!
      real-name real-name2 display-real-name-table
      source-info->string source-info->line call-info constant-form-eval
-     dump-nodes read-info-hook read/source-info big-fixnum?
+     dump-nodes big-fixnum?
      hide-variable export-variable variable-hidden? variable-visible?
      mark-variable variable-mark intrinsic? predicate? foldable?
      load-identifier-database
@@ -344,29 +344,6 @@
 	   (loop (cdr xs)) )
 	  (else `(let ((,(gensym 't) ,(car xs)))
 		   ,(loop (cdr xs))) ) ) ) )
-
-;; Only used in batch-driver: move it there?
-(define string->expr
-  (let ([exn? (condition-predicate 'exn)]
-	[exn-msg (condition-property-accessor 'exn 'message)] )
-    (lambda (str)
-      (handle-exceptions ex
-	  (quit-compiling "cannot parse expression: ~s [~a]~%" 
-			  str
-			  (if (exn? ex) 
-			      (exn-msg ex)
-			      (->string ex) ) ) 
-	(let ((xs (with-input-from-string
-		      str
-		    (lambda ()
-		      (let loop ((lst '()))
-			(let ((x (read)))
-			  (if (eof-object? x)
-			      (apply values (reverse lst))
-			      (loop (cons x lst)))))))))
-	  (cond [(null? xs) '(##core#undefined)]
-		[(null? (cdr xs)) (car xs)]
-		[else `(begin ,@xs)] ) ) ) ) ) )
 
 ;; Only used in optimizer; move it there?  But it's a C function call, so
 ;; it may be better in c-platform

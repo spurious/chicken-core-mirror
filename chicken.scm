@@ -30,7 +30,7 @@
 	srfi-4 data-structures support
 	compiler optimizer lfa2 compiler-syntax scrutinizer
 	;; TODO: These three need to be made configurable somehow
-	batch-driver c-platform c-backend))
+	batch-driver c-platform c-backend user-pass))
 
 (module chicken.compiler.chicken ()
 
@@ -38,6 +38,7 @@
 	chicken.compiler.batch-driver
 	chicken.compiler.c-platform
 	chicken.compiler.support
+	chicken.compiler.user-pass
 	chicken.data-structures)
 
 (include "tweaks")

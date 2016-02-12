@@ -32,13 +32,10 @@
   (uses extras data-structures files
 	support compiler-syntax compiler optimizer
 	;; TODO: Backend should be configurable
-	scrutinizer lfa2 c-platform c-backend) )
+	scrutinizer lfa2 c-platform c-backend user-pass))
 
 (module chicken.compiler.batch-driver
-    (compile-source-file
-
-     user-options-pass user-read-pass user-preprocessor-pass user-pass
-     user-post-analysis-pass)
+    (compile-source-file)
 
 (import chicken scheme
 	chicken.data-structures
@@ -54,18 +51,13 @@
 	chicken.compiler.scrutinizer
 	chicken.compiler.lfa2
 	chicken.compiler.c-platform
-	chicken.compiler.c-backend)
+	chicken.compiler.c-backend
+	chicken.compiler.user-pass)
 
 (include "tweaks")
 (include "mini-srfi-1.scm")
 
 (define-constant funny-message-timeout 60000)
-
-(define user-options-pass (make-parameter #f))
-(define user-read-pass (make-parameter #f))
-(define user-preprocessor-pass (make-parameter #f))
-(define user-pass (make-parameter #f))
-(define user-post-analysis-pass (make-parameter #f))
 
 ;;; Emit collected information from various statistics about the program
 
@@ -277,6 +269,18 @@
 		  ((#\k #\K) (* (string->number (substring str 0 len1)) 1024))
 		  (else (string->number str)) ) )
 	    (quit-compiling "invalid numeric argument ~S" str) ) ) )
+
+    (define parse-expression
+      (let ((exn?    (condition-predicate 'exn))
+	    (exn-msg (condition-property-accessor 'exn 'message)))
+	(lambda (str)
+	  (handle-exceptions ex
+	    (quit-compiling "cannot parse expression: ~s [~a]~%"
+			    str
+			    (if (exn? ex)
+				(exn-msg ex)
+				(->string ex)))
+	    (string->expression str)))))
 
     (define (collect-options opt)
       (let loop ([opts options])
@@ -543,12 +547,12 @@
 		      (dribble "User read pass...")
 		      (set! forms (proc prelude files postlude)) ]
 		     [else
-		      (do ([files files (cdr files)])
+		      (do ((files files (cdr files)))
 			  ((null? files)
 			   (set! forms
-			     (append (map string->expr prelude)
+			     (append (map parse-expression prelude)
 				     (reverse forms)
-				     (map string->expr postlude) ) ) )
+				     (map parse-expression postlude))))
 			(let* ((f (car files))
 			       (in (check-and-open-input-file f)) )
 			  (fluid-let ((##sys#current-source-filename f))

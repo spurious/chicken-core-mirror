@@ -269,6 +269,7 @@ DYNAMIC_CHICKEN_IMPORT_LIBRARIES = bitwise flonum format gc io keyword \
 DYNAMIC_CHICKEN_UNIT_IMPORT_LIBRARIES = continuation data-structures \
 	eval expand files internal irregex lolevel ports read-syntax \
 	repl tcp utils
+DYNAMIC_CHICKEN_COMPILER_IMPORT_LIBRARIES = user-pass
 
 # targets
 
@@ -284,7 +285,8 @@ CHICKEN_DEBUGGER_PROGRAM ?= $(PROGRAM_PREFIX)feathers$(PROGRAM_SUFFIX)$(SCRIPT_E
 IMPORT_LIBRARIES = $(DYNAMIC_IMPORT_LIBRARIES) \
 		   $(PRIMITIVE_IMPORT_LIBRARIES) \
 		   $(foreach lib,$(DYNAMIC_CHICKEN_IMPORT_LIBRARIES),chicken.$(lib)) \
-		   $(foreach lib,$(DYNAMIC_CHICKEN_UNIT_IMPORT_LIBRARIES),chicken.$(lib))
+		   $(foreach lib,$(DYNAMIC_CHICKEN_UNIT_IMPORT_LIBRARIES),chicken.$(lib)) \
+		   $(foreach lib,$(DYNAMIC_CHICKEN_COMPILER_IMPORT_LIBRARIES),chicken.compiler.$(lib))
 
 ifdef STATICBUILD
 CHICKEN_STATIC_EXECUTABLE = $(CHICKEN_PROGRAM)$(EXE)
