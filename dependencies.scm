@@ -25,7 +25,7 @@
   '(chicken csc csi chicken-install chicken-uninstall
             chicken-status chicken-profile))
 
-(define c-files '(dbg-stub runtime'))
+(define c-files '(dbg-stub runtime))
 
 (define scheme-files
   '(banner
@@ -133,7 +133,7 @@
     chicken.repl
     chicken.tcp))
 
-(define resource-files ...)
+(define resource-files '())
 
 (define toplevel-files
   (append '(libchicken.a libchicken.so)
@@ -151,8 +151,6 @@
 
 ;;XXX distfiles
 
-;;XXX all .c files depend on chicken.h + chicken-config.h
-
 ;;XXX differentiate between static and nonstatic objects
 
 ;;XXX libs: libchicken.a .so
@@ -161,11 +159,11 @@
 ;;XXX relinking
 ;;XXX cygwin specifics
 
-(depends libchicken.a 
+(depends 'libchicken.a 
   (map static-o-file libchicken-objects))
 
-(depends libchicken.so
-  (map o-file libchicken-objects)
+(depends 'libchicken.so
+  (map o-file libchicken-objects))
     
 (for-each
   (lambda (prg) 
@@ -188,10 +186,18 @@
 
 (depends 'feathers 'feathers.in)
 
+(for-each
+  (lambda (f)
+    (depends (o-file f) 'chicken.h 'chicken-config.h))
+  (append programs libchicken-objects compiler-objects))
+
+;;XXX extra-dependencies (mostly .scm include files)
+
 
 ;; build commands
 
-(
+;;XXX libchicken, compiler, program, with differing options
+;;XXX c-compilation commands for objs
 
 
 ;; name mapping
@@ -204,14 +210,14 @@
     (libchicken.so (lib #(PROGRAM_PREFIX) chicken 
                         #(PROGRAM_SUFFIX) 
                         ,(if WINDOWS '.dll '(#(DYLIB)))))
-    (chicken (#(PROGRAM_PREFIX) chicken #(PROGRAM_SUFFIX) ,EXE))
-    (csc (#(PROGRAM_PREFIX) csc #(PROGRAM_SUFFIX) ,EXE))
-    (csi (#(PROGRAM_PREFIX) csi #(PROGRAM_SUFFIX) ,EXE))
-    (chicken-profile (#(PROGRAM_PREFIX) chicken-profile #(PROGRAM_SUFFIX) ,EXE))
-    (chicken-status (#(PROGRAM_PREFIX) chicken-status #(PROGRAM_SUFFIX) ,EXE))
-    (chicken-install (#(PROGRAM_PREFIX) chicken-install #(PROGRAM_SUFFIX) ,EXE))
-    (chicken-uninstall (#(PROGRAM_PREFIX) chicken-uninstall #(PROGRAM_SUFFIX) ,EXE))
-    (feathers (#(PROGRAM_PREFIX) feathers #(PROGRAM_SUFFIX) ,EXE))
+    (chicken (#(PROGRAM_PREFIX) chicken #(PROGRAM_SUFFIX) #(EXE)))
+    (csc (#(PROGRAM_PREFIX) csc #(PROGRAM_SUFFIX) #(EXE)))
+    (csi (#(PROGRAM_PREFIX) csi #(PROGRAM_SUFFIX) #(EXE)))
+    (chicken-profile (#(PROGRAM_PREFIX) chicken-profile #(PROGRAM_SUFFIX) #(EXE)))
+    (chicken-status (#(PROGRAM_PREFIX) chicken-status #(PROGRAM_SUFFIX) #(EXE)))
+    (chicken-install (#(PROGRAM_PREFIX) chicken-install #(PROGRAM_SUFFIX) #(EXE)))
+    (chicken-uninstall (#(PROGRAM_PREFIX) chicken-uninstall #(PROGRAM_SUFFIX) #(EXE)))
+    (feathers (#(PROGRAM_PREFIX) feathers #(PROGRAM_SUFFIX) #(EXE)))
     (feathers.in (#(SRCDIR) / feathers.in))
     ,@(map (lambda (f) (list f `(#(SRCDIR) / ,f)))
         (append (map c-file c-files) 
