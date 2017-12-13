@@ -24,6 +24,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 
+set -e
+
 SRCDIR=`dirname $0`
 PLATFORM=
 CHICKEN=chicken
