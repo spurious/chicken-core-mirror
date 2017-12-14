@@ -135,10 +135,10 @@
 
 (define resource-files '())
 
-(define toplevel-files
-  (append '(libchicken.a libchicken.so)
-          '(feathers)
-          programs))
+(define toplevel-targets
+  (append '(libchicken.a libchicken.so feathers)
+          programs
+          (so-file (import-library import-libraries))))
 
 ;;XXX manpages for programs (mangled) + feathers
 
@@ -151,54 +151,83 @@
 
 ;;XXX distfiles
 
-;;XXX differentiate between static and nonstatic objects
-
-;;XXX libs: libchicken.a .so
-
 ;;XXX USES_SONAME
 ;;XXX relinking
 ;;XXX cygwin specifics
 
-(depends 'libchicken.a 
-  (map static-o-file libchicken-objects))
+(depends libchicken.a 
+  ,(static-o-file libchicken-objects))
 
-(depends 'libchicken.so
-  (map o-file libchicken-objects))
+(depends libchicken.so
+  ,(o-file libchicken-objects))
     
-(for-each
-  (lambda (prg) 
-    (depends prg (o-file prg) 'primary-libchicken))
-  programs)
+(depends ,programs ,(o-file prg) primary-libchicken)
 
-(for-each 
-  (lambda (f)
-    (depends (o-file f) (c-file f) headers))
-  (append '(runtime) libchicken-objects programs
+(for-each
+  (lambda (p)
+    (depends ,(o-file f) ,(c-file f) ,@headers))
+  (append '(runtime) 
+          libchicken-objects
+          programs
           compiler-objects
-          (map (cut symbol-append <> '.import)
-            import-libraries)))
+          (import-library import-libraries)))
 
 (for-each
-  (lambda (f) (depends (c-file f) (scm-file f)))
-  (append compiler-objects libchicken-objects programs
-          (map (cut symbol-append <> '.import)
-            import-libraries)))
+  (lambda (f) (depends ,(c-file f) ,(scm-file f)))
+  (append compiler-objects
+          libchicken-objects
+          programs
+          (import-library import-libraries)))
 
-(depends 'feathers 'feathers.in)
+(depends feathers feathers.in)
 
-(for-each
-  (lambda (f)
-    (depends (o-file f) 'chicken.h 'chicken-config.h))
-  (append programs libchicken-objects compiler-objects))
+(depends chicken (o-file compiler-objects))
 
 ;;XXX extra-dependencies (mostly .scm include files)
 
+;;XXX windows implib (.dll.a)
 
 ;; build commands
 
-;;XXX libchicken, compiler, program, with differing options
-;;XXX c-compilation commands for objs
+;;XXX compiler, with differing options
 
+(ld libchicken.so
+  (map o-file libchicken-objects))
+
+(static-ld libchicken.a
+  (map static-o-file libchicken-objects))
+
+;;XXX primary-libchicken
+
+(for-each
+  (lambda (p)
+    (ld p (list (o-file p) primary-libchicken)))
+  programs)
+
+(for-each
+  (lambda (f)
+    (cc f)
+    (cc f (static-o-file f)))
+  (append programs
+          libchicken-objects
+          compiler-objects))
+
+(for-each chicken
+  (append programs
+          (import-library import-libraries)
+          libchicken-objects))
+
+
+;; options
+
+(set! default-cc-options 
+  '("-DHAVE_CONFIG_H" "-I."))
+
+(set! default-chicken-options
+  '("-optimize-level" "2" "-include-path" "." 
+                      "-include-path" #(SRCDIR))
+                      "-inline" "-ignore-repository"
+                      "-feature" "chicken-bootstrap"))
 
 ;; name mapping
 

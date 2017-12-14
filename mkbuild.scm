@@ -1,7 +1,9 @@
 ;;;; build-script generator
 
 (import (chicken) (chicken data-structures)
-        (chicken plist))
+        (chicken plist) (chicken sort)
+        (chicken pretty-print) (chicken format)
+        (chicken port))
 
 
 (include "mini-srfi-1.scm")
@@ -10,7 +12,18 @@
 ;; utilities
 
 (define (join . args)
-  (string-intersperse (map ->string (flatten args))))
+  (string-intersperse
+    (map (lambda (part)
+           (if (vector? part)
+               (var part)
+               (->string part)))
+      (flatten args))))
+
+(define (var x)
+  (let ((x (->string (vector ref x 0))))
+    (if WINDOWS
+        (string-append "%" x "%")
+        (string-append "${" x "}"))))
 
 
 ;; configuration
@@ -34,60 +47,121 @@
 
 (define c-file (extension '.c))
 (define o-file (extension '.o))
+(define so-file (extension '.so))
 (define scm-file (extension '.scm))
-(define static-o-file (extension'-static.o))
+(define static-o-file (extension '-static.o))
+(define import-library (extension '.import))
+
+
+;;; options
+
+(define default-cc-options '())
+(define default-chicken-options '())
+(define default-ld-options '())
+
+(define (add-options t opts prop defaults)
+  (for-each
+    (lambda (t)
+      (put! t prop (append (get t prop defaults) opts)))
+    (if (list? t) t (list t))))
+
+(define-syntax cc-options
+  (syntax-rules ()
+    ((_ t opts ...)
+     (add-options `t `(opts ...) 'cc-options 
+                  default-cc-options))))
+
+(define-syntax chicken-options
+  (syntax-rules ()
+    ((_ t opts ...)
+     (add-options `t `(opts ...) 'chicken-options
+                  default-chicken-options))))
+
+(define-syntax ld-options
+  (syntax-rules ()
+    ((_ t opts ...)
+     (add-options `t `(opts ...) 'ld-options
+                  default-ld-options))))
 
 
 ;;; Build commands
 
 (define (build t proc)
-  (when (get t 'command)
-    (error "multiple commands assigned" t))
-  (put! t 'command proc))
+  (for-each
+    (lambda (t)
+      (when (get t 'command)
+        (error "multiple commands assigned" t))
+      (put! t 'command proc))
+    (if (list? t) t (list t))))
 
-(define (cc cf #!key (out (o-file cf)) (options '()))
-  (build outf 
+(define (cc f #!optional (outf (o-file f)))
+  (build outf
          (lambda ()
-           (let ((cf (c-file cf)))
+           (let ((cf (c-file f))
+                 (opts (get f 'cc-options
+                            default-cc-options)))
              (if WINDOWS
-                 (printf "%CC% ~a -o ~a -I. ~a" 
+                 (printf "%CC% ~a -o ~a ~a" 
                          (real-name cf)
                          (real-name outf)
-                         (join options))
-                 (printf "${CC} ~a -o ~a -I. ~a"
+                         (join opts))
+                 (printf "${CC} ~a -o ~a ~a"
                          (real-name cf)
                          (real-name outf)
-                         (join options)))))))
+                         (join opts)))))))
 
-(define (csc cf #!key (out (c-file cf)) (options '()))
+(define (chicken f #!optional (outf (c-file f)))
   (build outf 
          (lambda ()
-           (if WINDOWS
-               (printf "%CHICKEN% ~a -optimize-level 2 -include-path . -include-path %SRCDIR% -inline -ignore-repository -feature chicken-bootstrap -output-file ~a -I. ~a" 
-                       (real-name cf)
-                       (real-name outf)
-                       (join options))
-               (printf "${CHICKEN} ~a -optimize-level 2 -include-path . -include-path ${SRCDIR} -inline -ignore-repository -feature chicken-bootstrap-output-file ~a -I. ~a"
-                       (real-name cf)
-                       (real-name outf)
-                       (join options))))))
+           (let ((opts (get f 'chicken-options 
+                            default-chicken-options)))
+             (if WINDOWS
+                 (printf "%CHICKEN% ~a -output-file ~a ~a" 
+                         (real-name (scm-file f))
+                         (real-name outf)
+                         (join opts))
+                 (printf "${CHICKEN} ~a -output-file ~a ~a"
+                         (real-name (scm-file f))
+                         (real-name outf)
+                         (join opts)))))))
 
-(define (link lib fs #!key (options '()))
+(define (ld lib fs)
   (build lib
          (lambda ()
-           (if WINDOWS
-               (printf "%LD% ~a ~a -o ~a"
-                       (join (map (o real-name o-file) fs))
-                       (join options)
-                       (real-name lib))))))
+           (let ((opts (get lib 'ld-options 
+                            default-ld-options)))
+             (printf (if WINDOWS 
+                         "%LINKER% ~a ~a -o ~a"
+                         "%{LINKER} ~a ~a -o ~a")
+                     (join (map (o real-name o-file) fs))
+                     (join opts)
+                     (real-name lib))))))
+
+(define (static-ld lib fs)
+  (build lib
+         (lambda ()
+           (printf (if WINDOWS 
+                       "%LIBRARIAN% %LIBRARIAN_OPTIONS% ~a ~a"
+                       "%{LIBRARIAN} ${LIBRARIAN_OPTIONS} ~a ~a")
+                   (real-name lib)
+                   (join (map (o real-name static-o-file) 
+                           fs))))))
 
 
 ;;; dependency buildup
 
-(define (depends target . sources)
-  (put! target 'depends
-        (lset-union/eq? (get target 'depends '())
-                    (flatten sources))))
+(define (depends* target . sources)
+  (for-each
+    (lambda (t)
+      (put! t 'depends
+            (lset-union/eq? (get t 'depends '())
+                            (flatten sources))))
+    (if (list? target) (flatten target) (list target))))
+
+(define-syntax depends
+  (syntax-rules ()
+    ((_ t sources ...)
+     (depends* `t `(sources ...)))))
 
 
 ;;XXX parameters:
@@ -97,19 +171,10 @@
 ; build: SRCDIR ARCH PLATFORM DEBUGBUILD PREFIX
 ;        <prgnames> <libname> STATICBUILD
 
-
-;XXX chicken-config.h generation
-
-  
 (define name-map #f)
 (define nl "\n")
 
 (define (combine name)
-  (define (var x)
-    (let ((x (->string (vector ref x 0))))
-      (if WINDOWS
-          (string-append "%" x "%")
-          (string-append "${" x "}"))))
   (cond ((pair? name)
          (apply string-append
                 (map (lambda (part)
@@ -133,12 +198,11 @@
                     (let ((deps (get t 'depends)))
                       (cons t deps)))
                toplevel-targets)))
-    (topological-sort dag eq?)))
+    (reverse (topological-sort dag eq?))))
 
 (define (emit-build-script name)
-  (let ((targets (sort-targets))
+  (let ((dag (sort-targets))
         (out (open-output-file name)))
-    (pp dag) ;;XXX
     (when WINDOWS (set! nl "\r\n"))
     (if WINDOWS
         (display "#!/bin/sh\nset -e\nif test \"${SRCDIR}\" == \"\"; then\n  SRCDIR=.\nfi\n" out)
@@ -150,11 +214,13 @@
                          (get t 'command) 
                          (get t 'depends) 
                          out))
-      targets)
+      dag)
     (fprintf out "# END OF GENERATED FILE~a" nl)
     (close-output-port out)))
 
 (define (emit-build-rule t cmd deps out)
+  (unless cmd 
+    (error "missing command for target" t))
   (if WINDOWS
       (fprintf out "chicken-do ~a " t)
       (fprintf out "./chicken-do ~a " t))
