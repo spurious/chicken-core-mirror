@@ -26,18 +26,6 @@
 
 PLATFORM=linux
 
-C_COMPILER_OPTIONS="-fno-strict-aliasing -fwrapv -DHAVE_CHICKEN_CONFIG_H"
-
-if test -nz "${DEBUGBUILD}"; then
-    C_COMPILER_OPTIMIZATION_OPTIONS="-g -Wall -Wno-unused"
-else
-    if -test nz "${OPTIMIZE_FOR_SPEED}"; then
-        C_COMPILER_OPTIMIZATION_OPTIONS="-O3 -fomit-frame-pointer"
-    else
-        C_COMPILER_OPTIMIZATION_OPTIONS="-Os -fomit-frame-pointer"
-    fi
-fi
-
 LINKER_LINK_SHARED_LIBRARY_OPTIONS=-shared
 LINKER_LINK_SHARED_DLOADABLE_OPTIONS='-L. -shared -Wl,-R"'${RUNTIME_LINKER_PATH}
 LINKER_LINK_SHARED_PROGRAM_OPTIONS='-Wl,-R"'${RUNTIME_LINKER_PATH}

@@ -334,10 +334,8 @@ _/        _/    _/    _/    _/        _/  _/    _/        _/    _/_/
 	    |   |-- doc
 	    |   |   |-- LICENSE
 	    |   |   |-- README
-	    |   |   |-- mac.r                         (Macintosh)
-	    |   |   |-- CHICKEN.icns                  (Macintosh)
 	    |   |   |-- manual-html
-	    |   |   |-- chicken.png
+                    |   |   |-- chicken.png
 	    |   |   |-- feathers.tcl
 	    |   |   `-- *.html
 	    |   `-- setup.defaults

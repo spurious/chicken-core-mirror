@@ -44,7 +44,7 @@ static char *target;
 
 static void usage(int code)
 {
-  fputs("usage: chicken-do [-q] [-h] TARGET COMMAND ... : DEPENDENCIES ...\n", stderr);
+  fputs("usage: chicken-do [-q] [-h] [-n] TARGET COMMAND ... : DEPENDENCIES ...\n", stderr);
   exit(code);
 }
 
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
   int i, count, a = 0;
   char **args = (char **)malloc(sizeof(char *) * argc);
   struct stat st, sd;
-  int quiet = 0, opts = 1;
+  int quiet = 0, opts = 1, dryrun = 0;
 
   if(argc < 3) usage(1);
 
@@ -146,6 +146,7 @@ int main(int argc, char *argv[])
       switch(argv[ i ][ 1 ]) {
       case 'q': quiet = 1; break;
       case 'h': usage(0);
+      case 'n': dryrun = 1; break;
       default: usage(1);
       }
     }
@@ -179,7 +180,7 @@ int main(int argc, char *argv[])
   return 0;
 
 build:
-  if(!quiet) {
+  if(!quiet || dryrun) {
     fputs("  ", stdout);
 
     for(i = 0; i < a; ++i)
@@ -189,9 +190,12 @@ build:
     fflush(stdout);
   }
 
-  int s = execute(args);
+  if(!dryrun) {
+    int s = execute(args);
 
-  if(s != 0) cleanup();
+    if(s != 0) cleanup();
+  } 
+  else s = 1;
 
   return s;
 }

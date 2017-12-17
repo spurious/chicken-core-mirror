@@ -3,7 +3,7 @@
 (import (chicken) (chicken data-structures)
         (chicken plist) (chicken sort)
         (chicken pretty-print) (chicken format)
-        (chicken port))
+        (chicken port) (chicken string))
 
 
 (include "mini-srfi-1.scm")
@@ -20,7 +20,7 @@
       (flatten args))))
 
 (define (var x)
-  (let ((x (->string (vector ref x 0))))
+  (let ((x (->string (vector-ref x 0))))
     (if WINDOWS
         (string-append "%" x "%")
         (string-append "${" x "}"))))
@@ -46,8 +46,10 @@
         (flatten files))))
 
 (define c-file (extension '.c))
+(define h-file (extension '.h))
 (define o-file (extension '.o))
 (define so-file (extension '.so))
+(define rc-file (extension '.rc))
 (define scm-file (extension '.scm))
 (define static-o-file (extension '-static.o))
 (define import-library (extension '.import))
@@ -101,14 +103,25 @@
                  (opts (get f 'cc-options
                             default-cc-options)))
              (if WINDOWS
-                 (printf "%CC% ~a -o ~a ~a" 
+                 (printf "%C_COMPILER% ~a -c -o ~a ~a" 
+                         (join opts)
                          (real-name cf)
-                         (real-name outf)
-                         (join opts))
-                 (printf "${CC} ~a -o ~a ~a"
+                         (real-name outf))
+                 (printf "${C_COMPILER} ~a -c -o ~a ~a"
+                         (join opts)
                          (real-name cf)
-                         (real-name outf)
-                         (join opts)))))))
+                         (real-name outf)))))))
+
+(define (rc f #!optional (outf (o-file (rc-file f))))
+  (build outf
+         (lambda ()
+           (if WINDOWS
+               (printf "%RC_COMPILER% ~a ~a" 
+                       (real-name (rc-file f))
+                       (real-name outf))
+               (printf "${RC_COMPILER} ~a ~a" 
+                       (real-name (rc-file f))
+                       (real-name outf))))))
 
 (define (chicken f #!optional (outf (c-file f)))
   (build outf 
@@ -132,9 +145,9 @@
                             default-ld-options)))
              (printf (if WINDOWS 
                          "%LINKER% ~a ~a -o ~a"
-                         "%{LINKER} ~a ~a -o ~a")
-                     (join (map (o real-name o-file) fs))
+                         "${LINKER} ~a ~a -o ~a")
                      (join opts)
+                     (join (map real-name fs))
                      (real-name lib))))))
 
 (define (static-ld lib fs)
@@ -142,10 +155,45 @@
          (lambda ()
            (printf (if WINDOWS 
                        "%LIBRARIAN% %LIBRARIAN_OPTIONS% ~a ~a"
-                       "%{LIBRARIAN} ${LIBRARIAN_OPTIONS} ~a ~a")
+                       "${LIBRARIAN} ${LIBRARIAN_OPTIONS} ~a ~a")
                    (real-name lib)
                    (join (map (o real-name static-o-file) 
                            fs))))))
+
+(define (symlink to from)
+  (build to
+         (lambda ()
+           (printf "ln -sf ~a ~a"
+                   (real-name from)
+                   (real-name to)))))
+
+(define (touch dest)
+  (build dest
+         (lambda ()
+           (if WINDOWS
+               (printf "cmd /c \"echo > ~a\""
+                       (real-name dest))
+               (printf "touch ~a" (real-name dest))))))
+
+(define (generate dest script)
+  (build dest
+         (lambda ()
+           (if WINDOWS
+               (printf "cmd /c \"~a\"" (real-name script))
+               (printf "~a" (real-name script))))))
+
+(define (construct dest . pieces)
+  (build dest
+         (lambda ()
+           (if WINDOWS
+               (printf "cmd /c \"type ~a > ~a & echo wish %DATADIR%\\feathers.tcl %1 %2 %3 %4 %5 %6 %7 %8 %9 >> ~a""
+                       (join (map real-name pieces))
+                       (real-name dest)
+                       (real-name dest))
+               (print "sh -c \"cat ~a > ~a; echo exec wish ${DATADIR}/feathers.tcl -- >> ~a\""
+                      (join (map real-name pieces))
+                      (real-name dest)
+                      (real-name dest))))))
 
 
 ;;; dependency buildup
@@ -162,6 +210,21 @@
   (syntax-rules ()
     ((_ t sources ...)
      (depends* `t `(sources ...)))))
+
+
+;;; conditional execution
+
+(define-syntax conditional
+  (syntax-rules ()
+    ((_ (var) fs ...)
+     (for-each (cut put! <> 'conditional '(var))
+       `(fs ...)))
+    ((_ (var val) fs ...)
+     (for-each (cut put! <> 'conditional '(var val))
+       `(fs ...)))
+    ((_ var fs ...)
+     (for-each (cut put! <> 'conditional 'var)
+       `(fs ...)))))
 
 
 ;;XXX parameters:
@@ -182,7 +245,7 @@
                            (var part)
                            (combine part)))
                   name)))
-        ((eq? '/ part) 
+        ((eq? '/ name) 
          (if WINDOWS 
              "\\"
              "/"))
@@ -194,41 +257,63 @@
         (else (->string x))))
 
 (define (sort-targets)
-  (let ((dag (map (lambda (t)
-                    (let ((deps (get t 'depends)))
-                      (cons t deps)))
-               toplevel-targets)))
+  (let ((dag '()))
+    (define (gather t seen)
+      (when (memq t seen)
+        (error "circular dependency" t seen))
+      (let ((deps (get t 'depends '())))
+        (set! dag (cons (cons t deps) dag))
+        (let ((seen (cons t seen)))
+          (for-each (cut gather <> seen) deps))))
+    (for-each (cut gather <> '()) toplevel-targets)
     (reverse (topological-sort dag eq?))))
 
 (define (emit-build-script name)
   (let ((dag (sort-targets))
-        (out (open-output-file name)))
+        (out (open-output-file name #:binary)))
     (when WINDOWS (set! nl "\r\n"))
     (if WINDOWS
-        (display "#!/bin/sh\nset -e\nif test \"${SRCDIR}\" == \"\"; then\n  SRCDIR=.\nfi\n" out)
-        (display "@echo off\r\nif %SRCDIR == \"\" set SRCDIR=.\r\"" out))
-    (fprintf out "# GENERATED BY mkbuild.scm~a" nl)
+        (display "@echo off\r\nrem GENERATED BY mkbuild.scm\r\nif %SRCDIR == \"\" set SRCDIR=.\r\"\r\n" out))
+        (display "#!/bin/sh\n# GENERATED BY mkbuild.scm\nset -e\nif test \"${SRCDIR}\" = \"\"; then\n  SRCDIR=.\nfi\n" out)
     (for-each
       (lambda (t)
-        (emit-build-rule t
-                         (get t 'command) 
-                         (get t 'depends) 
-                         out))
+        (let ((cmd (get t 'command)))
+          (when cmd
+            (emit-build-rule t
+                             (get t 'command) 
+                             (get t 'depends '())
+                             out))))
       dag)
-    (fprintf out "# END OF GENERATED FILE~a" nl)
+    (if WINDOWS
+        (display "rem END OF GENERATED FILE\r\n" out)
+        (display "# END OF GENERATED FILE\n" out))
     (close-output-port out)))
 
 (define (emit-build-rule t cmd deps out)
   (unless cmd 
     (error "missing command for target" t))
+  (let ((c (get t 'conditional)))
+    (when c
+      (if (pair? c)
+          (if (pair? (cdr c))
+              (if WINDOWS
+                  (fprintf out "if %~a% = ~a " (car c) (cadr c))
+                  (fprintf out "test \"${~a}\" = ~a && " 
+                           (car c) (cadr c)))
+              (if WINDOWS
+                  (fprintf out "if %~a% == \"\" " (car c))
+                  (fprintf out "test -z \"${~a}\" && " (car c))))
+          (if WINDOWS
+              (fprintf out "if %~a% != \"\" " c)
+              (fprintf out "test -nz \"${~a}\" && " c)))))
   (if WINDOWS
-      (fprintf out "chicken-do ~a " t)
-      (fprintf out "./chicken-do ~a " t))
+      (fprintf out "chicken-do ~a " (real-name t))
+      (fprintf out "./chicken-do ~a " (real-name t)))
   (with-output-to-port out cmd)
   (display " :" out)
   (for-each 
     (lambda (dep)
-      (fprintf out " ~a" dep))
+      (fprintf out " ~a" (real-name dep)))
     deps)
   (display nl out))
 
