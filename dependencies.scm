@@ -107,6 +107,7 @@
     chicken.base
     chicken.condition
     chicken.csi
+    chicken.syntax
     chicken.foreign))
 
 (define dynamic-import-libraries
@@ -118,6 +119,7 @@
     chicken.fixnum
     chicken.flonum
     chicken.format
+    chicken.internal
     chicken.gc
     chicken.io
     chicken.keyword
@@ -134,7 +136,6 @@
     chicken.process.signal
     chicken.process-context
     chicken.random 
-    chicken.syntax
     chicken.sort 
     chicken.string
     chicken.time 
@@ -332,7 +333,8 @@
   chicken.compiler.optimizer.import.scm
   chicken.compiler.support.import.scm
   chicken.compiler.core.import.scm
-  chicken.data-structures.import.scm)
+  chicken.data-structures.import.scm
+  chicken.internal.import.scm)
 
 (depends c-backend.c
   mini-srfi-1.scm 
@@ -554,6 +556,8 @@
   chicken.foreign.import.scm)
 
 (depends expand.c
+  synrules.scm
+  common-declarations.scm
   chicken.blob.import.scm 
   chicken.condition.import.scm 
   chicken.keyword.import.scm 
@@ -565,6 +569,9 @@
   chicken.time.import.scm)
 
 (depends eval.c
+  mini-srfi-1.scm
+  egg-information.scm
+  common-declarations.scm
   chicken.blob.import.scm 
   chicken.condition.import.scm 
   chicken.foreign.import.scm 
@@ -601,6 +608,10 @@
   chicken.foreign.import.scm 
   chicken.port.import.scm 
   chicken.time.import.scm)
+
+(depends internal.c mini-srfi-1.scm)
+
+(depends read-syntax.c common-declarations.scm)
 
 
 ;;XXX windows implib (.dll.a)
@@ -675,6 +686,33 @@
 
 (chicken-options ,libchicken-objects
   "-explicit-use" "-no-trace")
+
+(chicken-options library
+  "-no-module-registration"
+  "-emit-import-library" "chicken.bitwise"
+  "-emit-import-library" "chicken.blob"
+  "-emit-import-library" "chicken.fixnum"
+  "-emit-import-library" "chicken.flonum"
+  "-emit-import-library" "chicken.gc"
+  "-emit-import-library" "chicken.keyword"
+  "-emit-import-library" "chicken.platform"
+  "-emit-import-library" "chicken.plist"
+  "-emit-import-library" "chicken.time")
+
+(chicken-options internal
+  "-emit-import-library" "chicken.internal")
+
+(chicken-options eval
+  "-emit-import-library" "chicken.eval"
+  "-emit-import-library" "chicken.load")
+
+(chicken-options repl
+  "-emit-import-library" "chicken.repl")
+
+(chicken-options read-syntax
+  "-emit-import-library" "chicken.read-syntax")
+
+(chicken-options expand "-no-module-registration")
 
 (chicken-options ,programs
   "-no-lambda-info" #(EXTRA_CHICKEN_PROGRAM_OPTIONS))
