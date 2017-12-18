@@ -34,7 +34,7 @@ CXX_COMPILER=g++
 LIBRARIAN=ar
 USES_SONAME=1
 ARCH=
-STATICBUILD
+STATICBUILD=
 GCHOOKS=
 DEBUGBUILD=
 OPTIMIZE_FOR_SPEED=
@@ -51,19 +51,23 @@ DYLIB=.so
 C_COMPILER_OPTIONS="-fno-strict-aliasing -fwrapv -DHAVE_CHICKEN_CONFIG_H -I."
 LINKER_OPTIONS=-L.
 NEEDS_RC=
-
-case ${SRCDIR} in
-    [!/]*) SRCDIR=${PWD}${SRCDIR};;
-esac
+EXTRA_CHICKEN_OPTIONS="-specialize -consult-types-file ${SRCDIR}/types.db"
+EXTRA_CHICKEN_PROGRAM_OPTIONS=
+RUNTIME_LINKER_PATH=.
+LIBCHICKEN_IMPORT_LIB=
+A=.a
+NEEDS_RANLIB=
+NEEDS_INSTALL_NAME=
+POSTINSTALL_PROGRAM=true
 
 usage() {
-    echo "usage: ${SRCDIR}/configure [-help] [-prefix PREFIX] [-platform PLATFORM] [-chicken CHICKEN] [-arch ARCH] [-gchooks] [-debug] [-optimize-for-speed] [-target TARGET] [-host HOST] [-static]" >&2
+    echo "usage: ${SRCDIR}/configure [-help] [-prefix PREFIX] [-platform PLATFORM] [-chicken CHICKEN] [-arch ARCH] [-gchooks] [-debug] [-optimize-for-speed] [-target TARGET] [-host HOST] [-static] [-profile]" >&2
     echo >&2
     echo "consult ${SRCDIR}/README for more detailed information." >&2
     exit $0
 }
 
-while test -nz "$1"; do
+while test -n "$1"; do
     case "$1" in
         --?help|--?h) usage 0;;
         -prefix)
@@ -71,39 +75,55 @@ while test -nz "$1"; do
             PREFIX=$1;;
         -platform)
             shift
-            if test -a "${SRCDIR}/config/$1"; then
-                . ${SRCDIR}config/$1
-            else
-                echo "unrecognized platform: $1" >&2
-                exit 1
-            fi;;
+            PLATFORM=$1;;
         -target)
             shift
             TARGETSYSTEM=$1;;
         -host)
             shift
             HOSTSYSTEM=$1;;
-        -static) STATICBUILD=1;;
-        -debug) DEBUGBUILD=1;;
-        -gchooks) GCHOOKS=1;;
-        -optimize-for-speed) OPTIMIZE_FOR_SPEED=1;;
+        -static) 
+            STATICBUILD=1;;
+        -debug) 
+            DEBUGBUILD=1;;
+        -gchooks) 
+            GCHOOKS=1;;
+        -profile)
+            EXTRA_CHICKEN_PROGRAM_OPTIONS="${EXTRA_CHICKEN_PROGRAM_OPTIONS} -profile";;
+        -optimize-for-speed) 
+            OPTIMIZE_FOR_SPEED=1;;
         -*) usage 1;;
     esac
+    shift
 done
 
-if test -nz "${DEBUGBUILD}"; then
+if test -n "${DEBUGBUILD}"; then
     C_COMPILER_OPTIMIZATION_OPTIONS="-g -Wall -Wno-unused"
-    if -test nz "${OPTIMIZE_FOR_SPEED}"; then
+    EXTRA_CHICKEN_OPTIONS="${EXTRA_CHICKEN_OPTIONS} -feature debugbuild -verbose"
+
+    if test -n "${OPTIMIZE_FOR_SPEED}"; then
         C_COMPILER_OPTIMIZATION_OPTIONS="-O3 -fomit-frame-pointer"
     else
         C_COMPILER_OPTIMIZATION_OPTIONS="-Os -fomit-frame-pointer"
     fi
+else
+    EXTRA_CHICKEN_PROGRAM_OPTIONS="${EXTRA_CHICKEN_PROGRAM_OPTIONS} -no-trace"
 fi
 
-#XXX infer platform if not set
-
 if test -z "${PLATFORM}"; then
-    echo "no platform selected" >&2
+    case `uname` in
+        Darwin) PLATFORM=macos;;
+        Linux) PLATFORM=linux;;
+        *)
+            echo "no platform selected" >&2
+            exit 1;;
+    esac
+fi
+
+if test -e "${SRCDIR}/config/${PLATFORM}"; then
+    . ${SRCDIR}/config/${PLATFORM}
+else
+    echo "unrecognized platform: ${PLATFORM}" >&2
     exit 1
 fi
 
@@ -116,12 +136,13 @@ fi
 
 echo "architecture is ${ARCH}"
 
-if test -nz "${DEBUGBUILD}"; then
+if test -n "${DEBUGBUILD}"; then
     C_COMPILER_OPTIMIZATION_OPTIONS="-g -Wall -Wno-unused"
 fi
 
 echo "identifying build version"
-sh ${SRCDIR)/config/identify.me
+sh ${SRCDIR}/config/identify.sh
+echo "build version is "`cat buildversion`
 
 BINDIR=${PREFIX}/bin
 LIBDIR=${PREFIX}/lib
@@ -129,7 +150,6 @@ SHAREDIR=${PREFIX}/share
 DATADIR=${SHAREDIR}/${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}
 INCLUDEDIR=${PREFIX}/include
 MANDIR=${SHAREDIR}/man
-DOCDIR=${DATADIR}/doc
 VARDIR=${LIBDIR}
 MAN1DIR=${MANDIR}/man1
 CHICKENLIBDIR=${VARDIR}/${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}
@@ -146,7 +166,7 @@ CHICKEN_DO_PROGRAM=${PROGRAM_PREFIX}chicken-do${PROGRAM_SUFFIX}
 CHICKEN_DEBUGGER_PROGRAM=${PROGRAM_PREFIX}feathers${PROGRAM_SUFFIX}
 INSTALL_LIB_NAME=${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}
 
-if test -nz "${HOSTSYSTEM}"; then
+if test -n "${HOSTSYSTEM}"; then
     C_COMPILER=${HOSTSYSTEM}-gcc
     CXX_COMPILER=${HOSTSYSTEM}-g++
     LIBRARIAN=${HOSTSYSTEM}-ar
@@ -155,15 +175,10 @@ fi
 
 echo "C compiler is ${C_COMPILER}"
 
-#XXX windows: windres
-
 LINKER=${C_COMPILER}
 ASSEMBLER=${C_COMPILER}
-#XXX macos:
-POSTINSTALL_STATIC_LIBRARY=true
-POSTINSTALL_PROGRAM=true
 
-if test -nz "${TARGETSYSTEM}"; then
+if test -n "${TARGETSYSTEM}"; then
     TARGET_C_COMPILER=${TARGETSYSTEM}-${C_COMPILER}
     TARGET_CXX_COMPILER=${TARGETSYSTEM}-${CXX_COMPILER}
     TARGET_RC_COMPILER=${TARGETSYSTEM}-${RC_COMPILER}
@@ -184,18 +199,25 @@ TARGET_LINKER_OPTIMIZATION_OPTIONS=${LINKER_OPTIMIZATION_OPTIONS}
 TARGET_FEATURES=
 TARGET_LIB_NAME=chicken
 
-if test "${TARGET_C_COMPILER}" != "${C_COMPILER}"
+if test "${TARGET_C_COMPILER}" != "${C_COMPILER}"; then
     CROSS_CHICKEN=1
     echo "this is a cross chicken"
 fi
 
-if test -nz "${STATICBUILD}"; then
+if test -n "${STATICBUILD}"; then
     STATIC_EXTRALIBS="${LIBRARIES}"
 fi
 
-echo >config.sh <<EOF
+cat >config.sh <<EOF
 #!/bin/sh
 SRCDIR="${SRCDIR}"
+BINDIR="${BINDIR}"
+LIBDIR="${LIBDIR}"
+DATADIR="${DATADIR}"
+SHAREDIR="${SHAREDIR}"
+INCLUDEDIR="${INCLUDEDIR}"
+MAN1DIR="${MAN1DIR}"
+CHICKENLIBDIR="${CHICKENLIBDIR}"
 PLATFORM="${PLATFORM}"
 CHICKEN="${CHICKEN}"
 ARCH="${ARCH}"
@@ -207,7 +229,7 @@ LINKER="${LINKER}"
 ASSEMBLER="${ASSEMBLER}"
 C_COMPILER_OPTIONS="${C_COMPILER_OPTIONS}"
 C_COMPILER_OPTIMIZATION_OPTIONS="${C_COMPILER_OPTIMIZATION_OPTIONS}"
-LINKER_OPTIONS=${LINKER_OPTIONS}"
+LINKER_OPTIONS="${LINKER_OPTIONS}"
 LINKER_LINK_SHARED_LIBRARY_OPTIONS="${LINKER_LINK_SHARED_LIBRARY_OPTIONS}"
 LINKER_LINK_SHARED_DLOADABLE_OPTIONS="${LINKER_LINK_DLOADABLE_LIBRARY_OPTIONS}"
 LINKER_LINK_SHARED_PROGRAM_OPTIONS="${LINKER_LINK_SHARED_PROGRAM_OPTIONS}"
@@ -217,48 +239,60 @@ NEEDS_RELINKING="${NEEDS_RELINKING}"
 USES_SONAME="${USES_SONAME}"
 LIBRARIES="${LIBRARIES}"
 STATIC_EXTRALIBS="${LIBRARIES}"
+CROSS_CHICKEN="${CROSS_CHICKEN}\"
+PROGRAM_PREFIX="${PROGRAM_PREFIX}"
+PROGRAM_SUFFIX="${PROGRAM_SUFFIX}"
+EXTRA_CHICKEN_OPTIONS="${EXTRA_CHICKEN_OPTIONS}"
 BAT=
+EXE=
+A="${A}"
+LIBCHICKEN_IMPORT_LIB="${LIBCHICKEN_IMPORT_LIB}"
+BINARYVERSION="${BINARYVERSION}"
+NEEDS_RANLIB="${NEEDS_RANLIB}"
+NEEDS_INSTALL_NAME="${NEEDS_INSTALL_NAME}"
+if test -z "\${RUNTIME_LINKER_PATH}"; then
+    RUNTIME_LINKER_PATH="${RUNTIME_LINKER_PATH}"
+fi
 EOF
 
-echo "C compiler options are ${C_COMPILER_OPTIONS} ${C_COMPILER_OPTIMIZATION_OPTIONS}"
-echo "Linker options are ${LINKER_OPTIONS}"
-echo "Linker shared library options are ${LINKER_LINK_SHARED_LIBRARY_OPTIONS}"
-echo "Linker dynamic loadable module options are ${LINKER_LINK_SHARED_DLOADABLE_OPTIONS}"
-echo "Linker program options are ${LINKER_LINK_SHARED_PROGRAM_OPTIONS}"
+echo "C compiler options are: ${C_COMPILER_OPTIONS} ${C_COMPILER_OPTIMIZATION_OPTIONS}"
+echo "Linker options are: ${LINKER_OPTIONS}"
+echo "Linker shared library options are: ${LINKER_LINK_SHARED_LIBRARY_OPTIONS}"
+echo "Linker dynamic loadable module options are: ${LINKER_LINK_SHARED_DLOADABLE_OPTIONS}"
+echo "Linker program options are: ${LINKER_LINK_SHARED_PROGRAM_OPTIONS}"
 
 if test -z "${STATICBUILD}"; then
-    echo "Linker options for dynamic libchicken are ${LIBCHICKEN_SO_LINKER_OPTIONS}"
+    echo "Linker options for dynamic libchicken are: ${LIBCHICKEN_SO_LINKER_OPTIONS}"
 fi
 
-echo "Libraries are ${LIBRARIES}"
-test -nz "${NEEDS_RELINKING}" && echo "Runtime library needs relinking"
-test -nz "${USES_SONAME}" && echo "Runtime library uses soname"
+echo "Libraries are: ${LIBRARIES}"
+test -n "${NEEDS_RELINKING}" && echo "Runtime library needs relinking"
+test -n "${USES_SONAME}" && echo "Runtime library uses soname"
 
 echo "updating chicken-config.h"
 
-if test -nz "${DEBUGBUILD}"; then
+if test -n "${DEBUGBUILD}"; then
     echo "debug build enabled"
     echo "#define DEBUGBUILD 1" >>chicken-config.h
 fi
 
-if testz -nz "${STATICBUILD}"; then
+if test -n "${STATICBUILD}"; then
     echo "static build enabled"
     echo "#define STATICBUILD 1" >>chicken-config.h
 fi
 
-if test -nz "${GCHOOKS}"; then
+if test -n "${GCHOOKS}"; then
     "GC hooks are enabled"
     echo "#define C_GC_HOOKS 1" >>chicken-config.h
 fi
 
-if test -nz "${DLLSINPATH}"; then
-    echo '#define C_TARGET_RUN_LIB_HOME "'${TARGET_RUN_PREFIX}'/bin"''' >>chicken-config.h
+if test -n "${DLLSINPATH}"; then
+    echo '#define C_TARGET_RUN_LIB_HOME "'${TARGET_RUN_PREFIX}'/bin"' >>chicken-config.h
 else
-    echo '#define C_TARGET_RUN_LIB_HOME "'${TARGET_RUN_PREFIX}/lib"' >>chicken-config.h
+    echo '#define C_TARGET_RUN_LIB_HOME "'${TARGET_RUN_PREFIX}'/lib"' >>chicken-config.h
 fi
 
-echo >>chicken-config.h <<EOF
-#define C_CHICKEN_PROGRAM "${CHICKEN_PROGRAM}"
+cat >>chicken-config.h <<EOF
 #define C_INSTALL_CC "${C_COMPILER}"
 #define C_INSTALL_CXX "${CXX_COMPILER}"
 #define C_INSTALL_POSTINSTALL_PROGRAM "${POSTINSTALL_PROGRAM}"
@@ -279,7 +313,7 @@ echo >>chicken-config.h <<EOF
 #define C_TARGET_MORE_LIBS "${TARGET_LIBRARIES}"
 #define C_TARGET_MORE_STATIC_LIBS "${TARGET_LIBRARIES}"
 #define C_TARGET_CC "${TARGET_C_COMPILER}"
-#define C_TARGET_CXX "$(TARGET_CXX_COMPILER)"
+#define C_TARGET_CXX "${TARGET_CXX_COMPILER}"
 #define C_TARGET_RC_COMPILER "${TARGET_RC_COMPILER}"
 #define C_TARGET_CFLAGS "${TARGET_C_COMPILER_OPTIONS} ${TARGET_C_COMPILER_OPTIMIZATION_OPTIONS}"
 #define C_TARGET_LDFLAGS "${TARGET_LINKER_OPTIONS} ${TARGET_LINKER_OPTIMIZATION_OPTIONS}"
@@ -299,17 +333,17 @@ echo >>chicken-config.h <<EOF
 #define C_CHICKEN_UNINSTALL_PROGRAM "${CHICKEN_UNINSTALL_PROGRAM}"
 #define C_CHICKEN_STATUS_PROGRAM "${CHICKEN_STATUS_PROGRAM}"
 #define C_WINDOWS_SHELL 0
-#define C_BINARY_VERSION $(BINARYVERSION)
+#define C_BINARY_VERSION ${BINARYVERSION}
 #define C_USES_SONAME ${USES_SONAME}
 /* END OF FILE */
 EOF
 
-if test ! -a chicken-do; then
+if test ! -x chicken-do; then
     echo "building chicken-do"
     ${CC} ${C_COMPILER_OPTIONS} ${C_COMPILER_OPTIMIZATION_OPTIONS} ${SRCDIR}/chicken-do.c -o chicken-do -I.
 fi
 
-if test -nz "${NEEDS_RC}"; then
+if test -n "${NEEDS_RC}"; then
     echo "generating .rc files"
     cat > chicken-install.rc <<EOF
 /* GENERATED */
@@ -350,4 +384,26 @@ END
 EOF
     CHICKEN_INSTALL_RC_O=chicken-install.rc.o
     CHICKEN_UNINSTALL_RC_O=chicken-uninstall.rc.o
+fi
+
+echo "generating makefile"
+cat >Makefile <<EOF
+# GENERATED BY configure
+all:
+	./build.sh
+install:
+	${SRCDIR}/install.sh
+clean:
+	${SRCDIR}/clean.sh
+spotless:
+	${SRCDIR}/clean.sh -spotless
+distclean:
+	${SRCDIR}/clean.sh -distclean
+testclean:
+	${SRCDIR}/clean.sh -testclean
+uninstall:
+	${SRCDIR}/uninstall.sh
+# END OF FILE
+EOF
+
 echo "done"

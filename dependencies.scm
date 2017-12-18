@@ -192,6 +192,11 @@
 ;;XXX relinking
 ;;XXX cygwin specifics
 
+(abstract 'primary-libchicken)
+
+(depends primary-libchicken
+  libchicken.a libchicken.so)
+
 (depends libchicken.a 
   ,(static-o-file libchicken-objects))
 
@@ -663,9 +668,20 @@
   '("-optimize-level" "2" "-include-path" "." 
                       "-include-path" #(SRCDIR)
                       "-inline" "-ignore-repository"
-                      "-feature" "chicken-bootstrap"))
+                      "-feature" "chicken-bootstrap"
+                      #(EXTRA_CHICKEN_OPTIONS)))
 
 (set! default-ld-options '(#(LINKER_OPTIONS)))
+
+(chicken-options ,libchicken-objects
+  "-explicit-use" "-no-trace")
+
+(chicken-options ,programs
+  "-no-lambda-info" #(EXTRA_CHICKEN_PROGRAM_OPTIONS))
+
+(chicken-options ,(import-library import-libraries)
+  "-feature" "chicken-compile-shared" "-dynamic" 
+  "-no-trace")
 
 (ld-options libchicken-so
   #(LINKER_LINK_SHARED_LIBRARY_OPTIONS)
