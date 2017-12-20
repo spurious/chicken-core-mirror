@@ -170,9 +170,10 @@ int main(int argc, char *argv[])
 
   for(++i; i < argc; ++i) {
     if(stat(argv[ i ], &sd) == -1) {
-      fprintf(stderr, "%s: %s\n", argv[ i ], strerror(errno));
-      exit(1);
-    }      
+        fprintf(stderr, "Warning: %s: can not access file \"%s\"\n", target, 
+            argv[ i ]);
+        goto build;   /* just continue */
+    }
 
     if(sd.st_mtime > st.st_mtime) goto build;
   }
@@ -190,8 +191,10 @@ build:
     fflush(stdout);
   }
 
+  int s;
+
   if(!dryrun) {
-    int s = execute(args);
+    s = execute(args);
 
     if(s != 0) cleanup();
   } 
