@@ -32,6 +32,7 @@ CHICKEN=chicken
 C_COMPILER=gcc
 CXX_COMPILER=g++
 LIBRARIAN=ar
+LIBRARIAN_OPTIONS=cru
 USES_SONAME=1
 ARCH=
 STATICBUILD=
@@ -40,7 +41,7 @@ DEBUGBUILD=
 OPTIMIZE_FOR_SPEED=
 BINARYVERSION=9
 STACKDIRECTION=1
-CROSS_CHICKEN=
+CROSS_CHICKEN=0
 PREFIX=/usr/local
 PROGRAM_PREFIX=
 PROGRAM_SUFFIX=
@@ -90,6 +91,9 @@ while test -n "$1"; do
             GCHOOKS=1;;
         -profile)
             EXTRA_CHICKEN_PROGRAM_OPTIONS="${EXTRA_CHICKEN_PROGRAM_OPTIONS} -profile";;
+        -chicken)
+            shift
+            CHICKEN=$1;;
         -optimize-for-speed) 
             OPTIMIZE_FOR_SPEED=1;;
         -*) usage 1;;
@@ -100,13 +104,13 @@ done
 if test -n "${DEBUGBUILD}"; then
     C_COMPILER_OPTIMIZATION_OPTIONS="-g -Wall -Wno-unused"
     EXTRA_CHICKEN_OPTIONS="${EXTRA_CHICKEN_OPTIONS} -feature debugbuild -verbose"
-
+else
     if test -n "${OPTIMIZE_FOR_SPEED}"; then
         C_COMPILER_OPTIMIZATION_OPTIONS="-O3 -fomit-frame-pointer"
     else
         C_COMPILER_OPTIMIZATION_OPTIONS="-Os -fomit-frame-pointer"
     fi
-else
+
     EXTRA_CHICKEN_PROGRAM_OPTIONS="${EXTRA_CHICKEN_PROGRAM_OPTIONS} -no-trace"
 fi
 
@@ -143,6 +147,7 @@ fi
 echo "identifying build version"
 sh ${SRCDIR}/config/identify.sh
 echo "build version is "`cat buildversion`
+echo "binary version is: ${BINARYVERSION}"
 
 BINDIR=${PREFIX}/bin
 LIBDIR=${PREFIX}/lib
@@ -208,6 +213,7 @@ if test -n "${STATICBUILD}"; then
     STATIC_EXTRALIBS="${LIBRARIES}"
 fi
 
+echo "generating config.sh"
 cat >config.sh <<EOF
 #!/bin/sh
 SRCDIR="${SRCDIR}"
@@ -222,12 +228,14 @@ PLATFORM="${PLATFORM}"
 CHICKEN="${CHICKEN}"
 ARCH="${ARCH}"
 LIBRARIAN="${LIBRARIAN}"
+LIBRARIAN_OPTIONS="${LIBRARIAN_OPTIONS}"
 DYLIB="${DYLIB}"
 C_COMPILER="${C_COMPILER}"
 CXX_COMPILER="${CXX_COMPILER}"
 LINKER="${LINKER}"
 ASSEMBLER="${ASSEMBLER}"
-C_COMPILER_OPTIONS="${C_COMPILER_OPTIONS}"
+C_COMPILER_OPTIONS="${C_COMPILER_OPTIONS} -I${SRCDIR}"
+C_COMPILER_SHARED_OPTIONS="${C_COMPILER_SHARED_OPTIONS}"
 C_COMPILER_OPTIMIZATION_OPTIONS="${C_COMPILER_OPTIMIZATION_OPTIONS}"
 LINKER_OPTIONS="${LINKER_OPTIONS}"
 LINKER_LINK_SHARED_LIBRARY_OPTIONS="${LINKER_LINK_SHARED_LIBRARY_OPTIONS}"
@@ -256,6 +264,7 @@ fi
 EOF
 
 echo "C compiler options are: ${C_COMPILER_OPTIONS} ${C_COMPILER_OPTIMIZATION_OPTIONS}"
+echo "C compiler options for shared objects are: ${C_COMPILER_SHARED_OPTIONS}"
 echo "Linker options are: ${LINKER_OPTIONS}"
 echo "Linker shared library options are: ${LINKER_LINK_SHARED_LIBRARY_OPTIONS}"
 echo "Linker dynamic loadable module options are: ${LINKER_LINK_SHARED_DLOADABLE_OPTIONS}"
@@ -329,6 +338,7 @@ cat >>chicken-config.h <<EOF
 #define C_CHICKEN_PROGRAM "${CHICKEN_PROGRAM}"
 #define C_CSC_PROGRAM "${CSC_PROGRAM}"
 #define C_CSI_PROGRAM "${CSI_PROGRAM}"
+#define C_CHICKEN_DO_PROGRAM "${CHICKEN_DO_PROGRAM}"
 #define C_CHICKEN_INSTALL_PROGRAM "${CHICKEN_INSTALL_PROGRAM}"
 #define C_CHICKEN_UNINSTALL_PROGRAM "${CHICKEN_UNINSTALL_PROGRAM}"
 #define C_CHICKEN_STATUS_PROGRAM "${CHICKEN_STATUS_PROGRAM}"
@@ -340,7 +350,7 @@ EOF
 
 if test ! -x chicken-do; then
     echo "building chicken-do"
-    ${CC} ${C_COMPILER_OPTIONS} ${C_COMPILER_OPTIMIZATION_OPTIONS} ${SRCDIR}/chicken-do.c -o chicken-do -I.
+    ${C_COMPILER} ${C_COMPILER_OPTIONS} ${C_COMPILER_OPTIMIZATION_OPTIONS} ${SRCDIR}/chicken-do.c -o chicken-do -I.
 fi
 
 if test -n "${NEEDS_RC}"; then
@@ -393,6 +403,8 @@ all:
 	./build.sh
 install:
 	${SRCDIR}/install.sh
+check:
+	cd ${SRCDIR}/tests; sh runtests.sh
 clean:
 	${SRCDIR}/clean.sh
 spotless:
