@@ -255,14 +255,6 @@
      (for-each (cut put! <> 'conditional 'var)
        `(fs ...)))))
 
-
-;;XXX parameters:
-;
-; mkbuild: WINDOWS
-;
-; build: SRCDIR ARCH PLATFORM DEBUGBUILD PREFIX
-;        <prgnames> <libname> STATICBUILD
-
 (define name-map #f)
 (define nl "\n")
 

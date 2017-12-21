@@ -1,4 +1,4 @@
-# configuration for Linux
+# configuration for iOS
 #
 # Copyright (c) 2017, The CHICKEN Team
 # All rights reserved.
@@ -24,26 +24,31 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 
-PLATFORM=linux
+PLATFORM=ios
 
-C_COMPILER_SHARED_OPTIONS="-fPIC -DPIC"
-LINKER_LINK_SHARED_LIBRARY_OPTIONS=-shared
-LINKER_LINK_SHARED_DLOADABLE_OPTIONS='-shared -Wl,-R"'${RUNTIME_LINKER_PATH}'"'
-LINKER_LINK_SHARED_PROGRAM_OPTIONS='-Wl,-R"'${RUNTIME_LINKER_PATH}'"'
-LIBCHICKEN_SO_LINKER_OPTIONS="-Wl,-soname,lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}.so.${BINARYVERSION}"
-LIBRARIES="-lm -ldl"
-NEEDS_RELINKING=1
-USES_SONAME=1
-
-if test "${ARCH}" = x32; then
-    C_COMPILER_OPTIONS="{C_COMPILER_OPTIONS} -mx32"
-    LINKER_OPTIONS="${LINKER_OPTIONS} -mx32"
+if test -z "${ARCH}"; then
+    ARCH=armv7
+    ARCHOPTS=-mno-thumb
 fi
+
+XCODE_PATH=/Applications/Xcode.app
+XCODE_DEVELOPER="${XCODE_PATH}/Contents/Developer"
+# for Xcode 4:  XCODE_TOOLPATH="${XCODE_DEVELOPER}/Toolchains/XCodeDefault.xctoolchain/usr/bin"
+XCODE_TOOLPATH="${XCODE_DEVELOPER}/usr/bin"
+# for simulator:  XCODE_SDK="${XCODE_DEVELOPER}/Platforms/iPhoneSimulator.platform/Developer/SDKs/ipHoneSimulator7.0.sdk"
+XCODE_SDK="${XCODE_DEVELOPER}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk"
+
+STATICBUILD=1
+
+# for Xcode 4:  C_COMPILER="${XCODE_DEVELOPER}/Platforms/iPhoneOS.platform/iPhoneOS.platform/Developer/usr/bin"
+C_COMPILER="${XCODE_TOOLPATH}/gcc"
+C_COMPILER_OPTIONS="${C_COMPILER_OPTIONS} -no-cpp-precomp -fno-strict-aliasing -fwrapv -fno-common -DHAVE_CHICKEN_CONFIG_H -isysroot ${XCODE_SDK} -arch ${ARCH} ${ARCHOPTS}"
+LINKER_OPTIONS="-isysroot ${XCODE_SDK} -arch ${ARCH}"
+LIBRARIAN_OPTIONS = scru
 
 cat >chicken-config.h <<EOF
 /* GENERATED */
 #define HAVE_DIRENT_H 1
-#define HAVE_DLFCN_H 1
 #define HAVE_INTTYPES_H 1
 #define HAVE_LIMITS_H 1
 #define HAVE_LONG_LONG 1
@@ -61,7 +66,6 @@ cat >chicken-config.h <<EOF
 #define HAVE_STRTOQ 1
 #define HAVE_SYS_STAT_H 1
 #define HAVE_SYS_TYPES_H 1
-#define HAVE_SETENV 1
 #define HAVE_UNISTD_H 1
 #define HAVE_UNSIGNED_LONG_LONG 1
 #define STDC_HEADERS 1
@@ -69,6 +73,6 @@ cat >chicken-config.h <<EOF
 #define HAVE_ALLOCA_H 1
 #define HAVE_ERRNO_H 1
 #define HAVE_SYSEXITS_H 1
+#define SEARCH_EXE_PATH 1
 #define C_STACK_GROWS_DOWNWARD 1
-#define C_USE_STD_FEATURE_MACROS
 EOF

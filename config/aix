@@ -1,4 +1,4 @@
-# configuration for Linux
+# configuration for AIX
 #
 # Copyright (c) 2017, The CHICKEN Team
 # All rights reserved.
@@ -24,21 +24,19 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 
-PLATFORM=linux
+PLATFORM=aix
 
+C_COMPILER_OPTIONS="${C_COMPILER_OPTIONS} -maix64"
 C_COMPILER_SHARED_OPTIONS="-fPIC -DPIC"
 LINKER_LINK_SHARED_LIBRARY_OPTIONS=-shared
 LINKER_LINK_SHARED_DLOADABLE_OPTIONS='-shared -Wl,-R"'${RUNTIME_LINKER_PATH}'"'
 LINKER_LINK_SHARED_PROGRAM_OPTIONS='-Wl,-R"'${RUNTIME_LINKER_PATH}'"'
 LIBCHICKEN_SO_LINKER_OPTIONS="-Wl,-soname,lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}.so.${BINARYVERSION}"
 LIBRARIES="-lm -ldl"
+LINKER_OPTIONS="${LINKER_OPTIONS} -maix64 -Wl,-bsvr4 -Wl,-bbigtoc"
 NEEDS_RELINKING=1
 USES_SONAME=1
-
-if test "${ARCH}" = x32; then
-    C_COMPILER_OPTIONS="{C_COMPILER_OPTIONS} -mx32"
-    LINKER_OPTIONS="${LINKER_OPTIONS} -mx32"
-fi
+LIBRARIAN_OPTIONS="-rv -X 64"
 
 cat >chicken-config.h <<EOF
 /* GENERATED */
@@ -51,7 +49,6 @@ cat >chicken-config.h <<EOF
 #define HAVE_MEMORY_H 1
 #define HAVE_SIGACTION 1
 #define HAVE_SIGSETJMP 1
-#define HAVE_SIGPROCMASK 1
 #define HAVE_STDINT_H 1
 #define HAVE_STDLIB_H 1
 #define HAVE_STRERROR 1
@@ -69,6 +66,8 @@ cat >chicken-config.h <<EOF
 #define HAVE_ALLOCA_H 1
 #define HAVE_ERRNO_H 1
 #define HAVE_SYSEXITS_H 1
+#define HAVE_MEMMOVE 1
+#define SEARCH_EXE_PATH 1
 #define C_STACK_GROWS_DOWNWARD 1
 #define C_USE_STD_FEATURE_MACROS
 EOF

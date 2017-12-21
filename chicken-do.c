@@ -170,8 +170,8 @@ int main(int argc, char *argv[])
 
   for(++i; i < argc; ++i) {
     if(stat(argv[ i ], &sd) == -1) {
-        fprintf(stderr, "Warning: %s: can not access file \"%s\"\n", target, 
-            argv[ i ]);
+        fprintf(stderr, "Warning: %s: can not access file \"%s\" (%s)\n", target, 
+            argv[ i ], strerror(errno));
         goto build;   /* just continue */
     }
 

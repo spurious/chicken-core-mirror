@@ -36,7 +36,7 @@ mkdir -p "${DESTDIR}${CHICKENLIBDIR}/${BINARYVERSION}"
 mkdir -p "${DESTDIR}${MAN1DIR}"
 
 if test -n "${LIBCHICKEN_IMPORT_LIB}"; then
-    install -m 644 ${LIBCHICKEN_IMPORT_LIB} "${DESTDIR}${LIBDIR}"
+    ${INSTALL_PROGRAM} -m 644 ${LIBCHICKEN_IMPORT_LIB} "${DESTDIR}${LIBDIR}"
 fi
 
 libname=lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}
@@ -49,28 +49,28 @@ if test -z "${STATICBUILD}"; then
     fi
 
     if test -n "${USES_SONAME}"; then
-        install -m 755 ${libname}${DYLIB}.${BINARYVERSION} "${DESTDIR}${libdest}"
+        ${INSTALL_PROGRAM} -m 755 ${libname}${DYLIB}.${BINARYVERSION} "${DESTDIR}${libdest}"
         oldpwd=${PWD}
         cd "${DESTDIR}${LIBDIR}" && ln -sf ${libname}${DYLIB}.${BINARYVERSION} l${libname}
         cd ${old}
     else
-        install -m 755 ${libname}${DYLIB} "${DESTDIR}${libdest}"
+        ${INSTALL_PROGRAM} -m 755 ${libname}${DYLIB} "${DESTDIR}${libdest}"
     fi
 fi
 
-install -m 644 ${libname}${A} "${DESTDIR}${LIBDIR}"
+${INSTALL_PROGRAM} -m 644 ${libname}${A} "${DESTDIR}${LIBDIR}"
 test -n "${NEEDS_RANLIB}" && ranlib "${DESTDIR}${LIBDIR}/${libname}${A}"
 
-install -m 644 "${SRCDIR}/chicken.h" chicken-config.h "${DESTDIR}${INCLUDEDIR}"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken.h" chicken-config.h "${DESTDIR}${INCLUDEDIR}"
 
-install -m 644 "${SRCDIR}/types.db" "${DESTDIR}${EGGDIR}"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/types.db" "${DESTDIR}${EGGDIR}"
 
 if test -n "${NEEDS_RELINKING}"; then
     rm "${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${EXE}"
     rm "${PROGRAM_PREFIX}csc${PROGRAM_SUFFIX}${EXE}"
     rm "${PROGRAM_PREFIX}csi${PROGRAM_SUFFIX}${EXE}"
-    rm "${PROGRAM_PREFIX}chicken-install${PROGRAM_SUFFIX}${EXE}"
-    rm "${PROGRAM_PREFIX}chicken-uninstall${PROGRAM_SUFFIX}${EXE}"
+    rm "${PROGRAM_PREFIX}chicken-${INSTALL_PROGRAM}${PROGRAM_SUFFIX}${EXE}"
+    rm "${PROGRAM_PREFIX}chicken-un${INSTALL_PROGRAM}${PROGRAM_SUFFIX}${EXE}"
     rm "${PROGRAM_PREFIX}chicken-status${PROGRAM_SUFFIX}${EXE}"
     rm "${PROGRAM_PREFIX}chicken-profile${PROGRAM_SUFFIX}${EXE}"
     rm *.import.so
@@ -78,24 +78,24 @@ if test -n "${NEEDS_RELINKING}"; then
     RUNTIME_LINKER_PATH="${LIBDIR}" sh build.sh
 fi
 
-install -m 755 "${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
-install -m 755 "${PROGRAM_PREFIX}csc${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
-install -m 755 "${PROGRAM_PREFIX}csi${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
-install -m 755 "${PROGRAM_PREFIX}chicken-status${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
-install -m 755 "${PROGRAM_PREFIX}chicken-install${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
-install -m 755 "${PROGRAM_PREFIX}chicken-uninstall${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
-install -m 755 "${PROGRAM_PREFIX}chicken-profile${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
-install -m 755 chicken-do${EXE} "${DESTDIR}${BINDIR}/${PROGRAM_PREFIX}chicken-do${PROGRAM_SUFFIX}${EXE}"
-install -m 755 "${PROGRAM_PREFIX}feathers${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
+${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
+${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}csc${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
+${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}csi${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
+${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken-status${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
+${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken-${INSTALL_PROGRAM}${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
+${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken-un${INSTALL_PROGRAM}${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
+${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken-profile${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
+${INSTALL_PROGRAM} -m 755 chicken-do${EXE} "${DESTDIR}${BINDIR}/${PROGRAM_PREFIX}chicken-do${PROGRAM_SUFFIX}${EXE}"
+${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}feathers${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
 
 if test -n "${STATICBUILD}"; then
     for x in `ls *.import.so`; do
-        install -m 755 ${x} "${DESTDIR}/${EGGDIR}"
+        ${INSTALL_PROGRAM} -m 755 ${x} "${DESTDIR}/${EGGDIR}"
         test -n "${NEEDS_INSTALL_NAME}" && install_name_tool -change ${libname}${DYLIB} "${LIBDIR}/${libname}${DYLIB}" "${DESTDIR}${EGGDIR}/$x"
     done
 else
     for x in `ls *.import.scm`; do
-        install -m 644 ${x} "${DESTDIR}/${EGGDIR}"
+        ${INSTALL_PROGRAM} -m 644 ${x} "${DESTDIR}/${EGGDIR}"
     done
 fi
 
@@ -104,27 +104,27 @@ if test -n "${NEEDS_INSTALL_NAME}"; then
     install_name_tool -change ${libname}${DYLIB} "${LIBDIR}/${libname}${DYLIB}" ${PROGRAM_PREFIX}csc${PROGRAM_SUFFIX}${EXE}
     install_name_tool -change ${libname}${DYLIB} "${LIBDIR}/${libname}${DYLIB}" ${PROGRAM_PREFIX}csi${PROGRAM_SUFFIX}${EXE}
     install_name_tool -change ${libname}${DYLIB} "${LIBDIR}/${libname}${DYLIB}" ${PROGRAM_PREFIX}chicken-status${PROGRAM_SUFFIX}${EXE}
-    install_name_tool -change ${libname}${DYLIB} "${LIBDIR}/${libname}${DYLIB}" ${PROGRAM_PREFIX}chicken-install${PROGRAM_SUFFIX}${EXE}
-    install_name_tool -change ${libname}${DYLIB} "${LIBDIR}/${libname}${DYLIB}" ${PROGRAM_PREFIX}chicken-uninstall${PROGRAM_SUFFIX}${EXE}
+    install_name_tool -change ${libname}${DYLIB} "${LIBDIR}/${libname}${DYLIB}" ${PROGRAM_PREFIX}chicken-${INSTALL_PROGRAM}${PROGRAM_SUFFIX}${EXE}
+    install_name_tool -change ${libname}${DYLIB} "${LIBDIR}/${libname}${DYLIB}" ${PROGRAM_PREFIX}chicken-un${INSTALL_PROGRAM}${PROGRAM_SUFFIX}${EXE}
     install_name_tool -change ${libname}${DYLIB} "${LIBDIR}/${libname}${DYLIB}" ${PROGRAM_PREFIX}chicken-profile${PROGRAM_SUFFIX}${EXE}
 fi
 
-test "${CROSS_CHICKEN}${DESTDIR}" = 0 && "${BINDIR}${PROGRAM_PREFIX}chicken-install${PROGRAM_SUFFIX}" -update-db
+test "${CROSS_CHICKEN}${DESTDIR}" = 0 && "${BINDIR}${PROGRAM_PREFIX}chicken-${INSTALL_PROGRAM}${PROGRAM_SUFFIX}" -update-db
 
-install -m 644 "${SRCDIR}/chicken.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}.1"
-install -m 644 "${SRCDIR}/csc.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}csc${PROGRAM_SUFFIX}.1"
-install -m 644 "${SRCDIR}/csi.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}csi${PROGRAM_SUFFIX}.1"
-install -m 644 "${SRCDIR}/chicken-install.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken-install${PROGRAM_SUFFIX}.1"
-install -m 644 "${SRCDIR}/chicken-uninstall.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken-uninstall${PROGRAM_SUFFIX}.1"
-install -m 644 "${SRCDIR}/chicken-status.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken-status${PROGRAM_SUFFIX}.1"
-install -m 644 "${SRCDIR}/chicken-profile.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken-profile${PROGRAM_SUFFIX}.1"
-install -m 644 "${SRCDIR}/chicken-do.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken-do${PROGRAM_SUFFIX}.1"
-install -m 644 "${SRCDIR}/feathers.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}feathers${PROGRAM_SUFFIX}.1"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}.1"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/csc.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}csc${PROGRAM_SUFFIX}.1"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/csi.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}csi${PROGRAM_SUFFIX}.1"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken-${INSTALL_PROGRAM}.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken-${INSTALL_PROGRAM}${PROGRAM_SUFFIX}.1"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken-un${INSTALL_PROGRAM}.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken-un${INSTALL_PROGRAM}${PROGRAM_SUFFIX}.1"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken-status.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken-status${PROGRAM_SUFFIX}.1"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken-profile.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken-profile${PROGRAM_SUFFIX}.1"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken-do.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken-do${PROGRAM_SUFFIX}.1"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/feathers.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}feathers${PROGRAM_SUFFIX}.1"
 
 mkdir -p "${DESTDIR}${DOCDIR}/manual"
-install -m 644 ${SRCDIR}/manual-html/* "${DESTDIR}${DOCDIR}/manual" || true
-install -m 644 ${SRCDIR}/README "${DESTDIR}${DOCDIR}"
-install -m 644 ${SRCDIR}/LICENSE "${DESTDIR}${DOCDIR}"
+${INSTALL_PROGRAM} -m 644 ${SRCDIR}/manual-html/* "${DESTDIR}${DOCDIR}/manual" || true
+${INSTALL_PROGRAM} -m 644 ${SRCDIR}/README "${DESTDIR}${DOCDIR}"
+${INSTALL_PROGRAM} -m 644 ${SRCDIR}/LICENSE "${DESTDIR}${DOCDIR}"
 
-install -m 644 ${SRCDIR}/setup.defaults "${DESTDIR}${DATADIR}"
-install -m 644 ${SRCDIR}/feathers.tcl "${DESTDIR}${DATADIR}"
+${INSTALL_PROGRAM} -m 644 ${SRCDIR}/setup.defaults "${DESTDIR}${DATADIR}"
+${INSTALL_PROGRAM} -m 644 ${SRCDIR}/feathers.tcl "${DESTDIR}${DATADIR}"

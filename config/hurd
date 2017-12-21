@@ -1,4 +1,4 @@
-# configuration for Linux
+# configuration for Hurd
 #
 # Copyright (c) 2017, The CHICKEN Team
 # All rights reserved.
@@ -24,7 +24,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 
-PLATFORM=linux
+PLATFORM=hurd
 
 C_COMPILER_SHARED_OPTIONS="-fPIC -DPIC"
 LINKER_LINK_SHARED_LIBRARY_OPTIONS=-shared
@@ -34,11 +34,6 @@ LIBCHICKEN_SO_LINKER_OPTIONS="-Wl,-soname,lib${PROGRAM_PREFIX}chicken${PROGRAM_S
 LIBRARIES="-lm -ldl"
 NEEDS_RELINKING=1
 USES_SONAME=1
-
-if test "${ARCH}" = x32; then
-    C_COMPILER_OPTIONS="{C_COMPILER_OPTIONS} -mx32"
-    LINKER_OPTIONS="${LINKER_OPTIONS} -mx32"
-fi
 
 cat >chicken-config.h <<EOF
 /* GENERATED */
@@ -69,6 +64,8 @@ cat >chicken-config.h <<EOF
 #define HAVE_ALLOCA_H 1
 #define HAVE_ERRNO_H 1
 #define HAVE_SYSEXITS_H 1
+#define HAVE_MEMMOVE 1
+#define SEARCH_EXE_PATH 1
 #define C_STACK_GROWS_DOWNWARD 1
 #define C_USE_STD_FEATURE_MACROS
 EOF

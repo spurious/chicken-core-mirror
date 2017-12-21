@@ -1,4 +1,4 @@
-# configuration for Linux
+# configuration for BSD
 #
 # Copyright (c) 2017, The CHICKEN Team
 # All rights reserved.
@@ -24,21 +24,21 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 
-PLATFORM=linux
+PLATFORM=bsd
 
 C_COMPILER_SHARED_OPTIONS="-fPIC -DPIC"
 LINKER_LINK_SHARED_LIBRARY_OPTIONS=-shared
 LINKER_LINK_SHARED_DLOADABLE_OPTIONS='-shared -Wl,-R"'${RUNTIME_LINKER_PATH}'"'
 LINKER_LINK_SHARED_PROGRAM_OPTIONS='-Wl,-R"'${RUNTIME_LINKER_PATH}'"'
 LIBCHICKEN_SO_LINKER_OPTIONS="-Wl,-soname,lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}.so.${BINARYVERSION}"
-LIBRARIES="-lm -ldl"
+LIBRARIES="-lm -lpthread"
 NEEDS_RELINKING=1
 USES_SONAME=1
 
-if test "${ARCH}" = x32; then
-    C_COMPILER_OPTIONS="{C_COMPILER_OPTIONS} -mx32"
-    LINKER_OPTIONS="${LINKER_OPTIONS} -mx32"
-fi
+# These may be useful for NetBSD:
+#
+#C_COMPILER_OPTIONS="${C_COMPILER_OPTIONS} -I/usr/pkg/lib"
+#LINKER_OPTIONS="${LINKER_OPTIONS} -L/usr/pkg/lib -Wl,-R/usr/pkg/lib"
 
 cat >chicken-config.h <<EOF
 /* GENERATED */
@@ -66,9 +66,12 @@ cat >chicken-config.h <<EOF
 #define HAVE_UNSIGNED_LONG_LONG 1
 #define STDC_HEADERS 1
 #define HAVE_ALLOCA 1
-#define HAVE_ALLOCA_H 1
 #define HAVE_ERRNO_H 1
 #define HAVE_SYSEXITS_H 1
+#define SEARCH_EXE_PATH 1
 #define C_STACK_GROWS_DOWNWARD 1
-#define C_USE_STD_FEATURE_MACROS
+/* Feature macros are unsupported on FreeBSD and DragonFly */
+#if !defined(__FreeBSD__) && !defined(__DragonFly__)
+# define C_USE_STD_FEATURE_MACROS
+#endif
 EOF

@@ -213,13 +213,6 @@
           (map (o o-file rc-file) resource-files)
           (so-file (import-library import-libraries))))
 
-;;XXX distfiles (generate here or separate script?)
-
-;;XXX map symbolic names to composite names that are 
-;;    parameterized/mangled (including "cyg...")
-
-;;XXX distfiles
-
 ;;XXX cygwin specifics
 
 (abstract 'primary-libchicken)
@@ -705,8 +698,6 @@
 
 ;; build commands
 
-;;XXX compiler, with differing options
-
 (ld 'libchicken.so
   (map o-file (cons 'runtime libchicken-objects)))
 
@@ -765,8 +756,6 @@
 
 
 ;; options
-
-;;XXX mac specific options, file extensions, commands
 
 (set! default-cc-options 
   '(#(C_COMPILER_OPTIONS) #(C_COMPILER_OPTIMIZATION_OPTIONS)))

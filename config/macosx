@@ -1,4 +1,4 @@
-# configuration for Linux
+# configuration for MacOS X
 #
 # Copyright (c) 2017, The CHICKEN Team
 # All rights reserved.
@@ -24,20 +24,36 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 
-PLATFORM=linux
+PLATFORM=macosx
 
+XCODE_DEVELOPER=/Applications/Xcode.app/Contents/Developer
+XCODE_TOOL_PATH="${XCODE_DEVELOPER}/Toolchains/XcodeDefault.xctoolchain/usr/bin"
+
+C_COMPILER="${XCODE_DEVELOPER}/usr/bin/gcc"
+C_COMPILER_OPTIONS="${C_COMPILER_OPTIONS} -fno-common"
 C_COMPILER_SHARED_OPTIONS="-fPIC -DPIC"
-LINKER_LINK_SHARED_LIBRARY_OPTIONS=-shared
-LINKER_LINK_SHARED_DLOADABLE_OPTIONS='-shared -Wl,-R"'${RUNTIME_LINKER_PATH}'"'
+LINKER_LINK_SHARED_LIBRARY_OPTIONS="-dynamiclib -compatibility_version 1 -current_version 1.0 -install_name lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}.dylib"
+LINKER_LINK_SHARED_DLOADABLE_OPTIONS="-bundle"
 LINKER_LINK_SHARED_PROGRAM_OPTIONS='-Wl,-R"'${RUNTIME_LINKER_PATH}'"'
-LIBCHICKEN_SO_LINKER_OPTIONS="-Wl,-soname,lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}.so.${BINARYVERSION}"
-LIBRARIES="-lm -ldl"
-NEEDS_RELINKING=1
-USES_SONAME=1
+LIBRARIAN_OPTIONS=scru
+DYLIB=.dylib
+NEEDS_INSTALL_NAME=1
 
-if test "${ARCH}" = x32; then
-    C_COMPILER_OPTIONS="{C_COMPILER_OPTIONS} -mx32"
-    LINKER_OPTIONS="${LINKER_OPTIONS} -mx32"
+if test -z "${ARCH}"; then
+    ARCH=`sh ${SRCDIR}/config/config-arch.sh`
+
+    if test "${ARCH}" = x86-64; then
+        C_COMPILER_OPTIONS="${C_COMPILER_OPTIONS} -m64"
+        LINKER_OPTIONS="${LINKER_OPTIONS} -m64"
+        # Avoid bus error in install_name_tool
+        LINKER_LINK_SHARED_DLOADABLE_OPTIONS="${LINKER_LINK_SHARED_DLOADABLE_OPTIONS} -Wl,-headerpad -Wl,128"
+    fi
+fi
+
+if test "${ARCH}" = universal; then
+    #XXX SDK version?
+    C_COMPILER_OPTIONS="${C_COMPILER_OPTIONS} -arch ppc -arch i386 -isysroot ${XCODE_DEVELOPER}/SDKs/MacOSX10.4u.sdk"
+    LINKER_OPTIONS="-arch ppc -arch i386 -isysroot ${XCODE_DEVELOPER}/SDKs/MacOSX10.4u.sdk"
 fi
 
 cat >chicken-config.h <<EOF
@@ -57,6 +73,8 @@ cat >chicken-config.h <<EOF
 #define HAVE_STRERROR 1
 #define HAVE_STRINGS_H 1
 #define HAVE_STRING_H 1
+#define HAVE_STRLCAT 1
+#define HAVE_STRLCPY 1
 #define HAVE_STRTOLL 1
 #define HAVE_STRTOQ 1
 #define HAVE_SYS_STAT_H 1
@@ -67,8 +85,8 @@ cat >chicken-config.h <<EOF
 #define STDC_HEADERS 1
 #define HAVE_ALLOCA 1
 #define HAVE_ALLOCA_H 1
+#define HAVE_CRT_EXTERNS_H 1
 #define HAVE_ERRNO_H 1
 #define HAVE_SYSEXITS_H 1
 #define C_STACK_GROWS_DOWNWARD 1
-#define C_USE_STD_FEATURE_MACROS
 EOF

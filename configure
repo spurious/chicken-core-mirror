@@ -33,7 +33,6 @@ C_COMPILER=gcc
 CXX_COMPILER=g++
 LIBRARIAN=ar
 LIBRARIAN_OPTIONS=cru
-USES_SONAME=1
 ARCH=
 STATICBUILD=
 GCHOOKS=
@@ -43,6 +42,7 @@ BINARYVERSION=9
 STACKDIRECTION=1
 CROSS_CHICKEN=0
 PREFIX=/usr/local
+USES_SONAME=0
 PROGRAM_PREFIX=
 PROGRAM_SUFFIX=
 PLATFORM=
@@ -60,13 +60,18 @@ A=.a
 NEEDS_RANLIB=
 NEEDS_INSTALL_NAME=
 POSTINSTALL_PROGRAM=true
+PTABLES=1
+INSTALL_PROGRAM=install
+
 
 usage() {
-    echo "usage: ${SRCDIR}/configure [-help] [-prefix PREFIX] [-platform PLATFORM] [-chicken CHICKEN] [-arch ARCH] [-gchooks] [-debug] [-optimize-for-speed] [-target TARGET] [-host HOST] [-static] [-profile]" >&2
+    echo "usage: ${SRCDIR}/configure [-help] [-prefix PREFIX] [-platform PLATFORM] [-chicken CHICKEN] [-arch ARCH] [-gchooks] [-debug] [-optimize-for-speed] [-target TARGET] [-host HOST] [-static] [-profile] [-no-ptables] [-program-prefix PREFIX] [-program-suffix SUFFIX] [-cc COMPILER]" >&2
     echo >&2
     echo "consult ${SRCDIR}/README for more detailed information." >&2
     exit $0
 }
+
+# parse command line
 
 while test -n "$1"; do
     case "$1" in
@@ -74,6 +79,15 @@ while test -n "$1"; do
         -prefix)
             shift
             PREFIX=$1;;
+        -cc)
+            shift
+            C_COMPILER=$1;;
+        -program-prefix)
+            shift
+            PROGRAM_PREFIX=$1;;
+        -program-suffix)
+            shift
+            PROGRAM_SUFFIX=$1;;
         -platform)
             shift
             PLATFORM=$1;;
@@ -83,6 +97,8 @@ while test -n "$1"; do
         -host)
             shift
             HOSTSYSTEM=$1;;
+        -no-ptables)
+            PTABLES=0;;
         -static) 
             STATICBUILD=1;;
         -debug) 
@@ -101,23 +117,38 @@ while test -n "$1"; do
     shift
 done
 
+# massage compiler options
+
 if test -n "${DEBUGBUILD}"; then
-    C_COMPILER_OPTIMIZATION_OPTIONS="-g -Wall -Wno-unused"
+    if test "${C_COMPILER}" = gcc; then
+        C_COMPILER_OPTIMIZATION_OPTIONS="-g -Wall -Wno-unused"
+    fi
+
     EXTRA_CHICKEN_OPTIONS="${EXTRA_CHICKEN_OPTIONS} -feature debugbuild -verbose"
 else
-    if test -n "${OPTIMIZE_FOR_SPEED}"; then
-        C_COMPILER_OPTIMIZATION_OPTIONS="-O3 -fomit-frame-pointer"
-    else
-        C_COMPILER_OPTIMIZATION_OPTIONS="-Os -fomit-frame-pointer"
+    #XXX check is insufficient
+    if test "${C_COMPILER}" = gcc; then
+        if test -n "${OPTIMIZE_FOR_SPEED}"; then
+            C_COMPILER_OPTIMIZATION_OPTIONS="-O3 -fomit-frame-pointer"
+        else
+            C_COMPILER_OPTIMIZATION_OPTIONS="-Os -fomit-frame-pointer"
+        fi
     fi
 
     EXTRA_CHICKEN_PROGRAM_OPTIONS="${EXTRA_CHICKEN_PROGRAM_OPTIONS} -no-trace"
 fi
 
+if test "${PTABLES}" = 1; then
+    C_COMPILER_OPTIONS="${C_COMPILER_OPTIONS} -DC_ENABLE_PTABLES"
+fi
+
+# determine platform
+
 if test -z "${PLATFORM}"; then
     case `uname` in
-        Darwin) PLATFORM=macos;;
+        Darwin) PLATFORM=macosx;;
         Linux) PLATFORM=linux;;
+        AIX) PLATFORM=aix;;
         *)
             echo "no platform selected" >&2
             exit 1;;
@@ -131,23 +162,31 @@ else
     exit 1
 fi
 
-echo "platform is ${PLATFORM}"
+echo "platform is: ${PLATFORM}"
+
+# determine architecture
 
 if test -z "${ARCH}"; then
     echo "configuring architecture"
     ARCH=`sh ${SRCDIR}/config/config-arch.sh`
 fi
 
-echo "architecture is ${ARCH}"
+echo "architecture is: ${ARCH}"
+
+# debug build?
 
 if test -n "${DEBUGBUILD}"; then
     C_COMPILER_OPTIMIZATION_OPTIONS="-g -Wall -Wno-unused"
 fi
 
+# determine version
+
 echo "identifying build version"
 sh ${SRCDIR}/config/identify.sh
-echo "build version is "`cat buildversion`
+echo "build version is: "`cat buildversion`
 echo "binary version is: ${BINARYVERSION}"
+
+# collect settings
 
 BINDIR=${PREFIX}/bin
 LIBDIR=${PREFIX}/lib
@@ -170,6 +209,8 @@ CHICKEN_STATUS_PROGRAM=${PROGRAM_PREFIX}chicken-status${PROGRAM_SUFFIX}
 CHICKEN_DO_PROGRAM=${PROGRAM_PREFIX}chicken-do${PROGRAM_SUFFIX}
 CHICKEN_DEBUGGER_PROGRAM=${PROGRAM_PREFIX}feathers${PROGRAM_SUFFIX}
 INSTALL_LIB_NAME=${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}
+
+# cross setup
 
 if test -n "${HOSTSYSTEM}"; then
     C_COMPILER=${HOSTSYSTEM}-gcc
@@ -209,9 +250,13 @@ if test "${TARGET_C_COMPILER}" != "${C_COMPILER}"; then
     echo "this is a cross chicken"
 fi
 
+# statiic build?
+
 if test -n "${STATICBUILD}"; then
     STATIC_EXTRALIBS="${LIBRARIES}"
 fi
+
+# config output
 
 echo "generating config.sh"
 cat >config.sh <<EOF
@@ -270,6 +315,8 @@ echo "Linker shared library options are: ${LINKER_LINK_SHARED_LIBRARY_OPTIONS}"
 echo "Linker dynamic loadable module options are: ${LINKER_LINK_SHARED_DLOADABLE_OPTIONS}"
 echo "Linker program options are: ${LINKER_LINK_SHARED_PROGRAM_OPTIONS}"
 
+# linker magic
+
 if test -z "${STATICBUILD}"; then
     echo "Linker options for dynamic libchicken are: ${LIBCHICKEN_SO_LINKER_OPTIONS}"
 fi
@@ -277,6 +324,8 @@ fi
 echo "Libraries are: ${LIBRARIES}"
 test -n "${NEEDS_RELINKING}" && echo "Runtime library needs relinking"
 test -n "${USES_SONAME}" && echo "Runtime library uses soname"
+
+# add more information to chicken-config (generated by platform script)
 
 echo "updating chicken-config.h"
 
@@ -348,10 +397,15 @@ cat >>chicken-config.h <<EOF
 /* END OF FILE */
 EOF
 
+# build chicken-do
+
 if test ! -x chicken-do; then
-    echo "building chicken-do"
+    echo "building chicken-do:"
+    echo " " ${C_COMPILER} ${C_COMPILER_OPTIONS} ${C_COMPILER_OPTIMIZATION_OPTIONS} ${SRCDIR}/chicken-do.c -o chicken-do -I.
     ${C_COMPILER} ${C_COMPILER_OPTIONS} ${C_COMPILER_OPTIMIZATION_OPTIONS} ${SRCDIR}/chicken-do.c -o chicken-do -I.
 fi
+
+# generate resource files (only for mingw/msys and mingw cross compile)
 
 if test -n "${NEEDS_RC}"; then
     echo "generating .rc files"
@@ -395,6 +449,8 @@ EOF
     CHICKEN_INSTALL_RC_O=chicken-install.rc.o
     CHICKEN_UNINSTALL_RC_O=chicken-uninstall.rc.o
 fi
+
+# output makefile
 
 echo "generating makefile"
 cat >Makefile <<EOF
