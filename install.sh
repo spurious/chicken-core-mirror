@@ -41,6 +41,19 @@ fi
 
 libname=lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}
 
+if test -n "${NEEDS_RELINKING}"; then
+    rm -f "${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${EXE}"
+    rm -f "${PROGRAM_PREFIX}csc${PROGRAM_SUFFIX}${EXE}"
+    rm -f "${PROGRAM_PREFIX}csi${PROGRAM_SUFFIX}${EXE}"
+    rm -f "${PROGRAM_PREFIX}chicken-install${PROGRAM_SUFFIX}${EXE}"
+    rm -f "${PROGRAM_PREFIX}chicken-uninstall${PROGRAM_SUFFIX}${EXE}"
+    rm -f "${PROGRAM_PREFIX}chicken-status${PROGRAM_SUFFIX}${EXE}"
+    rm -f "${PROGRAM_PREFIX}chicken-profile${PROGRAM_SUFFIX}${EXE}"
+    rm -f *.import.so
+    rm -f ${libname}${DYLIB}
+    RUNTIME_LINKER_PATH="${LIBDIR}" sh ${SRCDIR}/build.sh
+fi
+
 if test -z "${STATICBUILD}"; then
     libdest="${LIBDIR}"
 
@@ -49,12 +62,12 @@ if test -z "${STATICBUILD}"; then
     fi
 
     if test -n "${USES_SONAME}"; then
-        ${INSTALL_PROGRAM} -m 755 ${libname}${DYLIB}.${BINARYVERSION} "${DESTDIR}${libdest}"
+        ${INSTALL_PROGRAM} -m 755 "${libname}${DYLIB}.${BINARYVERSION}" "${DESTDIR}${libdest}"
         oldpwd=${PWD}
-        cd "${DESTDIR}${LIBDIR}" && ln -sf ${libname}${DYLIB}.${BINARYVERSION} l${libname}
-        cd ${old}
+        cd "${DESTDIR}${libdest}" && ln -sf "${libname}${DYLIB}.${BINARYVERSION}" "${libname}${DYLIB}"
+        cd ${oldpwd}
     else
-        ${INSTALL_PROGRAM} -m 755 ${libname}${DYLIB} "${DESTDIR}${libdest}"
+        ${INSTALL_PROGRAM} -m 755 "${libname}${DYLIB}" "${DESTDIR}${libdest}"
     fi
 fi
 
@@ -65,25 +78,12 @@ ${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken.h" chicken-config.h "${DESTDIR}${IN
 
 ${INSTALL_PROGRAM} -m 644 "${SRCDIR}/types.db" "${DESTDIR}${EGGDIR}"
 
-if test -n "${NEEDS_RELINKING}"; then
-    rm "${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${EXE}"
-    rm "${PROGRAM_PREFIX}csc${PROGRAM_SUFFIX}${EXE}"
-    rm "${PROGRAM_PREFIX}csi${PROGRAM_SUFFIX}${EXE}"
-    rm "${PROGRAM_PREFIX}chicken-${INSTALL_PROGRAM}${PROGRAM_SUFFIX}${EXE}"
-    rm "${PROGRAM_PREFIX}chicken-un${INSTALL_PROGRAM}${PROGRAM_SUFFIX}${EXE}"
-    rm "${PROGRAM_PREFIX}chicken-status${PROGRAM_SUFFIX}${EXE}"
-    rm "${PROGRAM_PREFIX}chicken-profile${PROGRAM_SUFFIX}${EXE}"
-    rm *.import.so
-    rm ${libname}${DYLIB}
-    RUNTIME_LINKER_PATH="${LIBDIR}" sh build.sh
-fi
-
 ${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
 ${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}csc${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
 ${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}csi${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
 ${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken-status${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
-${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken-${INSTALL_PROGRAM}${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
-${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken-un${INSTALL_PROGRAM}${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
+${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken-install${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
+${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken-uninstall${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
 ${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}chicken-profile${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"
 ${INSTALL_PROGRAM} -m 755 chicken-do${EXE} "${DESTDIR}${BINDIR}/${PROGRAM_PREFIX}chicken-do${PROGRAM_SUFFIX}${EXE}"
 ${INSTALL_PROGRAM} -m 755 "${PROGRAM_PREFIX}feathers${PROGRAM_SUFFIX}${EXE}" "${DESTDIR}${BINDIR}"

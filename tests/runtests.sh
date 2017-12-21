@@ -6,6 +6,7 @@
 
 
 set -e
+
 if test -z "$MSYSTEM"; then
     TEST_DIR=`pwd`
     PATH_SEP=':'
@@ -16,13 +17,19 @@ else
     PATH_SEP=';'
 fi
 
-DYLD_LIBRARY_PATH=${TEST_DIR}/..
-LD_LIBRARY_PATH=${TEST_DIR}/..
-LIBRARY_PATH=${TEST_DIR}/..:${LIBRARY_PATH}
+if test -n "$1"; then
+    BUILDDIR="$1"
+else
+    BUILDDIR="${TESTDIR}"/..
+fi
+
+DYLD_LIBRARY_PATH=${BUILDDIR}
+LD_LIBRARY_PATH=${BUILDDIR}
+LIBRARY_PATH=${BUILDDIR}:${LIBRARY_PATH}
 # Cygwin uses LD_LIBRARY_PATH for dlopen(), but the dlls linked into
 # the binary are read by the OS itself, which uses $PATH (mingw too)
 # Oddly, prefixing .. with ${TEST_DIR}/ does _not_ work on mingw!
-PATH=..:${PATH}
+PATH=..:${BUILDDIR}:${PATH}
 
 export DYLD_LIBRARY_PATH LD_LIBRARY_PATH LIBRARY_PATH PATH
 
@@ -33,22 +40,24 @@ case `uname` in
 		DIFF_OPTS=-bu ;;
 esac
 
-CHICKEN=${TEST_DIR}/../chicken
-CHICKEN_PROFILE=${TEST_DIR}/../chicken-profile
-CHICKEN_INSTALL=${TEST_DIR}/../chicken-install
-CHICKEN_UNINSTALL=${TEST_DIR}/../chicken-uninstall
+CHICKEN=${BUILDDIR}/chicken
+CHICKEN_PROFILE=${BUILDDIR}/chicken-profile
+CHICKEN_INSTALL=${BUILDDIR}/chicken-install
+CHICKEN_UNINSTALL=${BUILDDIR}/chicken-uninstall
 CHICKEN_INSTALL_REPOSITORY=${TEST_DIR}/test-repository
-CHICKEN_REPOSITORY_PATH="${TEST_DIR}/..${PATH_SEP}${CHICKEN_INSTALL_REPOSITORY}"
+CHICKEN_REPOSITORY_PATH=${BUILDDIR}:$CHICKEN_INSTALL_REPOSITORY
+COMPILE_OPTIONS="-compiler ${CHICKEN} -v -I${BUILDDIR} -L${BUILDDIR} -rpath ${BUILDDIR} -include-path ${BUILDDIR}"
 
 export CHICKEN_INSTALL_REPOSITORY CHICKEN_REPOSITORY_PATH
 
 TYPESDB=../types.db
 COMPILE_OPTIONS="-v -compiler ${CHICKEN} -I${TEST_DIR}/.. -L${TEST_DIR}/.. -include-path ${TEST_DIR}/.. -libdir ${TEST_DIR}/.. -rpath ${TEST_DIR}/.."
 
-compile="../csc ${COMPILE_OPTIONS} -o a.out -types ${TYPESDB} -ignore-repository"
-compile_r="../csc ${COMPILE_OPTIONS} -o a.out"
-compile_s="../csc ${COMPILE_OPTIONS} -s -types ${TYPESDB} -ignore-repository"
-interpret="../csi -n -include-path ${TEST_DIR}/.."
+compile="../csc -types ${TYPESDB} -ignore-repository ${COMPILE_OPTIONS} -o a.out -libdir ${BUILDDIR}"
+compile2="../csc -compiler ${CHICKEN} -v -I${BUILDDIR} -L${BUILDDIR} -include-path ${BUILDDIR} -libdir ${BUILDDIR}"
+compile_s="../csc -s -types ${TYPESDB} -ignore-repository ${COMPILE_OPTIONS} -libdir ${BUILDDIR}"
+compile_static="../csc -compiler ${CHICKEN} -v -static -I${BUILDDIR} -include-path ${BUILDDIR} -libdir ${BUILDDIR}"
+interpret="../csi -n -include-path ${BUILDDIR}"
 time=time
 
 # Check for a "time" command, since some systems don't ship with a
@@ -292,8 +301,8 @@ echo "======================================== r7rs tests ..."
 $interpret -i -s r7rs-tests.scm
 
 echo "======================================== module tests ..."
-$interpret -include-path ${TEST_DIR}/.. -s module-tests.scm
-$interpret -include-path ${TEST_DIR}/.. -s module-tests-2.scm
+$interpret -include-path ${BUILDDIR} -s module-tests.scm
+$interpret -include-path ${BUILDDIR} -s module-tests-2.scm
 
 echo "======================================== module tests (command line options) ..."
 module="test-$(date +%s)"
@@ -396,7 +405,7 @@ $interpret -bnq test-glob.scm
 echo "======================================== compiler/nursery stress test ..."
 for s in 100000 120000 200000 250000 300000 350000 400000 450000 500000; do
     echo "  $s"
-    ../chicken -ignore-repository ../port.scm -:s$s -output-file tmp.c -include-path ${TEST_DIR}/..
+    ../chicken -ignore-repository ../port.scm -:s$s -output-file tmp.c -include-path ${BUILDDIR}
 done
 
 echo "======================================== heap literal stress test ..."

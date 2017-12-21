@@ -189,13 +189,6 @@
                    (real-name lib)
                    (join (map real-name fs))))))
 
-(define (symlink to from)
-  (build to
-         (lambda ()
-           (printf "ln -sf ~a ~a"
-                   (real-name from)
-                   (real-name to)))))
-
 (define (touch dest)
   (build dest
          (lambda ()

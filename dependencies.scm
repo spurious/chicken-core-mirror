@@ -265,7 +265,6 @@
 
 (depends feathers feathers.in)
 (depends chicken ,(o-file compiler-objects))
-(depends libchicken.so.link libchicken.so)
 
 (for-each
   (lambda (f)
@@ -691,6 +690,7 @@
 (depends chicken.compiler.c-platform.import.scm c-platform.c)
 (depends chicken.compiler.c-backend.import.scm c-backend.c)
 (depends chicken.compiler.user-pass.import.scm user-pass.c)
+(depends chicken.compiler.support.import.scm support.c)
 
 
 ;;XXX windows implib (.dll.a)
@@ -705,9 +705,6 @@
   (map static-o-file (cons 'runtime libchicken-objects)))
 
 (for-each (cut rc <>) resource-files)
-
-(unless WINDOWS
-  (symlink 'libchicken.so.link 'libchicken.so))
 
 (define (sans lst . xs)
   (remove (cut memq <> xs) lst))
@@ -747,8 +744,6 @@
 
 (conditional (STATICBUILD) 
   ,@(so-file (import-library import-libraries)))
-
-(conditional USES_SONAME libchicken.so.link)
 
 (unless WINDOWS
   (conditional NEEDS_RC
@@ -913,9 +908,6 @@
     (libchicken.so (lib #(PROGRAM_PREFIX) chicken 
                         #(PROGRAM_SUFFIX) 
                         ,(if WINDOWS '.dll '(#(DYLIB)))))
-    (libchicken.so.link (lib #(PROGRAM_PREFIX) chicken
-                             #(PROGRAM_SUFFIX)
-                             #(BINARYVERSION)))
     (chicken (#(PROGRAM_PREFIX) chicken #(PROGRAM_SUFFIX) #(EXE)))
     (csc (#(PROGRAM_PREFIX) csc #(PROGRAM_SUFFIX) #(EXE)))
     (csi (#(PROGRAM_PREFIX) csi #(PROGRAM_SUFFIX) #(EXE)))
@@ -929,7 +921,8 @@
     (feathers.in (#(SRCDIR) / feathers.in))
     (identify.sh (#(SRCDIR) / config / identify.sh))
     ,@(map (lambda (f) (list f `(#(SRCDIR) / ,f)))
-        (append (map c-file c-files) 
+        (append (map c-file c-files)
+                '(chicken.h)
                 (map rc-file resource-files)
                 (map scm-file scheme-files)
                 (map (o scm-file import-library) 
