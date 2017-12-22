@@ -255,7 +255,7 @@
 
 (for-each
   (lambda (f)
-    (depends ,(so-file f) ,(c-file f)))
+    (depends ,(so-file f) ,(o-file f) libchicken.so))
   (import-library import-libraries))
 
 (for-each
@@ -719,6 +719,13 @@
 
 (for-each
   (lambda (f)
+    (let ((f (import-library f)))
+      (cc f)
+      (ld (so-file f) (cons (o-file f) 'primary-libchicken))))
+  import-libraries)
+
+(for-each
+  (lambda (f)
     (cc f)
     (cc f (static-o-file f)))
   (append (sans programs 'chicken)
@@ -877,14 +884,14 @@
 
 (ld-options ,programs
   #(LINKER_LINK_SHARED_PROGRAM_OPTIONS)
-  "-lchicken"
+  #(LINK_LIBCHICKEN)
   #(LIBRARIES))
 
 (ld-options chicken-install #(CHICKEN_INSTALL_RC_O))
 (ld-options chicken-uninstall #(CHICKEN_UNINSTALL_RC_O))
 
 (ld-options ,(so-file (import-library import-libraries))
-  "-DC_SHARED" #(LINKER_LINK_SHARED_DLOADABLE_OPTIONS))
+  #(LINKER_LINK_SHARED_DLOADABLE_OPTIONS))
 
 (cc-options ,(append (o-file (cons 'runtime 
                                    libchicken-objects))
@@ -892,22 +899,21 @@
                                           libchicken-objects)))
   "-DC_BUILDING_LIBCHICKEN")
 
-(cc-options ,(o-file (append (cons 'runtime 
-                                   libchicken-objects)
-                             (import-library import-libraries)))
+(cc-options ,(o-file (cons 'runtime libchicken-objects))
   #(C_COMPILER_SHARED_OPTIONS))
+
+(cc-options ,(o-file (import-library import-libraries))
+  "-DC_SHARED" #(C_COMPILER_SHARED_OPTIONS))
 
 
 ;; name mapping
 
 (define (build-name-map)
-  `((primary-libchicken (#(PRIMARY_LIBCHICKEN)))
-    (libchicken.a (lib #(PROGRAM_PREFIX) chicken
+  `((libchicken.a (lib #(PROGRAM_PREFIX) chicken
                        #(PROGRAM_SUFFIX) 
                        ,(if WINDOWS '.lib '.a)))
-    (libchicken.so (lib #(PROGRAM_PREFIX) chicken 
-                        #(PROGRAM_SUFFIX) 
-                        ,(if WINDOWS '.dll '(#(DYLIB)))))
+    (primary-libchicken (#(PRIMARY_LIBCHICKEN)))
+    (libchicken.so (#(LIBCHICKEN)))
     (chicken (#(PROGRAM_PREFIX) chicken #(PROGRAM_SUFFIX) #(EXE)))
     (csc (#(PROGRAM_PREFIX) csc #(PROGRAM_SUFFIX) #(EXE)))
     (csi (#(PROGRAM_PREFIX) csi #(PROGRAM_SUFFIX) #(EXE)))
