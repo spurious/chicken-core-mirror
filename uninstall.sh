@@ -25,8 +25,8 @@
 
 
 set -e
-
 . config.sh
+set -x
 
 rm -f "${DESTDIR}${BINDIR}/${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${EXE}"
 rm -f "${DESTDIR}${BINDIR}/${PROGRAM_PREFIX}csc${PROGRAM_SUFFIX}${EXE}"
@@ -38,12 +38,21 @@ rm -f "${DESTDIR}${BINDIR}/${PROGRAM_PREFIX}chicken-profile${PROGRAM_SUFFIX}${EX
 rm -f "${DESTDIR}${BINDIR}/${PROGRAM_PREFIX}chicken-do${PROGRAM_SUFFIX}${EXE}"
 rm -f "${DESTDIR}${BINDIR}/${PROGRAM_PREFIX}feathers${PROGRAM_SUFFIX}${EXE}"
 
-rm -f "${DESTDIR}${LIBDIR}/lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${DYLIB}"
-rm -f "${DESTDIR}${BINDIR}/lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${DYLIB}"
+if test -z "${STATICBUILD}"; then
+    rm -f "${DESTDIR}${LIBDIR}/lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${DYLIB}"
+
+    if test "${USES_SONAME}" = 1; then
+        rm -f "${DESTDIR}${LIBDIR}/lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${DYLIB}.${BINARYVERSION}"
+    fi
+
+    if test -n "${LIBCHICKEN_IMPORT_LIB}"; then
+        rm -f "${DESTDIR}/lib/${LIBCHICKEN_IMPORT_LIB}"
+fi
+    
 rm -f "${DESTDIR}${LIBDIR}/lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${A}"
-rm -f "${DESTDIR}${LIBDIR}/lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${DYLIB}.${BINARYVERSION}"
 
 rm -f "${DESTDIR}${EGGDIR}/types.db"
+rm -f "${DESTDIR}${DATADIR}/setup.defaults"
 
 rm -f "${DESTDIR}${INCLUDEDIR}/chicken.h
 rm -f "${DESTDIR}${INCLUDEDIR}/chicken-config.h
