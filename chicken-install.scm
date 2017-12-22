@@ -280,7 +280,7 @@
 			  (error 
 			   (sprintf 
 			       "version of installed `~a' does not match chicken-install version (~a)"
-			     +defaults-file+
+			     deff
 			     +defaults-version+)
 			   (cadr x)))
 			 ;; others are ignored
