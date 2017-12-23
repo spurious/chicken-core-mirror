@@ -30,8 +30,8 @@ set -x
 
 mkdir -p "${DESTDIR}${LIBDIR}"
 mkdir -p "${DESTDIR}${BINDIR}"
-mkdir -p "${DESTDIR}${INCLUDEDIR}"
-mkdir -p "${DESTDIR}${DATADIR}/doc"
+mkdir -p "${DESTDIR}${CHICKENINCDIR}"
+mkdir -p "${DESTDIR}${DOCDIR}"
 mkdir -p "${DESTDIR}${SHAREDIR}"
 mkdir -p "${DESTDIR}${CHICKENLIBDIR}/${BINARYVERSION}"
 mkdir -p "${DESTDIR}${MAN1DIR}"
@@ -74,7 +74,7 @@ fi
 ${INSTALL_PROGRAM} -m 644 lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${A} "${DESTDIR}${LIBDIR}"
 test -n "${NEEDS_RANLIB}" && ranlib "${DESTDIR}${LIBDIR}/lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${A}"
 
-${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken.h" chicken-config.h "${DESTDIR}${INCLUDEDIR}"
+${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken.h" chicken-config.h "${DESTDIR}${CHICKENINCDIR}"
 
 ${INSTALL_PROGRAM} -m 644 "${SRCDIR}/types.db" "${DESTDIR}${EGGDIR}"
 
@@ -123,9 +123,9 @@ ${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken-profile.mdoc" "${DESTDIR}${MAN1DIR}
 ${INSTALL_PROGRAM} -m 644 "${SRCDIR}/chicken-do.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken-do${PROGRAM_SUFFIX}.1"
 ${INSTALL_PROGRAM} -m 644 "${SRCDIR}/feathers.mdoc" "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}feathers${PROGRAM_SUFFIX}.1"
 
-mkdir -p "${DESTDIR}${DATADIR}/doc/manual"
-${INSTALL_PROGRAM} -m 644 ${SRCDIR}/manual-html/* "${DESTDIR}${DATADIR}/doc/manual" || true
-${INSTALL_PROGRAM} -m 644 ${SRCDIR}/README "${DESTDIR}${DATADIR}/doc"
-${INSTALL_PROGRAM} -m 644 ${SRCDIR}/LICENSE "${DESTDIR}${DATADIR}/doc"
+mkdir -p "${DESTDIR}${DOCDIR}/manual"
+${INSTALL_PROGRAM} -m 644 ${SRCDIR}/manual-html/* "${DESTDIR}${DOCDIR}/manual" || true
+${INSTALL_PROGRAM} -m 644 ${SRCDIR}/README "${DESTDIR}${DOCDIR}"
+${INSTALL_PROGRAM} -m 644 ${SRCDIR}/LICENSE "${DESTDIR}${DOCDIR}"
 
 ${INSTALL_PROGRAM} -m 644 ${SRCDIR}/feathers.tcl "${DESTDIR}${DATADIR}"
