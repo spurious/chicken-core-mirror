@@ -692,6 +692,8 @@
 (depends chicken.compiler.user-pass.import.scm user-pass.c)
 (depends chicken.compiler.support.import.scm support.c)
 
+(depends build-version.c buildversion)
+
 
 ;;XXX windows implib (.dll.a)
 

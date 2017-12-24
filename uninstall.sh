@@ -47,6 +47,7 @@ if test -z "${STATICBUILD}"; then
 
     if test -n "${LIBCHICKEN_IMPORT_LIB}"; then
         rm -f "${DESTDIR}/lib/${LIBCHICKEN_IMPORT_LIB}"
+    fi
 fi
     
 rm -f "${DESTDIR}${LIBDIR}/lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${A}"
@@ -54,7 +55,7 @@ rm -f "${DESTDIR}${LIBDIR}/lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${A}"
 rm -f "${DESTDIR}${EGGDIR}/types.db"
 rm -f "${DESTDIR}${DATADIR}/setup.defaults"
 
-rm -fr "${DESTDIR}${CHICKENINCDIR}
+rm -fr "${DESTDIR}${CHICKENINCDIR}"
 
 rm -f "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}.1"
 rm -f "${DESTDIR}${MAN1DIR}/${PROGRAM_PREFIX}csc${PROGRAM_SUFFIX}.1"

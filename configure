@@ -183,7 +183,8 @@ fi
 # determine version
 
 echo "identifying build version"
-sh ${SRCDIR}/config/identify.sh
+cp ${SRCDIR}/buildversion .
+sh ${SRCDIR}/config/identify.sh "${SRCDIR}"
 echo "build version is: "`cat buildversion`
 echo "binary version is: ${BINARYVERSION}"
 
