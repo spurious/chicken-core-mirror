@@ -29,7 +29,7 @@ set -e
 . config.sh
 
 usage () {
-    echo "clean.sh [-help] [-distclean] [-spotless] [-testclean]" >&2
+    echo "clean.sh [-help] [-distclean] [-spotless] [-testclean] [-bootclean]" >&2
     exit $1
 }
 
@@ -37,6 +37,7 @@ confclean=
 testclean=
 clean=1
 spotless=
+bootclean=
 
 case "$1" in
     --?help|--?h)
@@ -50,6 +51,9 @@ case "$1" in
         spotless=1
         confclean=1
         testclean=1;;
+    -bootclean)
+        clean=
+        bootclean=1;;
     -*)
         usage 1;;
 esac
@@ -108,4 +112,8 @@ if test -n "${spotless}"; then
     rm -f port.c ports.c posixunix.c profiler.c read-syntax.c repl.c
     rm -f scheduler.c scrutinizer.c srfi-4.c stub.c
     rm -f support.c tcp.c user-pass.c
+fi
+
+if test -n "${bootclean}"; then
+    rm -f chicken-boot* libchicken-boot* chicken-profile-boot* chicken-install-boot* chicken-uninstall-boot* chicken-status-boot* feathers-boot* csi-boot*
 fi
