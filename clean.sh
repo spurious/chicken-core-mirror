@@ -115,5 +115,13 @@ if test -n "${spotless}"; then
 fi
 
 if test -n "${bootclean}"; then
-    rm -f chicken-boot* libchicken-boot* chicken-profile-boot* chicken-install-boot* chicken-uninstall-boot* chicken-status-boot* feathers-boot* csi-boot*
+    rm -f chicken-boot-stage1${EXE} chicken-boot${EXE}
+    rm -f libchicken-boot-stage1${A} libchicken-boot${A}
+    rm -f chicken-profile-boot-stage1${EXE} chicken-profile-boot${EXE} 
+    rm -f chicken-install-boot-stage1${EXE} chicken-install-boot${EXE}
+    rm -f chicken-uninstall-boot-stage1${EXE} chicken-uninstall-boot${EXE}
+    rm -f chicken-status-boot-stage1${EXE} chicken-status-boot${EXE}
+    rm -f feathers-boot-stage1 feathers-boot
+    rm -f csi-boot-stage1${EXE} csi-boot${EXE}
+    rm -f csc-boot-stage1${EXE} csc-boot${EXE}
 fi
