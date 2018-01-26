@@ -137,6 +137,7 @@
     synrules
     tcp
     tweaks
+    eval-modules
     user-pass))
 
 (define primitive-import-libraries
@@ -171,6 +172,7 @@
     chicken.process 
     chicken.process.signal
     chicken.process-context
+    chicken.process-context.posix
     chicken.random 
     chicken.sort 
     chicken.string
@@ -221,10 +223,13 @@
   libchicken.a libchicken.so)
 
 (depends libchicken.a 
-  ,(static-o-file (cons 'runtime libchicken-objects)))
+  ,(static-o-file (cons 'runtime 'eval-modules 
+                        libchicken-objects)))
 
 (depends libchicken.so
   ,(o-file (cons 'runtime libchicken-objects)))
+
+(depends libchicken-import-library libchicken.so)
     
 (for-each
   (lambda (prg)
@@ -244,7 +249,7 @@
   (lambda (f)
     (depends ,(static-o-file f) ,(c-file f) 
              ,@(h-file headers)))
-  (append '(runtime) libchicken-objects))
+  (append '(runtime eval-modules) libchicken-objects))
           
 (for-each
   (lambda (f) (depends ,(c-file f) ,(scm-file f)))
@@ -281,6 +286,7 @@
   chicken.compiler.c-platform.import.scm
   chicken.compiler.support.import.scm
   chicken.compiler.user-pass.import.scm
+  chicken.process-context.import.scm
   chicken.string.import.scm)
 
 (depends batch-driver.c
@@ -300,6 +306,7 @@
   chicken.load.import.scm 
   chicken.pathname.import.scm 
   chicken.platform.import.scm 
+  chicken.process-context.import.scm
   chicken.pretty-print.import.scm 
   chicken.string.import.scm 
   chicken.time.import.scm)
@@ -309,6 +316,7 @@
   chicken.compiler.optimizer.import.scm
   chicken.compiler.support.import.scm
   chicken.compiler.core.import.scm
+  chicken.process-context.import.scm
   chicken.data-structures.import.scm
   chicken.internal.import.scm)
 
@@ -424,6 +432,7 @@
   chicken.format.import.scm 
   chicken.io.import.scm 
   chicken.pathname.import.scm 
+  chicken.process-context.import.scm
   chicken.posix.import.scm 
   chicken.process.import.scm 
   chicken.string.import.scm)
@@ -440,6 +449,7 @@
   chicken.load.import.scm 
   chicken.platform.import.scm 
   chicken.port.import.scm 
+  chicken.process-context.import.scm
   chicken.pretty-print.import.scm 
   chicken.repl.import.scm 
   chicken.sort.import.scm 
@@ -450,6 +460,7 @@
   chicken.internal.import.scm 
   chicken.posix.import.scm 
   chicken.sort.import.scm 
+  chicken.process-context.import.scm
   chicken.string.import.scm)
 
 (depends chicken-status.c
@@ -475,6 +486,7 @@
   egg-information.scm
   chicken.condition.import.scm 
   chicken.data-structures.import.scm 
+  chicken.process-context.import.scm
   chicken.file.import.scm 
   chicken.foreign.import.scm 
   chicken.format.import.scm 
@@ -525,6 +537,7 @@
   chicken.memory.import.scm 
   chicken.pathname.import.scm 
   chicken.platform.import.scm 
+  chicken.process-context.import.scm
   chicken.port.import.scm 
   chicken.time.import.scm)
 
@@ -538,6 +551,7 @@
   chicken.memory.import.scm 
   chicken.pathname.import.scm 
   chicken.platform.import.scm 
+  chicken.process-context.import.scm
   chicken.port.import.scm 
   chicken.string.import.scm 
   chicken.time.import.scm)
@@ -597,6 +611,7 @@
   chicken.irregex.import.scm 
   chicken.foreign.import.scm 
   chicken.pathname.import.scm 
+  chicken.process-context.import.scm
   chicken.posix.import.scm)
 
 (depends lolevel.c	
@@ -628,6 +643,11 @@
 (depends internal.c mini-srfi-1.scm)
 (depends read-syntax.c common-declarations.scm)
 
+(depends eval-modules.c
+  ,(scm-file (cons* 'eval-modules 
+                    'common-declarations
+                    import-libraries)))
+
 (depends chicken.compiler.user-pass.import.c user-pass.c)
 (depends srfi-4.import.c srfi-4.c)
 
@@ -638,6 +658,7 @@
                                     chicken.keyword
                                     chicken.blob
                                     chicken.platform 
+                                    chicken.process-context
                                     chicken.plist
                                     chicken.time)))
   library.c)
@@ -647,6 +668,7 @@
                                     chicken.process 
                                     chicken.process.signal
                                     chicken.process-context
+                                    chicken.process-context.posix
                                     chicken.time.posix
                                     chicken.errno)))
   ,(if WINDOWS 'posixwin.c 'posixunix.c))
@@ -758,6 +780,9 @@
   (conditional NEEDS_RC
     ,@(o-file (rc-file resource-files))))
 
+(conditional (LIBCHICKEN_IMPORT_LIB)
+  libchicken-import-library)
+
 
 ;; options
 
@@ -786,6 +811,7 @@
   "-emit-import-library" "chicken.keyword"
   "-emit-import-library" "chicken.platform"
   "-emit-import-library" "chicken.plist"
+  "-emit-import-library" "chicken.process-context"
   "-emit-import-library" "chicken.time")
 
 (chicken-options internal
@@ -825,7 +851,7 @@
   "-emit-import-library" "chicken.time.posix"
   "-emit-import-library" "chicken.process"
   "-emit-import-library" "chicken.process.signal"  
-  "-emit-import-library" "chicken.process-context"  
+  "-emit-import-library" "chicken.process-context.posix"  
   "-emit-import-library" "chicken.posix")   
 
 (chicken-options posixunix
@@ -835,7 +861,7 @@
   "-emit-import-library" "chicken.time.posix"
   "-emit-import-library" "chicken.process"
   "-emit-import-library" "chicken.process.signal"  
-  "-emit-import-library" "chicken.process-context"  
+  "-emit-import-library" "chicken.process-context.posix"  
   "-emit-import-library" "chicken.posix")   
 
 (chicken-options continuation
@@ -915,6 +941,7 @@
                        #(PROGRAM_SUFFIX) 
                        ,(if WINDOWS '.lib '.a)))
     (primary-libchicken (#(PRIMARY_LIBCHICKEN)))
+    (libchicken-import-library (#(LIBCHICKEN_IMPORT_LIB)))
     (libchicken.so (#(LIBCHICKEN)))
     (chicken (#(PROGRAM_PREFIX) chicken #(PROGRAM_SUFFIX) #(EXE)))
     (csc (#(PROGRAM_PREFIX) csc #(PROGRAM_SUFFIX) #(EXE)))
