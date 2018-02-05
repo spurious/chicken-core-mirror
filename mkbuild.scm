@@ -24,10 +24,11 @@
 ; POSSIBILITY OF SUCH DAMAGE.
 
 
-(import (chicken data-structures)
+(import (chicken base)
         (chicken plist) (chicken sort)
         (chicken pretty-print) (chicken format)
-        (chicken port) (chicken string))
+        (chicken port) (chicken string)
+        (chicken process-context))
 
 
 (include "mini-srfi-1.scm")

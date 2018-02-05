@@ -223,7 +223,7 @@
   libchicken.a libchicken.so)
 
 (depends libchicken.a 
-  ,(static-o-file (cons 'runtime 'eval-modules 
+  ,(static-o-file (cons* 'runtime 'eval-modules 
                         libchicken-objects)))
 
 (depends libchicken.so
@@ -667,7 +667,6 @@
                                     chicken.posix 
                                     chicken.process 
                                     chicken.process.signal
-                                    chicken.process-context
                                     chicken.process-context.posix
                                     chicken.time.posix
                                     chicken.errno)))
@@ -868,7 +867,6 @@
   "-emit-import-library" "chicken.continuation")
 
 (chicken-options data-structures
-  "-emit-import-library" "chicken.data-structures"
   "-emit-import-library" "chicken.sort"
   "-emit-import-library" "chicken.string")
 
