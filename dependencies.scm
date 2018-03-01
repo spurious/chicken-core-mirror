@@ -179,7 +179,6 @@
     chicken.time 
     chicken.time.posix
     chicken.continuation
-    chicken.data-structures
     chicken.eval
     chicken.file
     chicken.irregex
@@ -254,6 +253,7 @@
 (for-each
   (lambda (f) (depends ,(c-file f) ,(scm-file f)))
   (append compiler-objects
+          '(eval-modules)
           libchicken-objects
           programs
           (import-library import-libraries)))
@@ -262,11 +262,6 @@
   (lambda (f)
     (depends ,(so-file f) ,(o-file f) libchicken.so))
   (import-library import-libraries))
-
-(for-each
-  (lambda (f)
-    (depends ,(static-o-file f) ,(c-file f)))
-  libchicken-objects)
 
 (depends feathers feathers.in)
 (depends chicken ,(o-file compiler-objects))
@@ -317,7 +312,6 @@
   chicken.compiler.support.import.scm
   chicken.compiler.core.import.scm
   chicken.process-context.import.scm
-  chicken.data-structures.import.scm
   chicken.internal.import.scm)
 
 (depends c-backend.c
@@ -326,7 +320,6 @@
   chicken.compiler.support.import.scm 
   chicken.compiler.core.import.scm 
   chicken.bitwise.import.scm 
-  chicken.data-structures.import.scm 
   chicken.flonum.import.scm 
   chicken.foreign.import.scm 
   chicken.format.import.scm 
@@ -339,7 +332,6 @@
   mini-srfi-1.scm
   chicken.compiler.scrutinizer.import.scm 
   chicken.compiler.support.import.scm 
-  chicken.data-structures.import.scm 
   chicken.eval.import.scm 
   chicken.format.import.scm 
   chicken.io.import.scm 
@@ -352,7 +344,6 @@
 (depends optimizer.c
   mini-srfi-1.scm 
   chicken.compiler.support.import.scm 
-  chicken.data-structures.import.scm 
   chicken.internal.import.scm 
   chicken.sort.import.scm 
   chicken.string.import.scm)
@@ -364,7 +355,6 @@
 (depends scrutinizer.c
   mini-srfi-1.scm
   chicken.compiler.support.import.scm 
-  chicken.data-structures.import.scm 
   chicken.format.import.scm 
   chicken.internal.import.scm 
   chicken.io.import.scm 
@@ -384,7 +374,6 @@
   mini-srfi-1.scm 
   chicken.compiler.support.import.scm 
   chicken.compiler.core.import.scm 
-  chicken.data-structures.import.scm 
   chicken.format.import.scm)
 
 (depends chicken-ffi-syntax.c
@@ -399,7 +388,6 @@
   chicken.bitwise.import.scm 
   chicken.blob.import.scm 
   chicken.condition.import.scm 
-  chicken.data-structures.import.scm 
   chicken.file.import.scm 
   chicken.foreign.import.scm 
   chicken.format.import.scm 
@@ -439,7 +427,6 @@
 
 (depends csi.c
   chicken.condition.import.scm 
-  chicken.data-structures.import.scm 
   chicken.foreign.import.scm 
   chicken.format.import.scm 
   chicken.gc.import.scm 
@@ -485,7 +472,6 @@
   egg-download.scm
   egg-information.scm
   chicken.condition.import.scm 
-  chicken.data-structures.import.scm 
   chicken.process-context.import.scm
   chicken.file.import.scm 
   chicken.foreign.import.scm 
@@ -646,7 +632,7 @@
 (depends eval-modules.c
   ,(scm-file (cons* 'eval-modules 
                     'common-declarations
-                    import-libraries)))
+                    (import-library import-libraries))))
 
 (depends chicken.compiler.user-pass.import.c user-pass.c)
 (depends srfi-4.import.c srfi-4.c)
@@ -725,7 +711,8 @@
   (map o-file (cons 'runtime libchicken-objects)))
 
 (static-ld 'libchicken.a
-  (map static-o-file (cons 'runtime libchicken-objects)))
+  (map static-o-file (cons* 'runtime 'eval-modules 
+                           libchicken-objects)))
 
 (for-each (cut rc <>) resource-files)
 
@@ -756,9 +743,12 @@
           libchicken-objects
           compiler-objects))
 
+(cc 'eval-modules (static-o-file 'eval-modules))
+
 (for-each chicken
   (append (sans programs 'chicken)
           compiler-objects
+          '(eval-modules)
           (import-library import-libraries)
           libchicken-objects))
 
