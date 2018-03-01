@@ -3,33 +3,34 @@
 #
 # - Note: this needs a proper shell, so it will not work with plain mingw
 #   (just the compiler and the Windows shell, without MSYS)
-
+#
+# - should be called as runtests.sh SRCDIR BINDIR
 
 set -e
 
-if test -z "$MSYSTEM"; then
-    TEST_DIR=`pwd`
-    PATH_SEP=':'
-else
-    # Use Windows-native format with drive letters instead of awkward
-    # MSYS /c/blabla "pseudo-paths" which break when used in syscalls.
-    TEST_DIR=`pwd -W`
-    PATH_SEP=';'
+SRC_DIR="$1"
+BIN_DIR="$2"
+PATH_SEP=':'
+
+if test -z "${SRC_DIR}"; then
+    SRC_DIR=`pwd`
+
+    if test -z "$MSYSTEM"; then
+        # Use Windows-native format with drive letters instead of awkward
+        # MSYS /c/blabla "pseudo-paths" which break when used in syscalls.
+        SRC_DIR=`pwd -W`
+        PATH_SEP=';'
+    fi
 fi
 
-if test -n "$1"; then
-    BUILDDIR="$1"
-else
-    BUILDDIR="${TESTDIR}"/..
-fi
+TEST_DIR="${SRC_DIR}/tests"
 
-DYLD_LIBRARY_PATH=${BUILDDIR}
-LD_LIBRARY_PATH=${BUILDDIR}
-LIBRARY_PATH=${BUILDDIR}:${LIBRARY_PATH}
+DYLD_LIBRARY_PATH=${BIN_DIR}
+LD_LIBRARY_PATH=${BIN_DIR}
+LIBRARY_PATH=${BIN_DIR}:${LIBRARY_PATH}
 # Cygwin uses LD_LIBRARY_PATH for dlopen(), but the dlls linked into
 # the binary are read by the OS itself, which uses $PATH (mingw too)
-# Oddly, prefixing .. with ${TEST_DIR}/ does _not_ work on mingw!
-PATH=..:${BUILDDIR}:${PATH}
+PATH=${BIN_DIR}:${PATH}
 
 export DYLD_LIBRARY_PATH LD_LIBRARY_PATH LIBRARY_PATH PATH
 
@@ -40,24 +41,22 @@ case `uname` in
 		DIFF_OPTS=-bu ;;
 esac
 
-CHICKEN=${BUILDDIR}/chicken
-CHICKEN_PROFILE=${BUILDDIR}/chicken-profile
-CHICKEN_INSTALL=${BUILDDIR}/chicken-install
-CHICKEN_UNINSTALL=${BUILDDIR}/chicken-uninstall
-CHICKEN_INSTALL_REPOSITORY=${TEST_DIR}/test-repository
-CHICKEN_REPOSITORY_PATH=${BUILDDIR}:$CHICKEN_INSTALL_REPOSITORY
-COMPILE_OPTIONS="-compiler ${CHICKEN} -v -I${BUILDDIR} -L${BUILDDIR} -rpath ${BUILDDIR} -include-path ${BUILDDIR}"
+CHICKEN=${BIN_DIR}/chicken
+CHICKEN_PROFILE=${BIN_DIR}/chicken-profile
+CHICKEN_INSTALL=${BIN_DIR}/chicken-install
+CHICKEN_UNINSTALL=${BIN_DIR}/chicken-uninstall
+CHICKEN_INSTALL_REPOSITORY=test-repository
+CHICKEN_REPOSITORY_PATH="${BIN_DIR}${PATH_SEP}${CHICKEN_INSTALL_REPOSITORY}"
 
 export CHICKEN_INSTALL_REPOSITORY CHICKEN_REPOSITORY_PATH
 
-TYPESDB=../types.db
-COMPILE_OPTIONS="-v -compiler ${CHICKEN} -I${TEST_DIR}/.. -L${TEST_DIR}/.. -include-path ${TEST_DIR}/.. -libdir ${TEST_DIR}/.. -rpath ${TEST_DIR}/.."
+TYPESDB=${SRC_DIR}/types.db
+COMPILE_OPTIONS="-v -compiler ${CHICKEN} -I${SRC_DIR} -L${BIN_DIR} -include-path ${SRC_DIR} -include-path ${TEST_DIR} -libdir ${BIN_DIR} -rpath ${BIN_DIR}"
 
-compile="../csc -types ${TYPESDB} -ignore-repository ${COMPILE_OPTIONS} -o a.out -libdir ${BUILDDIR}"
-compile2="../csc -compiler ${CHICKEN} -v -I${BUILDDIR} -L${BUILDDIR} -include-path ${BUILDDIR} -libdir ${BUILDDIR}"
-compile_s="../csc -s -types ${TYPESDB} -ignore-repository ${COMPILE_OPTIONS} -libdir ${BUILDDIR}"
-compile_static="../csc -compiler ${CHICKEN} -v -static -I${BUILDDIR} -include-path ${BUILDDIR} -libdir ${BUILDDIR}"
-interpret="../csi -n -include-path ${BUILDDIR}"
+compile="${BIN_DIR}/csc ${COMPILE_OPTIONS} -o a.out -types ${TYPESDB} -ignore-repository"
+compile_r="${BIN_DIR}/csc ${COMPILE_OPTIONS} -o a.out"
+compile_s="${BIN_DIR}/csc ${COMPILE_OPTIONS} -s -types ${TYPESDB} -ignore-repository"
+interpret="${BIN_DIR}/csi -n -include-path ${SRC_DIR} -include-path ${TEST_DIR}"
 time=time
 
 # Check for a "time" command, since some systems don't ship with a
@@ -68,91 +67,64 @@ $time true >/dev/null 2>/dev/null
 test $? -eq 127 && time=
 set -e
 
-rm -fr *.exe *.so *.o *.import.* a.out ../foo.import.* test-repository
+rm -fr *.exe *.so *.o *.import.* a.out foo.import.* test-repository
 mkdir -p test-repository
 cp $TYPESDB test-repository/types.db
 
 echo "======================================== version tests ..."
-$compile version-tests.scm
+$compile "${TEST_DIR}/version-tests.scm"
 ./a.out
 
 echo "======================================== compiler tests ..."
-$compile compiler-tests.scm
+$compile "${TEST_DIR}/compiler-tests.scm"
 ./a.out
 
 echo "======================================== csc tests ..."
-$interpret -s csc-tests.scm
+$interpret -s "${TEST_DIR}/csc-tests.scm" "${SRC_DIR}" "${TEST_DIR}"
 
 echo "======================================== compiler inlining tests  ..."
-$compile inlining-tests.scm -optimize-level 3
+$compile "${TEST_DIR}/inlining-tests.scm" -optimize-level 3
 ./a.out
 
-echo "======================================== compiler message tests ..."
-$compile -analyze-only messages-test.scm 2>messages.out
-diff $DIFF_OPTS messages.expected messages.out
-
 echo "======================================== optimizer tests  ..."
-$compile clustering-tests.scm -clustering
+$compile "${TEST_DIR}/clustering-tests.scm" -clustering
 ./a.out
 
 echo "======================================== profiler tests ..."
-$compile null.scm -profile -profile-name TEST.profile
+$compile "${TEST_DIR}/null.scm" -profile -profile-name TEST.profile
 ./a.out
 $CHICKEN_PROFILE TEST.profile
 
 echo "======================================== scrutiny tests ..."
-$compile scrutinizer-tests.scm -analyze-only
-$compile typematch-tests.scm -specialize -no-warnings
+$compile "${TEST_DIR}/scrutinizer-tests.scm" -analyze-only
+$compile "${TEST_DIR}/typematch-tests.scm" -specialize -no-warnings
 ./a.out
 
-$compile scrutiny-tests.scm -analyze-only -verbose 2>scrutiny.out
-$compile specialization-tests.scm -analyze-only -verbose -specialize 2>specialization.out
-
-# these are sensitive to gensym-names, so make them optional
-if test \! -f scrutiny.expected; then
-    cp scrutiny.expected scrutiny.out
-fi
-if test \! -f specialization.expected; then
-    cp specialization.expected specialization.out
-fi
-
-diff $DIFF_OPTS scrutiny.expected scrutiny.out
-diff $DIFF_OPTS specialization.expected specialization.out
-
-$compile scrutiny-tests-2.scm -A 2>scrutiny-2.out -verbose
-
-# this is sensitive to gensym-names, so make it optional
-if test \! -f scrutiny-2.expected; then
-    cp scrutiny-2.expected scrutiny-2.out
-fi
-
-diff $DIFF_OPTS scrutiny-2.expected scrutiny-2.out
-
-$compile scrutiny-tests-3.scm -specialize -block
+$compile "${TEST_DIR}/scrutiny-tests-3.scm" -specialize -block
 ./a.out
 
-$compile scrutiny-tests-strict.scm -strict-types -specialize
+$compile "${TEST_DIR}/scrutiny-tests-strict.scm" -strict-types -specialize
 ./a.out
 
 echo "======================================== specialization tests ..."
 rm -f foo.types foo.import.*
-$compile specialization-test-1.scm -emit-type-file foo.types -specialize \
+$compile "${TEST_DIR}/specialization-test-1.scm" -emit-type-file foo.types -specialize \
   -debug ox -emit-import-library foo
 ./a.out
-$compile specialization-test-2.scm -types foo.types -types specialization-test-2.types -specialize -debug ox
+$compile "${TEST_DIR}/specialization-test-2.scm" -types foo.types -types "${TEST_DIR}/specialization-test-2.types" -specialize -debug ox
 ./a.out
 rm -f foo.types foo.import.*
 
 echo "======================================== specialization benchmark ..."
-$compile fft.scm -O2 -local -d0 -disable-interrupts -b -o fft1.out
-$compile fft.scm -O2 -local -specialize -debug x -d0 -disable-interrupts -b -o fft2.out -specialize
+$compile "${TEST_DIR}/fft.scm" -O2 -local -d0 -disable-interrupts -b -o fft1.out
+$compile "${TEST_DIR}/fft.scm" -O2 -local -specialize -debug x -d0 -disable-interrupts -b -o fft2.out -specialize
 echo "normal:"
 $time ./fft1.out 1000 7
 echo "specialized:"
 $time ./fft2.out 1000 7
 
 echo "======================================== callback tests ..."
-$compile -extend c-id-valid.scm callback-tests.scm
+$compile -extend "${TEST_DIR}/c-id-valid.scm" "${TEST_DIR}/callback-tests.scm"
 ./a.out
 
 if ./a.out twice; then
@@ -163,8 +135,8 @@ else
 fi
 
 echo "======================================== runtime tests ..."
-$interpret -s apply-test.scm
-$compile apply-test.scm
+$interpret -s "${TEST_DIR}/apply-test.scm"
+$compile "${TEST_DIR}/apply-test.scm"
 ./a.out
 if ./a.out -:A10k; then
     echo "apply test with limited temp stack didn't fail"
@@ -173,268 +145,268 @@ else
     echo "apply test with limited temp stack failed as it should."
 fi
 
-$compile test-gc-hooks.scm
+$compile "${TEST_DIR}/test-gc-hooks.scm"
 ./a.out
 
 echo "======================================== library tests ..."
-$interpret -s library-tests.scm
-$compile -specialize library-tests.scm
+$interpret -s "${TEST_DIR}/library-tests.scm"
+$compile -specialize "${TEST_DIR}/library-tests.scm"
 ./a.out
-$interpret -s records-and-setters-test.scm
-$compile records-and-setters-test.scm
+$interpret -s "${TEST_DIR}/records-and-setters-test.scm"
+$compile "${TEST_DIR}/records-and-setters-test.scm"
 ./a.out
 
 echo "======================================== reader tests ..."
-$interpret -s reader-tests.scm
+$interpret -s "${TEST_DIR}/reader-tests.scm"
 
 echo "======================================== dynamic-wind tests ..."
-$interpret -s dwindtst.scm >dwindtst.out
-diff $DIFF_OPTS dwindtst.expected dwindtst.out
-$compile dwindtst.scm
+$interpret -s "${TEST_DIR}/dwindtst.scm" >dwindtst.out
+diff $DIFF_OPTS "${TEST_DIR}/dwindtst.expected" dwindtst.out
+$compile "${TEST_DIR}/dwindtst.scm"
 ./a.out >dwindtst.out
-diff $DIFF_OPTS dwindtst.expected dwindtst.out
+diff $DIFF_OPTS "${TEST_DIR}/dwindtst.expected" dwindtst.out
 
 echo "======================================== lolevel tests ..."
-$interpret -s lolevel-tests.scm
-$compile -specialize lolevel-tests.scm
+$interpret -s "${TEST_DIR}/lolevel-tests.scm"
+$compile -specialize "${TEST_DIR}/lolevel-tests.scm"
 ./a.out
 
 echo "======================================== arithmetic tests ..."
-$interpret -D check -s arithmetic-test.scm
+$interpret -D check -s "${TEST_DIR}/arithmetic-test.scm" "${TEST_DIR}"
 
 echo "======================================== pretty-printer tests ..."
-$interpret -s pp-test.scm
+$interpret -s "${TEST_DIR}/pp-test.scm"
 
 echo "======================================== evaluation environment tests ..."
-$interpret -s environment-tests.scm
+$interpret -s "${TEST_DIR}/environment-tests.scm"
 
 echo "======================================== syntax tests ..."
-$interpret -s syntax-tests.scm
+$interpret -s "${TEST_DIR}/syntax-tests.scm"
 
 echo "======================================== syntax tests (compiled) ..."
-$compile syntax-tests.scm
+$compile "${TEST_DIR}/syntax-tests.scm"
 ./a.out
 
 echo "======================================== syntax tests (v2, compiled) ..."
-$compile syntax-tests-2.scm
+$compile "${TEST_DIR}/syntax-tests-2.scm"
 ./a.out
 
 echo "======================================== meta-syntax tests ..."
-$interpret -bnq meta-syntax-test.scm -e '(import foo)' -e "(assert (equal? '((1)) (bar 1 2)))" -e "(assert (equal? '(list 1 2 3) (listify)))" -e "(import test-import-syntax-for-syntax)" -e "(assert (equal? '(1) (test)))" -e "(import test-begin-for-syntax)" -e "(assert (equal? '(1) (test)))"
-$compile_s meta-syntax-test.scm -j foo
+$interpret -bnq "${TEST_DIR}/meta-syntax-test.scm" -e '(import foo)' -e "(assert (equal? '((1)) (bar 1 2)))" -e "(assert (equal? '(list 1 2 3) (listify)))" -e "(import test-import-syntax-for-syntax)" -e "(assert (equal? '(1) (test)))" -e "(import test-begin-for-syntax)" -e "(assert (equal? '(1) (test)))"
+$compile_s "${TEST_DIR}/meta-syntax-test.scm" -j foo
 $compile_s foo.import.scm
-$interpret -bnq meta-syntax-test.scm -e '(import foo)' -e "(assert (equal? '((1)) (bar 1 2)))" -e "(assert (equal? '(list 1 2 3) (listify)))" -e "(import test-import-syntax-for-syntax)" -e "(assert (equal? '(1) (test)))" -e "(import test-begin-for-syntax)" -e "(assert (equal? '(1) (test)))"
+$interpret -bnq "${TEST_DIR}/meta-syntax-test.scm" -e '(import foo)' -e "(assert (equal? '((1)) (bar 1 2)))" -e "(assert (equal? '(list 1 2 3) (listify)))" -e "(import test-import-syntax-for-syntax)" -e "(assert (equal? '(1) (test)))" -e "(import test-begin-for-syntax)" -e "(assert (equal? '(1) (test)))"
 
 echo "======================================== reexport tests ..."
-$interpret -bnq reexport-tests.scm
-$compile reexport-tests.scm
+$interpret -bnq "${TEST_DIR}/reexport-tests.scm"
+$compile "${TEST_DIR}/reexport-tests.scm"
 ./a.out
 rm -f reexport-m*.import*
-$compile_s reexport-m1.scm -J
+$compile_s "${TEST_DIR}/reexport-m1.scm" -J -o reexport-m1.so
 $compile_s reexport-m1.import.scm
-$interpret -s reexport-m2.scm
-$compile reexport-m2.scm
+$interpret -s "${TEST_DIR}/reexport-m2.scm"
+$compile "${TEST_DIR}/reexport-m2.scm"
 ./a.out
-$compile_s reexport-m3.scm -J
-$compile_s reexport-m4.scm -J
-$compile_s reexport-m5.scm -J
-$compile_s reexport-m6.scm -J
-$compile reexport-tests-2.scm
+$compile_s "${TEST_DIR}/reexport-m3.scm" -J -o reexport-m3.so
+$compile_s "${TEST_DIR}/reexport-m4.scm" -J -o reexport-m4.so
+$compile_s "${TEST_DIR}/reexport-m5.scm" -J -o reexport-m5.so
+$compile_s "${TEST_DIR}/reexport-m6.scm" -J -o reexport-m6.so
+$compile "${TEST_DIR}/reexport-tests-2.scm"
 ./a.out
 
 echo "======================================== functor tests ..."
-$interpret -bnq simple-functors-test.scm
-$compile simple-functors-test.scm
+$interpret -bnq "${TEST_DIR}/simple-functors-test.scm"
+$compile "${TEST_DIR}/simple-functors-test.scm"
 ./a.out
-$interpret -bnq functor-tests.scm
-$compile functor-tests.scm
+$interpret -bnq "${TEST_DIR}/functor-tests.scm"
+$compile "${TEST_DIR}/functor-tests.scm"
 ./a.out
-$compile -s square-functor.scm -J
+$compile -s "${TEST_DIR}/square-functor.scm" -J -o square-functor.so
 $compile -s square-functor.import.scm
-$interpret -bnq use-square-functor.scm
-$compile use-square-functor.scm
+$interpret -bnq "${TEST_DIR}/use-square-functor.scm"
+$compile "${TEST_DIR}/use-square-functor.scm"
 ./a.out
-$compile -s use-square-functor.scm -J
+$compile -s "${TEST_DIR}/use-square-functor.scm" -J -o use-square-functor.so
 $interpret -nqe '(require-library use-square-functor)' -e '(import sf1)' -e '(import sf2)'
 rm -f sf1.import.* sf2.import.* lst.import.* mod.import.*
 
 echo "======================================== compiler syntax tests ..."
-$compile compiler-syntax-tests.scm
+$compile "${TEST_DIR}/compiler-syntax-tests.scm"
 ./a.out
 
 echo "======================================== import tests ..."
-$interpret -bnq import-tests.scm
+$interpret -bnq "${TEST_DIR}/import-tests.scm"
 
 echo "======================================== import library tests ..."
-rm -f ../foo.import.* foo.import.*
-$compile import-library-test1.scm -emit-import-library foo
-$interpret -s import-library-test2.scm
+rm -f foo.import.*
+$compile_s "${TEST_DIR}/import-library-test1.scm" -emit-import-library foo -o import-library-test1.so
+$interpret -s "${TEST_DIR}/import-library-test2.scm"
 $compile_s foo.import.scm -o foo.import.so
-$interpret -s import-library-test2.scm
-$compile import-library-test2.scm
+$interpret -s "${TEST_DIR}/import-library-test2.scm"
+$compile "${TEST_DIR}/import-library-test2.scm"
 ./a.out
 rm -f foo.import.*
 
 echo "======================================== optionals test ..."
-$interpret -s test-optional.scm
-$compile test-optional.scm
+$interpret -s "${TEST_DIR}/test-optional.scm"
+$compile "${TEST_DIR}/test-optional.scm"
 ./a.out
 
 echo "======================================== syntax tests (matchable) ..."
-$interpret matchable.scm -s match-test.scm
+$interpret "${TEST_DIR}/matchable.scm" -s "${TEST_DIR}/match-test.scm"
 
 echo "======================================== syntax tests (loopy-loop) ..."
-$interpret -s loopy-test.scm
+$interpret -s "${TEST_DIR}/loopy-test.scm"
 
 echo "======================================== r4rstest ..."
 echo "(expect mult-float-print-test to fail)"
-$interpret -e '(set! ##sys#procedure->string (constantly "#<procedure>"))' \
-  -i -s r4rstest.scm >r4rstest.out
+$interpret -e '(begin (set! ##sys#procedure->string (constantly "#<procedure>")) (set! r4rstest.scm "'${TEST_DIR}'/r4rstest.scm"))' \
+  -i -s "${TEST_DIR}/r4rstest.scm" >r4rstest.out
 
-diff $DIFF_OPTS r4rstest.expected r4rstest.out
+diff $DIFF_OPTS "${TEST_DIR}/r4rstest.expected" r4rstest.out
 
 echo "======================================== syntax tests (r5rs_pitfalls) ..."
 echo "(expect two failures)"
-$interpret -i -s r5rs_pitfalls.scm
+$interpret -i -s "${TEST_DIR}/r5rs_pitfalls.scm"
 
 echo "======================================== r7rs tests ..."
-$interpret -i -s r7rs-tests.scm
+$interpret -i -s "${TEST_DIR}/r7rs-tests.scm"
 
 echo "======================================== module tests ..."
-$interpret -include-path ${BUILDDIR} -s module-tests.scm
-$interpret -include-path ${BUILDDIR} -s module-tests-2.scm
+$interpret -include-path "${SRC_DIR}" -s "${TEST_DIR}/module-tests.scm"
+$interpret -include-path "${SRC_DIR}" -s "${TEST_DIR}/module-tests-2.scm"
 
 echo "======================================== module tests (command line options) ..."
 module="test-$(date +%s)"
-$compile test.scm -A -w -j "$module" -module "$module"
+$compile "${TEST_DIR}/test.scm" -A -w -j "$module" -module "$module"
 $interpret -e "(import-syntax $module)"
 rm -f "$module.import.scm"
 
 echo "======================================== module tests (compiled) ..."
-$compile module-tests-compiled.scm
+$compile "${TEST_DIR}/module-tests-compiled.scm"
 ./a.out
-$compile module-static-eval-compiled.scm
+$compile "${TEST_DIR}/module-static-eval-compiled.scm"
 ./a.out
-$compile -static module-static-eval-compiled.scm
+$compile -static "${TEST_DIR}/module-static-eval-compiled.scm"
 ./a.out
 
 echo "======================================== module tests (chained) ..."
 rm -f m*.import.* test-chained-modules.so
-$interpret -bnq test-chained-modules.scm
-$compile_s test-chained-modules.scm -j m3
+$interpret -bnq "${TEST_DIR}/test-chained-modules.scm"
+$compile_s "${TEST_DIR}/test-chained-modules.scm" -j m3 -o test-chained-modules.so
 $compile_s m3.import.scm
 $interpret -bn test-chained-modules.so
 $interpret -bn test-chained-modules.so -e '(import m3) (s3)'
 
 echo "======================================== module tests (ec) ..."
 rm -f ec.so ec.import.*
-$interpret -bqn ec.scm ec-tests.scm
-$compile_s ec.scm -emit-import-library ec -o ec.so
+$interpret -bqn "${TEST_DIR}/ec.scm" "${TEST_DIR}/ec-tests.scm"
+$compile_s "${TEST_DIR}/ec.scm" -emit-import-library ec -o ec.so
 $compile_s ec.import.scm -o ec.import.so 
-$interpret -bnq ec.so ec-tests.scm
-# $compile ec-tests.scm
+$interpret -bnq ec.so "${TEST_DIR}/ec-tests.scm"
+# $compile "${TEST_DIR}/ec-tests.scm"
 # ./a.out        # takes ages to compile
 
 echo "======================================== port tests ..."
-$interpret -s port-tests.scm
+$interpret -e '(set! compiler.scm "'${TEST_DIR}'/compiler.scm")' -s "${TEST_DIR}/port-tests.scm"
 
 echo "======================================== fixnum tests ..."
-$compile fixnum-tests.scm
+$compile "${TEST_DIR}/fixnum-tests.scm"
 ./a.out
 
 echo "======================================== random number tests ..."
-$interpret -s random-tests.scm
+$interpret -s "${TEST_DIR}/random-tests.scm"
 
 echo "======================================== string->number tests ..."
-$interpret -s numbers-string-conversion-tests.scm
-$compile -specialize numbers-string-conversion-tests.scm
+$interpret -s "${TEST_DIR}/numbers-string-conversion-tests.scm"
+$compile -specialize "${TEST_DIR}/numbers-string-conversion-tests.scm"
 ./a.out
 
 echo "======================================== basic numeric ops tests ..."
-$interpret -s numbers-test.scm
-$compile -specialize numbers-test.scm
+$interpret -s "${TEST_DIR}/numbers-test.scm"
+$compile -specialize "${TEST_DIR}/numbers-test.scm"
 ./a.out
 
 echo "======================================== Alex Shinn's numeric ops tests ..."
-$interpret -s numbers-test-ashinn.scm
-$compile -specialize numbers-test-ashinn.scm
+$interpret -s "${TEST_DIR}/numbers-test-ashinn.scm"
+$compile -specialize "${TEST_DIR}/numbers-test-ashinn.scm"
 ./a.out
 
 echo "======================================== Gauche's numeric ops tests ..."
-$interpret -s numbers-test-gauche.scm
-$compile -specialize numbers-test-gauche.scm
+$interpret -s "${TEST_DIR}/numbers-test-gauche.scm"
+$compile -specialize "${TEST_DIR}/numbers-test-gauche.scm"
 ./a.out
 
 echo "======================================== srfi-4 tests ..."
-$interpret -s srfi-4-tests.scm
+$interpret -s "${TEST_DIR}/srfi-4-tests.scm"
 
 echo "======================================== condition tests ..."
-$interpret -s condition-tests.scm
+$interpret -s "${TEST_DIR}/condition-tests.scm"
 
 echo "======================================== data-structures tests ..."
-$interpret -s data-structures-tests.scm
+$interpret -s "${TEST_DIR}/data-structures-tests.scm"
 
 echo "======================================== path tests ..."
-$interpret -bnq path-tests.scm
+$interpret -bnq "${TEST_DIR}/path-tests.scm"
 
 echo "======================================== srfi-45 tests ..."
-$interpret -s srfi-45-tests.scm
+$interpret -s "${TEST_DIR}/srfi-45-tests.scm"
 
 echo "======================================== posix tests ..."
-$compile posix-tests.scm
+$compile "${TEST_DIR}/posix-tests.scm"
 ./a.out
 
 echo "======================================== file access tests ..."
 if test -n "$MSYSTEM"; then
-  $interpret -s file-access-tests.scm //
-  $interpret -s file-access-tests.scm \\
+  $interpret -s "${TEST_DIR}/file-access-tests.scm" //
+  $interpret -s "${TEST_DIR}/file-access-tests.scm" \\
 else
-  $interpret -s file-access-tests.scm /
+  $interpret -s "${TEST_DIR}/file-access-tests.scm" /
 fi
 
 echo "======================================== find-files tests ..."
-$interpret -bnq test-find-files.scm
+$interpret -bnq "${TEST_DIR}/test-find-files.scm"
 
 echo "======================================== record-renaming tests ..."
-$interpret -bnq record-rename-test.scm
+$interpret -bnq "${TEST_DIR}/record-rename-test.scm"
 
 echo "======================================== regular expression tests ..."
-$interpret -bnq test-irregex.scm
-$interpret -bnq test-glob.scm
+$interpret -e '(set! re-tests.txt "'${TEST_DIR}'/re-tests.txt")' -bnq "${TEST_DIR}/test-irregex.scm"
+$interpret -bnq "${TEST_DIR}/test-glob.scm"
 
 echo "======================================== compiler/nursery stress test ..."
 for s in 100000 120000 200000 250000 300000 350000 400000 450000 500000; do
     echo "  $s"
-    ../chicken -ignore-repository ../port.scm -:s$s -output-file tmp.c -include-path ${BUILDDIR}
+    "${BIN_DIR}/chicken" -ignore-repository "${SRC_DIR}/port.scm" -:s$s -output-file tmp.c -include-path "${SRC_DIR}"
 done
 
 echo "======================================== heap literal stress test ..."
-$compile heap-literal-stress-test.scm
+$compile "${TEST_DIR}/heap-literal-stress-test.scm"
 for s in 100000 120000 200000 250000 300000 350000 400000 450000 500000; do
   echo "  $s"
   ./a.out -:d -:g -:hi$s
 done
 
 echo "======================================== symbol-GC tests ..."
-$compile symbolgc-tests.scm
+$compile "${TEST_DIR}/symbolgc-tests.scm"
 ./a.out
 
 echo "======================================== finalizer tests ..."
-$interpret -s test-finalizers.scm
-$compile test-finalizers.scm
+$interpret -s "${TEST_DIR}/test-finalizers.scm"
+$compile "${TEST_DIR}/test-finalizers.scm"
 ./a.out
-$compile finalizer-error-test.scm
+$compile "${TEST_DIR}/finalizer-error-test.scm"
 echo "expect an error message here:"
 ./a.out -:hg101
-$compile test-finalizers-2.scm
+$compile "${TEST_DIR}/test-finalizers-2.scm"
 ./a.out
 
 echo "======================================== locative stress test ..."
-$compile locative-stress-test.scm
+$compile "${TEST_DIR}/locative-stress-test.scm"
 ./a.out
 
 echo "======================================== syntax-rules stress test ..."
-$time $interpret -bnq syntax-rule-stress-test.scm
+$time $interpret -bnq "${TEST_DIR}/syntax-rule-stress-test.scm"
 
 echo "======================================== include test ..."
 mkdir -p a/b
@@ -452,48 +424,48 @@ $compile -analyze-only a/b/include.scm -include-path a
 rm -r a
 
 echo "======================================== executable tests ..."
-$compile executable-tests.scm
-./a.out "$TEST_DIR/a.out"
+$compile "${TEST_DIR}/executable-tests.scm"
+./a.out `pwd`/a.out
 
 echo "======================================== user pass tests ..."
-$compile -extend user-pass-tests.scm null.scm
+$compile -extend "${TEST_DIR}/user-pass-tests.scm" "${TEST_DIR}/null.scm"
 
 echo "======================================== embedding (1) ..."
-$compile embedded1.c
+$compile "${TEST_DIR}/embedded1.c"
 ./a.out
 
 echo "======================================== embedding (2) ..."
-$compile -e embedded2.scm
+$compile -e "${TEST_DIR}/embedded2.scm"
 ./a.out
 
 echo "======================================== embedding (3) ..."
-$compile -e embedded3.c embedded4.scm
+$compile -e "${TEST_DIR}/embedded3.c" "${TEST_DIR}/embedded4.scm"
 ./a.out
 
 echo "======================================== linking tests ..."
-$compile_r -unit reverser reverser/tags/1.0/reverser.scm -J -c -o reverser.o
-$compile_r -link reverser linking-tests.scm
+$compile_r -unit reverser "${TEST_DIR}/reverser/tags/1.0/reverser.scm" -J -c -o reverser.o
+$compile_r -link reverser "${TEST_DIR}/linking-tests.scm"
 ./a.out
-$compile_r -link reverser linking-tests.scm -static
+$compile_r -link reverser "${TEST_DIR}/linking-tests.scm" -static
 ./a.out
 mv reverser.o reverser.import.scm "$CHICKEN_INSTALL_REPOSITORY"
-$compile_r -link reverser linking-tests.scm
+$compile_r -link reverser "${TEST_DIR}/linking-tests.scm"
 ./a.out
-$compile_r -link reverser linking-tests.scm -static
+$compile_r -link reverser "${TEST_DIR}/linking-tests.scm" -static
 ./a.out
 
 echo "======================================== private repository test ..."
 mkdir -p tmp
-$compile private-repository-test.scm -private-repository -o tmp/xxx
-tmp/xxx ${TEST_DIR}/tmp
+$compile ${TEST_DIR}/private-repository-test.scm -private-repository -o tmp/xxx
+tmp/xxx `pwd`/tmp
 # This MUST be `pwd`: ${PWD} is not portable, and ${TEST_DIR} breaks mingw-msys
-PATH=`pwd`/tmp:$PATH xxx ${TEST_DIR}/tmp
+PATH=`pwd`/tmp:$PATH xxx `pwd`/tmp
 # this may crash, if the PATH contains a non-matching libchicken.dll on Windows:
 #PATH=$PATH:${TEST_DIR}/tmp xxx ${TEST_DIR}/tmp
 
 echo "======================================== multiple return values tests ..."
-$interpret -s multiple-values.scm
-$compile multiple-values.scm
+$interpret -s "${TEST_DIR}/multiple-values.scm"
+$compile "${TEST_DIR}/multiple-values.scm"
 ./a.out
 
 echo "======================================== done."

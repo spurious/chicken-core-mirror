@@ -47,9 +47,20 @@
 		  (set! cur-section args) #t))
 (define record-error (lambda (e) (set! errs (cons (list cur-section e) errs))))
 
+;;; hacked writer to avoid polluting test output
+
+(define (write* x)
+  (define (walk x)
+    (cond ((and (string? x) (string=? x r4rstest.scm))
+           "r4rstest.scm")
+          ((port? x) "#<port>")
+          ((pair? x) (cons (walk (car x)) (walk (cdr x))))
+          (else x)))
+  (write (walk x)))
+
 (define test
   (lambda (expect fun . args)
-    (write (cons fun args))
+    (write* (cons fun args))
     (display "  ==> ")
     ((lambda (res)
       (write res)
@@ -1140,8 +1151,8 @@
 (SECTION 6 10 1)
 (test #t input-port? (current-input-port))
 (test #t output-port? (current-output-port))
-(test #t call-with-input-file "r4rstest.scm" input-port?)
-(define this-file (open-input-file "r4rstest.scm"))
+(test #t call-with-input-file r4rstest.scm input-port?)
+(define this-file (open-input-file r4rstest.scm))
 (test #t input-port? this-file)
 (SECTION 6 10 2)
 (test #\; peek-char this-file)

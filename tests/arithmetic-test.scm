@@ -19,11 +19,14 @@
 	(chicken platform)
 	(chicken pretty-print)
 	(chicken random)
-	(chicken fixnum))
+        (chicken fixnum)
+        (chicken pathname)
+        (chicken process-context))
 
 (define range 2)
 (define random-range 32000)
 (define result '())
+(define testdir (car (command-line-arguments)))
 
 (define points
   (list 0 1 -1 2 -2
@@ -121,12 +124,13 @@
 
 #+check
 (load 
- (cond-expand
-   (check-numbers "arithmetic-test.numbers.expected")
-   (else
-    (if (feature? #:64bit)
-	"arithmetic-test.64.expected"
-	"arithmetic-test.32.expected")))
+ (make-pathname testdir 
+   (cond-expand
+     (check-numbers "arithmetic-test.numbers.expected")
+     (else
+      (if (feature? #:64bit)
+  	"arithmetic-test.64.expected"
+	"arithmetic-test.32.expected"))))
  (lambda (x)
    (apply
     (lambda (c/total1 exp1 _ res1)

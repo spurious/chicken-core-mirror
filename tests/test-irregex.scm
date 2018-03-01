@@ -67,7 +67,7 @@
 (for-each
  (lambda (opts)
    (test-group (sprintf "irregex - ~S" opts)
-     (with-input-from-file "re-tests.txt"
+     (with-input-from-file re-tests.txt
        (lambda ()
          (port-for-each
           (lambda (line)
@@ -155,7 +155,7 @@
  (lambda (opts)
    (test-group
     (sprintf "irregex/chunked - ~S" opts)
-    (with-input-from-file "re-tests.txt"
+    (with-input-from-file re-tests.txt
       (lambda ()
 	(port-for-each
 	 (lambda (line)
@@ -198,7 +198,7 @@
 ;; pregexp
 
 '(test-group "pregexp"
-   (with-input-from-file "re-tests.txt"
+   (with-input-from-file re-tests.txt
      (lambda ()
        (port-for-each
         (lambda (line) (test-re pregexp-match line))
@@ -208,7 +208,7 @@
 ;; default regex (PCRE)
 
 '(test-group "regex"
-   (with-input-from-file "re-tests.txt"
+   (with-input-from-file re-tests.txt
      (lambda ()
        (port-for-each
         (lambda (line) (test-re string-search line))

@@ -84,19 +84,8 @@ if test -n "${confclean}"; then
 fi
 
 if test -n "${testclean}"; then
-    rm -f ${SRCDIR}/tests/*.dll
-    rm -f ${SRCDIR}/tests/*.import.scm
-    rm -f ${SRCDIR}/tests/*.link
-    rm -f ${SRCDIR}/tests/*.out
-    rm -f ${SRCDIR}/tests/*.profile
-    rm -f ${SRCDIR}/tests/*.so
-    rm -fr ${SRCDIR}/tests/tmp*
-    rm -f ${SRCDIR}/tests/empty-file
-    rm -f ${SRCDIR}/tests/null
-    rm -f ${SRCDIR}/tests/null.c
-    rm -f ${SRCDIR}/tests/null.o
-    rm -f ${SRCDIR}/tests/null.exe
-    rm -fr ${SRCDIR}/tests/test-repository
+    rm -fr tests/test-repository tests/tmp
+    rm -f tests/*
 fi
 
 if test -n "${spotless}"; then

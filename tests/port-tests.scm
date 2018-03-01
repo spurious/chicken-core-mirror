@@ -169,11 +169,11 @@ EOF
   (assert (not (input-port-open? p))))
 
 ;; fill buffers
-(with-input-from-file "compiler.scm" read-string)
+(with-input-from-file compiler.scm read-string)
 
 (print "slow...")
 (time
- (with-input-from-file "compiler.scm"
+ (with-input-from-file compiler.scm
    (lambda ()
      (with-output-to-file "compiler.scm.2"
        (lambda ()
@@ -184,7 +184,7 @@ EOF
 
 (print "fast...")
 (time
- (with-input-from-file "compiler.scm"
+ (with-input-from-file compiler.scm
    (lambda ()
      (with-output-to-file "compiler.scm.2"
        (lambda ()
