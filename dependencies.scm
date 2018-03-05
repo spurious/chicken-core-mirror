@@ -763,19 +763,19 @@
 
 ;; conditionals
 
-(conditional (STATICBUILD) libchicken.so)
+(conditional (! STATICBUILD) libchicken.so)
 
-(conditional (STATICBUILD) 
+(conditional (! STATICBUILD) 
   ,@(so-file (import-library import-libraries)))
 
 (unless WINDOWS
   (conditional NEEDS_RC
     ,@(o-file (rc-file resource-files))))
 
-(conditional (LIBCHICKEN_IMPORT_LIB)
+(conditional (! LIBCHICKEN_IMPORT_LIB)
   libchicken-import-library)
 
-(conditional (USES_SONAME)
+(conditional USES_SONAME
   libchicken.so.symlink)
 
 

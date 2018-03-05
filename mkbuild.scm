@@ -247,8 +247,8 @@
 
 (define-syntax conditional
   (syntax-rules ()
-    ((_ (var) fs ...)
-     (for-each (cut put! <> 'conditional '(var))
+    ((_ (! var) fs ...)
+     (for-each (cut put! <> 'conditional '(! var))
        `(fs ...)))
     ((_ (var val) fs ...)
      (for-each (cut put! <> 'conditional '(var val))
@@ -351,14 +351,14 @@
     (let ((c (get t 'conditional)))
       (when c
         (if (pair? c)
-            (if (pair? (cdr c))
+            (if (not (eq? '! (car c)))
                 (if WINDOWS
                     (fprintf out "if %~a% = ~a " (car c) (cadr c))
                     (fprintf out "test \"${~a}\" = ~a && " 
                              (car c) (cadr c)))
                 (if WINDOWS
-                    (fprintf out "if %~a% == \"\" " (car c))
-                    (fprintf out "test -z \"${~a}\" && " (car c))))
+                    (fprintf out "if %~a% == \"\" " (cadr c))
+                    (fprintf out "test -z \"${~a}\" && " (cadr c))))
             (if WINDOWS
                 (fprintf out "if %~a% != \"\" " c)
                 (fprintf out "test -n \"${~a}\" && " c)))))

@@ -257,7 +257,6 @@ fi
 
 if test -n "${STATICBUILD}"; then
     STATIC_EXTRALIBS="${LIBRARIES}"
-    EXTRA_CHICKEN_OPTIONS="${EXTRA_CHICKEN_OPTIONS} -static"
     PRIMARY_LIBCHICKEN=lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${A}
 fi
 
@@ -482,9 +481,6 @@ all:
 install:
 	"${SRCDIR}/install.sh"
 check:
-	if test "${USES_SONAME}" = 1; then \
-	  ln -sf libchicken.so libchicken.so.${BINARYVERSION};
-	fi
 	mkdir -p tests
 	cd tests; sh "${SRCDIR}/tests/runtests.sh" "${SRCDIR}" "${here}"
 clean:
