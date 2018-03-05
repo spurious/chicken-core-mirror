@@ -895,7 +895,7 @@
     (chicken-options ,cf
                      "-emit-import-library"
                      ,(symbol-append 'chicken.compiler. cf)))
-  '(batch-driver c-backend compiler-syntax
+  '(batch-driver c-backend compiler-syntax chicken
     core c-platform lfa2 optimizer scrutinizer support
     user-pass))
 
