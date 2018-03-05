@@ -209,7 +209,8 @@
 (define resource-files '(chicken-install chicken-uninstall))
 
 (define toplevel-targets
-  (append '(libchicken.a libchicken.so feathers)
+  (append '(libchicken.a libchicken.so libchicken.so.symlink 
+                         feathers)
           programs
           (map (o o-file rc-file) resource-files)
           (so-file (import-library import-libraries))))
@@ -757,6 +758,8 @@
 
 (construct 'feathers 'feathers.in)
 
+(symlink 'libchicken.so 'libchicken.so.symlink)
+
 
 ;; conditionals
 
@@ -771,6 +774,9 @@
 
 (conditional (LIBCHICKEN_IMPORT_LIB)
   libchicken-import-library)
+
+(conditional (USES_SONAME)
+  libchicken.so.symlink)
 
 
 ;; options
@@ -931,6 +937,7 @@
     (primary-libchicken (#(PRIMARY_LIBCHICKEN)))
     (libchicken-import-library (#(LIBCHICKEN_IMPORT_LIB)))
     (libchicken.so (#(LIBCHICKEN)))
+    (libchicken.so.symlink (#(LIBCHICKEN) |.| #(BINARYVERSION)))
     (chicken (#(PROGRAM_PREFIX) chicken #(PROGRAM_SUFFIX) #(EXE)))
     (csc (#(PROGRAM_PREFIX) csc #(PROGRAM_SUFFIX) #(EXE)))
     (csi (#(PROGRAM_PREFIX) csi #(PROGRAM_SUFFIX) #(EXE)))

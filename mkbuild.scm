@@ -218,6 +218,14 @@
                        (real-name dest)
                        (real-name dest))))))
 
+(define (symlink src dest)
+  (build dest
+         (lambda ()
+           (printf "ln -sf \"~a\" \"~a\""
+                   (real-name src)
+                   (real-name dest)))))
+
+
 
 ;;; dependency buildup
 
