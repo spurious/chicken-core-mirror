@@ -141,11 +141,11 @@
     user-pass))
 
 (define primitive-import-libraries
-  '(chicken
-    chicken.base
+  '(chicken.base
     chicken.condition
     chicken.csi
     chicken.syntax
+    chicken.time
     chicken.foreign))
 
 (define dynamic-import-libraries
@@ -176,7 +176,6 @@
     chicken.random 
     chicken.sort 
     chicken.string
-    chicken.time 
     chicken.time.posix
     chicken.continuation
     chicken.eval
@@ -599,7 +598,7 @@
   chicken.foreign.import.scm 
   chicken.pathname.import.scm 
   chicken.process-context.import.scm
-  chicken.posix.import.scm)
+  chicken.condition.import.scm)
 
 (depends lolevel.c	
   common-declarations.scm
@@ -646,8 +645,7 @@
                                     chicken.blob
                                     chicken.platform 
                                     chicken.process-context
-                                    chicken.plist
-                                    chicken.time)))
+                                    chicken.plist)))
   library.c)
 
 (depends ,(scm-file (import-library '(chicken.file.posix
@@ -806,8 +804,7 @@
   "-emit-import-library" "chicken.keyword"
   "-emit-import-library" "chicken.platform"
   "-emit-import-library" "chicken.plist"
-  "-emit-import-library" "chicken.process-context"
-  "-emit-import-library" "chicken.time")
+  "-emit-import-library" "chicken.process-context")
 
 (chicken-options internal
   "-emit-import-library" "chicken.internal")
