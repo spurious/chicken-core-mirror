@@ -67,7 +67,7 @@ usage() {
     echo "usage: ${SRCDIR}/configure [-help] [-prefix PREFIX] [-platform PLATFORM] [-chicken CHICKEN] [-arch ARCH] [-gchooks] [-debug] [-optimize-for-speed] [-target TARGET] [-host HOST] [-static] [-profile] [-no-ptables] [-program-prefix PREFIX] [-program-suffix SUFFIX] [-cc COMPILER]" >&2
     echo >&2
     echo "consult ${SRCDIR}/README for more detailed information." >&2
-    exit $0
+    exit $1
 }
 
 # parse command line
@@ -222,6 +222,7 @@ if test -n "${HOSTSYSTEM}"; then
     echo "host system is ${HOSTSYSTEM}"
 fi
 
+echo "Scheme compiler is ${CHICKEN}"
 echo "C compiler is ${C_COMPILER}"
 
 LINKER=${C_COMPILER}
@@ -253,7 +254,7 @@ if test "${TARGET_C_COMPILER}" != "${C_COMPILER}"; then
     echo "this is a cross chicken"
 fi
 
-# statiic build?
+# static build?
 
 if test -n "${STATICBUILD}"; then
     STATIC_EXTRALIBS="${LIBRARIES}"
@@ -477,7 +478,7 @@ cat >Makefile <<EOF
 .PHONY: all install check clean spotless distclean testclean uninstall boot-chicken bootclean
 
 all:
-	"${SRCDIR}/build.sh"
+	sh "${SRCDIR}/build.sh"
 install:
 	"${SRCDIR}/install.sh"
 check:
