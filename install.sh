@@ -50,7 +50,6 @@ if test -n "${NEEDS_RELINKING}"; then
     rm -f "${PROGRAM_PREFIX}chicken-profile${PROGRAM_SUFFIX}${EXE}"
     rm -f *.import.so
     rm -f ${LIBCHICKEN}
-    ln -sf lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${DYLIB}.${BINARYVERSION} lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${DYLIB}
     RUNTIME_LINKER_PATH="${LIBDIR}" sh ${SRCDIR}/build.sh
     LIBCHICKEN=lib${PROGRAM_PREFIX}chicken${PROGRAM_SUFFIX}${DYLIB}.${BINARYVERSION}
 fi
