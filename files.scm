@@ -36,7 +36,7 @@
 
 (declare
   (unit files)
-  (uses irregex data-structures)
+  (uses extras irregex data-structures)
   (fixnum)
   (hide chop-pds absolute-pathname-root root-origin root-directory split-directory)
   (disable-interrupts) 
