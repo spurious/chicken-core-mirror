@@ -76,7 +76,6 @@ if test -n "${clean}"; then
     for x in bitwise blob errno file.posix fixnum flonum format gc io keyword load locative memory	memory.representation platform plist posix pretty-print process process.signal process-context random sort string time time.posix continuation data-structures eval file internal irregex pathname port read-syntax repl tcp; do
         rm -f chicken.${x}.import.scm
     done
-    rm -f chicken.compiler.user-pass.import.scm
 fi
 
 if test -n "${confclean}"; then
