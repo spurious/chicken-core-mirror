@@ -51,7 +51,7 @@ CHICKEN_REPOSITORY_PATH="${BIN_DIR}${PATH_SEP}${CHICKEN_INSTALL_REPOSITORY}"
 export CHICKEN_INSTALL_REPOSITORY CHICKEN_REPOSITORY_PATH
 
 TYPESDB=${SRC_DIR}/types.db
-COMPILE_OPTIONS="-v -compiler ${CHICKEN} -I${SRC_DIR} -L${BIN_DIR} -include-path ${SRC_DIR} -include-path ${TEST_DIR} -libdir ${BIN_DIR} -rpath ${BIN_DIR}"
+COMPILE_OPTIONS="-v -compiler ${CHICKEN} -I${SRC_DIR} -L${BIN_DIR} -include-path ${SRC_DIR} -include-path ${TEST_DIR} -libdir ${BIN_DIR} -rpath ${BIN_DIR} -C -I${BIN_DIR} -C -I${SRC_DIR}"
 
 compile="${BIN_DIR}/csc ${COMPILE_OPTIONS} -o a.out -types ${TYPESDB} -ignore-repository"
 compile_r="${BIN_DIR}/csc ${COMPILE_OPTIONS} -o a.out"
@@ -80,7 +80,7 @@ $compile "${TEST_DIR}/compiler-tests.scm"
 ./a.out
 
 echo "======================================== csc tests ..."
-$interpret -s "${TEST_DIR}/csc-tests.scm" "${SRC_DIR}" "${TEST_DIR}"
+$interpret -s "${TEST_DIR}/csc-tests.scm" "${SRC_DIR}" "${BIN_DIR}" "${TEST_DIR}"
 
 echo "======================================== compiler inlining tests  ..."
 $compile "${TEST_DIR}/inlining-tests.scm" -optimize-level 3
