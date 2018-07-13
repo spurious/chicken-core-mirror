@@ -1,3 +1,9 @@
+4.14.0
+
+- Module system
+  - Modules implementing an interface can now correctly export extra
+    identifiers (bug reported by Martin Schneeweis, fix by "megane").
+
 4.13.0
 
 - Security fixes
