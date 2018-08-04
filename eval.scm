@@ -208,7 +208,7 @@
 
       (define (rename var se)
 	(cond ((find-id var se))
-	      ((##sys#get var '##core#macro-alias))
+	      ((##sys#get var '##core#macro-alias) symbol? => values)
 	      (else var)))
 
       (define (lookup var0 e se)

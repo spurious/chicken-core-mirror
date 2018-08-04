@@ -413,7 +413,7 @@
 
   (define (lookup id se)
     (cond ((find-id id se))
-	  ((##sys#get id '##core#macro-alias))
+	  ((##sys#get id '##core#macro-alias) symbol? => values)
 	  (else id)))
 
   (define (macro-alias var se)
