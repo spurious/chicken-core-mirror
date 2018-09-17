@@ -675,21 +675,21 @@ EOF
 		       s1 s2 'string-ci>?
 		       (lambda (len1 len2 cmp)
 			 (or (fx> cmp 0)
-			     (and (fx< len2 len1)
+			     (and (fx> len1 len2)
 				  (eq? cmp 0) ) ) ) ) ) )
   (set! string-ci<=? (lambda (s1 s2)
 		       (compare 
 			s1 s2 'string-ci<=?
 			(lambda (len1 len2 cmp)
 			  (if (eq? cmp 0)
-			      (fx>= len1 len2)
+			      (fx<= len1 len2)
 			      (fx< cmp 0) ) ) ) ) )
   (set! string-ci>=? (lambda (s1 s2)
 		       (compare 
 			s1 s2 'string-ci>=?
 			(lambda (len1 len2 cmp)
 			  (if (eq? cmp 0)
-			      (fx<= len1 len2)
+			      (fx>= len1 len2)
 			      (fx> cmp 0) ) ) ) ) ) )
 
 (define (##sys#string-append x y)
