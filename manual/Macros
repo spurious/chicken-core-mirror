@@ -61,7 +61,7 @@ transformer procedure is undefined.
 
 <procedure>(er-macro-transformer PROCEDURE)</procedure>
 
-Returns an explicit-remnaming transformer object wrapping the
+Returns an explicit-renaming transformer object wrapping the
 syntax-transformer procedure {{PROCEDURE}}. The procedure will be
 called with the form to be expanded and rename and compare procedures
 and perform explicit renaming to maintain hygiene. See below for
