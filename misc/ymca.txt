@@ -1,0 +1,102 @@
+Description of Backend Intermediate Language
+
+
+* TOP: Toplevel statements
+
+    (call ID/EXP EXP ...)
+        Perform procedure call with arguments.
+
+    (comment STR)
+
+    (declare [extern|static] [noreturn] ID (TYPE VAR) ...)
+        Declare extern or static function prototype.
+
+    (define [extern|static] [noreturn] ID (TYPE VAR) ...)
+        ...
+    (end)
+        Define function.
+
+    (define/array [static] [aligned] TYPE ID SIZE|#f [EXP ...])
+        Define global array variable.
+
+    (define/variable [extern|static] TYPE ID [EXP])
+        Define global non-array variable.
+
+    (goto ID)
+    (if EXP TOP TOP)
+    (label LABEL)
+
+    (let VAR [EXP])
+        Declare local variable.
+
+    (let/proc VAR PEXP)
+        Declare a local variable holding a procedure ptr.
+
+    (let/ptr VAR EXP)
+        Declare pointer variable.
+
+    (let/array VAR SIZE)
+        Declare array variable.
+
+    (let/unboxed TYPE VAR [EXP])
+        Declare local unboxed variable.
+
+    (return EXP)
+
+    (set LVALUE EXP)
+        Set local or global variable or lvalue.
+
+    (switch EXP (case CEXP TOP) ... (default TOP))
+
+    (trace STR)
+        Emit a trace item.
+    
+* EXP: Expressions
+
+    (adr EXP)
+        Address-of expression.
+
+    (box AEXP EXP)
+        Allocate a one-element vector from allocation ptr AEXP.
+
+    (cast TYPE EXP)
+
+    (closure SIZE AEXP EXP ...)
+        Allocate a closure with given size from allocation ptr AEXP.
+    
+    (cond EXP EXP EXP)
+        Conditional expression.
+
+    (deref EXP)
+        Pointer-dereferencing.
+
+    (elt EXP IEXP)
+        Extract element IEXP from array EXP.
+
+    (mutate EXP IEXP XEXP)
+        Mutate object slot with index.
+
+    (setslot EXP IEXP XEXP)
+
+    (slot EXP IEXP)
+        Extract slot IEXP from object EXP.
+
+    (unlikely EXP)
+        Unlikely conditional expression.
+
+    (words EXP)
+        Mutiplied by word size.
+
+    (ID EXP ...)
+        General function or macro call.
+
+    (OP EXP ...)
+        +, *, -, /, &, |, ^, ==, !, !=, <, >, <=, >=
+
+    <VAR>
+    <LITERAL>
+
+
+XXX undefined true false null
+array shapes (C_debug_info) for initializers
+
