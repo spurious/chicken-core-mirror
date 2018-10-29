@@ -30,7 +30,7 @@
 	srfi-4 extras data-structures
 	lolevel ; unused, but loaded to make foldable bindings available
 	support compiler optimizer lfa2 compiler-syntax scrutinizer
-	batch-driver c-platform c-backend user-pass))
+	batch-driver c-platform c-backend target user-pass))
 
 (module chicken.compiler.chicken ()
 

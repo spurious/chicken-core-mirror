@@ -1452,7 +1452,7 @@
 		(else (string-intersperse (reverse nesting) " in "))) ) ) )
 	  (else (##sys#symbol->qualified-string rn)) ) ) )
 
-(define (real-name2 var db)		; Used only in c-backend.scm
+(define (real-name2 var db)
   (and-let* ((rn (hash-table-ref real-name-table var)))
     (real-name rn db) ) )
 
@@ -1848,6 +1848,7 @@ Available debugging options:
      7          show expressions after complete optimization
      8          show database after final analysis
      9          show expressions after closure conversion
+     y          show backend language expressions before code generation
 
 
 EOF

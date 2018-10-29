@@ -45,7 +45,7 @@ LIBCHICKEN_STATIC_OBJECTS = $(LIBCHICKEN_OBJECTS_1:=-static$(O)) \
 
 COMPILER_OBJECTS_1 = \
 	chicken batch-driver core optimizer lfa2 compiler-syntax scrutinizer support \
-	c-platform c-backend user-pass
+	c-platform c-backend target user-pass
 COMPILER_OBJECTS        = $(COMPILER_OBJECTS_1:=$(O))
 COMPILER_STATIC_OBJECTS = $(COMPILER_OBJECTS_1:=-static$(O))
 
@@ -526,6 +526,7 @@ batch-driver.c: batch-driver.scm mini-srfi-1.scm \
 		chicken.compiler.c-platform.import.scm \
 		chicken.compiler.lfa2.import.scm \
 		chicken.compiler.c-backend.import.scm \
+		chicken.compiler.target.import.scm \
 		chicken.compiler.support.import.scm \
 		chicken.compiler.user-pass.import.scm \
 		chicken.format.import.scm \
@@ -544,6 +545,19 @@ c-platform.c: c-platform.scm mini-srfi-1.scm \
 		chicken.compiler.core.import.scm \
 		chicken.internal.import.scm
 c-backend.c: c-backend.scm mini-srfi-1.scm \
+		chicken.compiler.c-platform.import.scm \
+		chicken.compiler.support.import.scm \
+		chicken.compiler.core.import.scm \
+		chicken.compiler.target.import.scm \
+		chicken.bitwise.import.scm \
+		chicken.flonum.import.scm \
+		chicken.foreign.import.scm \
+		chicken.format.import.scm \
+		chicken.internal.import.scm \
+		chicken.sort.import.scm \
+		chicken.string.import.scm \
+		chicken.time.import.scm
+target.c: target.scm mini-srfi-1.scm \
 		chicken.compiler.c-platform.import.scm \
 		chicken.compiler.support.import.scm \
 		chicken.compiler.core.import.scm \

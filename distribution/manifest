@@ -10,7 +10,9 @@ batch-driver.c
 c-backend.c
 chicken.compiler.c-backend.import.scm
 c-platform.c
+target.c
 chicken.compiler.c-platform.import.scm
+chicken.compiler.target.import.scm
 chicken-profile.c
 chicken.c
 core.c
@@ -56,6 +58,7 @@ buildversion
 buildbranch
 c-backend.scm
 c-platform.scm
+target.scm
 chicken-ffi-syntax.scm
 chicken-ffi-syntax.c
 chicken-profile.mdoc
