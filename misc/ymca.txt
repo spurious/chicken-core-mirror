@@ -3,20 +3,32 @@ Description of Backend Intermediate Language
 
 * TOP: Toplevel statements
 
-    (call ID/EXP EXP ...)
+    (begin TOP ...)
+
+    (call EXP EXP ...)
         Perform procedure call with arguments.
 
+    (case EXP)
+        Marks "switch" case branch.
+
     (comment STR)
+        Inline comment.
 
     (declare [extern|static] [noreturn] ID (TYPE VAR) ...)
         Declare extern or static function prototype.
+
+    (declare/array [static] [aligned] TYPE ID [SIZE])
+        Declare global array variable.
+
+    (default)
+        Marks default branch in a "switch" construct.
 
     (define [extern|static] [noreturn] ID (TYPE VAR) ...)
         ...
     (end)
         Define function.
 
-    (define/array [static] [aligned] TYPE ID SIZE|#f [EXP ...])
+    (define/array [static] [aligned] TYPE ID SIZE|#f EXP ...)
         Define global array variable.
 
     (define/variable [extern|static] TYPE ID [EXP])
@@ -24,19 +36,20 @@ Description of Backend Intermediate Language
 
     (goto ID)
     (if EXP TOP TOP)
+    (inline CODE)
     (label LABEL)
 
     (let VAR [EXP])
-        Declare local variable.
+        Declare local variable of type "word".
 
     (let/proc VAR PEXP)
-        Declare a local variable holding a procedure ptr.
+        Declare a local variable holding a procedure ptr ("C_proc").
 
     (let/ptr VAR EXP)
-        Declare pointer variable.
+        Declare pointer variable (to "word").
 
     (let/array VAR SIZE)
-        Declare array variable.
+        Declare array variable (of "words").
 
     (let/unboxed TYPE VAR [EXP])
         Declare local unboxed variable.
@@ -46,7 +59,13 @@ Description of Backend Intermediate Language
     (set LVALUE EXP)
         Set local or global variable or lvalue.
 
-    (switch EXP (case CEXP TOP) ... (default TOP))
+    (switch EXP)
+    ...
+    (endswitch)
+        "switch" construct, see also "case" + "default".
+
+    (tailcall FEXP EXP ...)
+        Perform procedure call with arguments.
 
     (trace STR)
         Emit a trace item.
@@ -73,6 +92,8 @@ Description of Backend Intermediate Language
     (elt EXP IEXP)
         Extract element IEXP from array EXP.
 
+    (inline CODE)
+
     (mutate EXP IEXP XEXP)
         Mutate object slot with index.
 
@@ -95,8 +116,44 @@ Description of Backend Intermediate Language
 
     <VAR>
     <LITERAL>
+    <FUNCTIONNAME>
+
+* TYPE: Type specifiers
+
+    void
+    char
+    uchar
+    short
+    ushort
+    int
+    uint
+    long 
+    ulong
+    ptr
+    (ptr TYPE)
+    word
+    float
+    double
+    u32
+    s32
+    u64
+    s64
+    size_t
+    ssize_t
+    (ref TYPE)
+    (template-instance TYPE ...)
+    (struct NAME)
+    (union NAME)
+    (enum NAME)
+    (function TYPE CCONV TYPE ... ["..."])
+
+* Intrinsics
+
+    ...
 
 
-XXX undefined true false null
 array shapes (C_debug_info) for initializers
 
+NOTES: 
+- ptables are enabled by default
+- no "return" macro for foreign stubs
