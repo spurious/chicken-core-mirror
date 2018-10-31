@@ -17,25 +17,23 @@ Description of Backend Intermediate Language
     (declare [extern|static] [noreturn] ID (TYPE VAR) ...)
         Declare extern or static function prototype.
 
-    (declare/array [static] [aligned] TYPE ID [SIZE])
+    (declare/array [static] [aligned] TYPE ID SIZE|())
         Declare global array variable.
-
-    (default)
-        Marks default branch in a "switch" construct.
 
     (define [extern|static] [noreturn] ID (TYPE VAR) ...)
         ...
     (end)
         Define function.
 
-    (define/array [static] [aligned] TYPE ID SIZE|#f EXP ...)
-        Define global array variable.
+    (define/array [static] [aligned] TYPE ID SIZE|() INIT ...)
+        Define global array variable with initializers. INIT may be a string,
+        a number or a vector of strings/numbers.
 
     (define/variable [extern|static] TYPE ID [EXP])
         Define global non-array variable.
 
     (goto ID)
-    (if EXP TOP TOP)
+    (if EXP TOP [TOP])
     (inline CODE)
     (label LABEL)
 
@@ -61,15 +59,14 @@ Description of Backend Intermediate Language
 
     (switch EXP)
     ...
+    (default)
+    ...
     (endswitch)
         "switch" construct, see also "case" + "default".
 
     (tailcall FEXP EXP ...)
         Perform procedure call with arguments.
 
-    (trace STR)
-        Emit a trace item.
-    
 * EXP: Expressions
 
     (adr EXP)
@@ -112,7 +109,7 @@ Description of Backend Intermediate Language
         General function or macro call.
 
     (OP EXP ...)
-        +, *, -, /, &, |, ^, ==, !, !=, <, >, <=, >=
+        ~, +, *, -, /, &, |, ^, ==, !, !=, <, >, <=, >=
 
     <VAR>
     <LITERAL>
@@ -145,14 +142,13 @@ Description of Backend Intermediate Language
     (struct NAME)
     (union NAME)
     (enum NAME)
-    (function TYPE CCONV TYPE ... ["..."])
+    (function TYPE CCONV|#f TYPE ... ["..."])
 
 * Intrinsics
 
     ...
 
 
-array shapes (C_debug_info) for initializers
 
 NOTES: 
 - ptables are enabled by default

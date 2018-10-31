@@ -145,7 +145,7 @@
                                    c 
                                    ,(if non-av-proc '0 'av)))))
 		       (emit-trace-info
-			(gen `(trace ,name-str)))))
+			(gen `(call C_trace ,name-str)))))
 	       (cond ((eq? '##core#proc (node-class fn))
 		      (push-args args i 0)
 		      (let ([fpars (node-parameters fn)])
@@ -257,7 +257,7 @@
 			  (gen `(call C_debugger (adr (elt C_debug_info ,dbi))
                                   c ,(if non-av-proc '0 'av)))))
 		       (emit-trace-info
-			(gen `(trace ,name-str)))))
+			(gen `(call C_trace ,name-str)))))
                `(tailcall ,call-id
                       ,@(if allocating (list `(C_a_i ,demand)) '())
                       ,@(if (or (not empty-closure) (pair? args))
@@ -484,7 +484,8 @@
 	    ((null? llits))
 	  (let* ((ll (##sys#lambda-info->string (car llits)))
 		 (llen (string-length ll)))
-	    (gen `(define/array static aligned char ,(name "li" i) #f
+	    (gen `(define/array static aligned char ,(name "li" i)
+                     ()
                      (C_lihdr ,(arithmetic-shift llen -16)
                               ,(bitwise-and #xff (arithmetic-shift llen -8))
                               ,(bitwise-and #xff llen))
@@ -669,7 +670,6 @@
                          varlist
                          '(((ptr word) av)))))
 	   (when (eq? rest-mode 'none) (set! rest #f))
-	   (gen '(let tmp))
 	   (unless (or customizable direct)
 	     (do ((i 0 (add1 i)))
 		 ((>= i n))
@@ -849,10 +849,10 @@
                  ,@(map (lambda (p)
                           (let ((id (car p))
                                 (ll (cdr p)))
-                            (list (conc id ":" (string->c-identifier sf))
-                                  (if (eq? 'toplevel id)
-                                      (conc "C_" (toplevel unit-name))
-                                      id))))
+                            (vector (conc id ":" (string->c-identifier sf))
+                                    (if (eq? 'toplevel id)
+                                        (conc "C_" (toplevel unit-name))
+                                        id))))
                      lambda-table*)
                  (0 0)))
   (gen `(define static (ptr C_PTABLE_ENTRY) create_ptable)
