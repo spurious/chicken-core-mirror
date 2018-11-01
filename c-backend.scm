@@ -55,10 +55,8 @@
 
 ;;; Write backend language forms to output-port:
 
-(define output #f)
-
 (define (gen . data)
-  (for-each (cut generate-target-code <> output) data))
+  (for-each generate-target-code data))
 
 ;; Hacky procedures to make certain names more suitable for use in C.
 (define (backslashify s) (string-translate* (->string s) '(("\\" . "\\\\"))))
@@ -343,10 +341,10 @@
 	     (first params))
 
 	    ((##core#ref) 
-             `(slot ,(expr (car subs) i) ,(add1 (first params))))
+             `(slot ,(expr (car subs) i) ,(first params)))
 
 	    ((##core#unbox) 
-	     `(slot ,(expr (car subs) i) 1))
+	     `(slot ,(expr (car subs) i) 0))
 
 	    ((##core#update_i)
 	     `(setslot ,(expr (car subs) i)
@@ -385,7 +383,7 @@
 			  `(C_retrieve2 (elt lf ,index) 
                               ,(##sys#symbol->qualified-string
                                  (fourth params)))))
-		     (safe `(slot (elt lf ,index) 1))
+		     (safe `(slot (elt lf ,index) 0))
 		     (else `(C_fast_retrieve (elt lf ,index))))))
 
 	    ((##core#setglobal)
@@ -404,7 +402,8 @@
 	       (cond (block
 		      `(set (elt lf ,index) ,(expr (car subs) i)))
 		     (else
-		      `(setslot (elt lf ,index) ,(expr (car subs) i))))))
+		      `(setslot (elt lf ,index) 0 
+                                ,(expr (car subs) i))))))
 
 	    ((##core#undefined) 'C_SCHEME_UNDEFINED)
 
@@ -475,7 +474,7 @@
       (let ((n (length literals)))
 	(for-each
 	 (lambda (uu)
-	   (gen `(declare extern ,(name "C_" uu) (word c) (ptr word) av)))
+	   (gen `(declare extern ,(name "C_" uu) (word c) (ptr word) ((ptr word) av))))
 	 (map toplevel used-units))
 	(unless (zero? n)
 	  (gen `(declare/array static word lf ,n)))
@@ -659,7 +658,7 @@
            (when (eq? 'toplevel id)
              (gen `(define/variable static int toplevel_initialized 0))
              (unless unit-name
-               (gen `(C_main_entry_point))))
+               (gen `(call C_main_entry_point))))
            (gen `(define ,(if direct 'word 'void)
                    ,(if (eq? 'toplevel id) (name "C_" topname) id)
                    ,@(if customizable '() '((word c)))
@@ -695,7 +694,7 @@
 		    (gen '(let/ptr a)
 			 `(if toplevel_initialized 
                               (tailcall C_kontinue t1 C_SCHEME_UNDEFINED)
-                              (tailcall C_toplevel_entry (or unit-name topname))))
+                              (tailcall C_toplevel_entry ,(or unit-name topname))))
 		    (when emit-debug-info
 		      (gen `(call C_register_debug_info C_debug_info)))
 		    (when disable-stack-overflow-checking
@@ -801,7 +800,7 @@
                                   `((tailcall C_save_and_reclaim_args 
                                               ,(name "tr" id) ,nec
                                               ,@arglist))
-                                  `((tailcall C_save_and_reclaim id
+                                  `((tailcall C_save_and_reclaim ,id
                                               ,n av))))))
                   (when (> demand 0)
                     (gen `(set a (C_alloc ,demand))))
@@ -814,7 +813,7 @@
   
     ;; Don't truncate floating-point precision!
     (flonum-print-precision (+ flonum-maximum-decimal-exponent 1))
-    (set! output out)
+    (init-target out user-supplied-options source-file)
     (debugging 'p "code generation phase...")
     (header)
     (declarations)
@@ -826,7 +825,8 @@
     (when emit-debug-info
       (emit-debug-table dbg-info-table))
     (procedures)
-    (emit-procedure-table lambda-table* source-file)))
+    (emit-procedure-table lambda-table* source-file)
+    (finalize-target)))
 
 
 ;;; Emit global tables for debug-info
@@ -854,7 +854,7 @@
                                         (conc "C_" (toplevel unit-name))
                                         id))))
                      lambda-table*)
-                 (0 0)))
+                 #(0 0)))
   (gen `(define static (ptr C_PTABLE_ENTRY) create_ptable)
        '(return ptable)
        '(end)))

@@ -14,20 +14,22 @@ Description of Backend Intermediate Language
     (comment STR)
         Inline comment.
 
-    (declare [extern|static] [noreturn] ID (TYPE VAR) ...)
+    (declare [extern|static] [noreturn] TYPE ID (TYPE VAR) ...)
         Declare extern or static function prototype.
 
     (declare/array [static] [aligned] TYPE ID SIZE|())
         Declare global array variable.
 
-    (define [extern|static] [noreturn] ID (TYPE VAR) ...)
+    (define [extern|static] [noreturn] TYPE ID (TYPE VAR) ...)
         ...
     (end)
         Define function.
 
     (define/array [static] [aligned] TYPE ID SIZE|() INIT ...)
         Define global array variable with initializers. INIT may be a string,
-        a number or a vector of strings/numbers.
+        a number, a vector of strings/numbers or a list of the form
+        "(C_lihdr <b1> <b2> <b3>)" representing a lambda-info header
+        with the 3 lowest bytes of then length field.
 
     (define/variable [extern|static] TYPE ID [EXP])
         Define global non-array variable.
@@ -43,7 +45,7 @@ Description of Backend Intermediate Language
     (let/proc VAR PEXP)
         Declare a local variable holding a procedure ptr ("C_proc").
 
-    (let/ptr VAR EXP)
+    (let/ptr VAR [EXP])
         Declare pointer variable (to "word").
 
     (let/array VAR SIZE)
@@ -146,8 +148,339 @@ Description of Backend Intermediate Language
 
 * Intrinsics
 
-    ...
-
+    C_a_i_address_to_pointer
+    C_a_i_cons
+    C_a_i_flonum_abs
+    C_a_i_flonum_acos
+    C_a_i_flonum_asin
+    C_a_i_flonum_atan
+    C_a_i_flonum_atan2
+    C_a_i_flonum_ceiling
+    C_a_i_flonum_cos
+    C_a_i_flonum_difference
+    C_a_i_flonum_exp
+    C_a_i_flonum_expt
+    C_a_i_flonum_floor
+    C_a_i_flonum_gcd
+    C_a_i_flonum_log
+    C_a_i_flonum_negate
+    C_a_i_flonum_plus
+    C_a_i_flonum_quotient
+    C_a_i_flonum_quotient_checked
+    C_a_i_flonum_round
+    C_a_i_flonum_sin
+    C_a_i_flonum_sqrt
+    C_a_i_flonum_tan
+    C_a_i_flonum_times
+    C_a_i_flonum_truncate
+    C_a_i_list
+    C_a_i_locative_ref
+    C_a_i_pointer_to_address
+    C_a_i_record
+    C_a_i_string
+    C_a_i_vector
+    C_a_u_i_f32vector_ref
+    C_a_u_i_f64vector_ref
+    C_a_u_i_pointer_f32_ref
+    C_a_u_i_pointer_f64_ref
+    C_a_u_i_pointer_inc
+    C_a_u_i_pointer_s32_ref
+    C_a_u_i_pointer_u32_ref
+    C_allocate_vector
+    C_anypointerp
+    C_apply
+    C_block_size
+    C_booleanp
+    C_bytevectorp
+    C_call_cc
+    C_call_with_values
+    C_charp
+    C_context_switch
+    C_continuation_graft
+    C_ensure_heap_reserve
+    C_eofp
+    C_eqp
+    C_fixnum_abs
+    C_fixnum_and
+    C_fixnum_decrease
+    C_fixnum_difference
+    C_fixnum_divide
+    C_fixnum_greater_or_equal_p
+    C_fixnum_greaterp
+    C_fixnum_increase
+    C_fixnum_less_or_equal_p
+    C_fixnum_lessp
+    C_fixnum_modulo
+    C_fixnum_negate
+    C_fixnum_not
+    C_fixnum_or
+    C_fixnum_plus
+    C_fixnum_shift_left
+    C_fixnum_shift_right
+    C_fixnum_times
+    C_fixnum_xor
+    C_fixnump
+    C_flonum_equalp
+    C_flonum_greater_or_equal_p
+    C_flonum_greaterp
+    C_flonum_less_or_equal_p
+    C_flonum_lessp
+    C_greater_or_equal_p
+    C_greaterp
+    C_i_assoc
+    C_i_assq
+    C_i_assv
+    C_i_bignump
+    C_i_bit_to_bool
+    C_i_block_ref
+    C_i_caar
+    C_i_cadddr
+    C_i_caddr
+    C_i_cadr
+    C_i_car
+    C_i_cdar
+    C_i_cddddr
+    C_i_cdddr
+    C_i_cddr
+    C_i_cdr
+    C_i_char_equalp
+    C_i_char_greater_or_equal_p
+    C_i_char_greaterp
+    C_i_char_less_or_equal_p
+    C_i_char_lessp
+    C_i_check_boolean
+    C_i_check_boolean_2
+    C_i_check_bytevector
+    C_i_check_bytevector_2
+    C_i_check_char
+    C_i_check_char_2
+    C_i_check_exact
+    C_i_check_exact_2
+    C_i_check_fixnum
+    C_i_check_fixnum_2
+    C_i_check_list
+    C_i_check_list_2
+    C_i_check_locative
+    C_i_check_locative_2
+    C_i_check_number
+    C_i_check_number_2
+    C_i_check_pair
+    C_i_check_pair_2
+    C_i_check_string
+    C_i_check_string_2
+    C_i_check_structure
+    C_i_check_structure_2
+    C_i_check_symbol
+    C_i_check_symbol_2
+    C_i_check_vector
+    C_i_check_vector_2
+    C_i_closurep
+    C_i_cplxnump
+    C_i_equalp
+    C_i_eqvp
+    C_i_evenp
+    C_i_exact_integerp
+    C_i_exactp
+    C_i_finitep
+    C_i_fixnum_arithmetic_shift
+    C_i_fixnum_gcd
+    C_i_fixnum_length
+    C_i_fixnum_max
+    C_i_fixnum_min
+    C_i_fixnum_remainder_checked
+    C_i_fixnumevenp
+    C_i_fixnumoddp
+    C_i_flonum_max
+    C_i_flonum_min
+    C_i_flonump
+    C_i_foreign_block_argumentp
+    C_i_foreign_char_argumentp
+    C_i_foreign_fixnum_argumentp
+    C_i_foreign_flonum_argumentp
+    C_i_foreign_pointer_argumentp
+    C_i_foreign_ranged_integer_argumentp
+    C_i_foreign_string_argumentp
+    C_i_foreign_struct_wrapper_argumentp
+    C_i_foreign_unsigned_ranged_integer_argumentp
+    C_i_get_keyword
+    C_i_greater_or_equalp
+    C_i_greaterp
+    C_i_inexactp
+    C_i_infinitep
+    C_i_integer_length
+    C_i_integerp
+    C_i_length
+    C_i_less_or_equalp
+    C_i_lessp
+    C_i_list_ref
+    C_i_list_tail
+    C_i_listp
+    C_i_locative_set
+    C_i_locative_to_object
+    C_i_locativep
+    C_i_member
+    C_i_memq
+    C_i_memv
+    C_i_nanp
+    C_i_negativep
+    C_i_nequalp
+    C_i_not
+    C_i_not_pair_p
+    C_i_nullp
+    C_i_numberp
+    C_i_o_fixnum_difference
+    C_i_o_fixnum_plus
+    C_i_o_fixnum_quotient
+    C_i_o_fixnum_times
+    C_i_oddp
+    C_i_pairp
+    C_i_portp
+    C_i_positivep
+    C_i_rationalp
+    C_i_ratnump
+    C_i_realp
+    C_i_safe_pointerp
+    C_i_set_car
+    C_i_set_cdr
+    C_i_set_i_slot
+    C_i_setslot
+    C_i_string_ci_equal_p
+    C_i_string_equal_p
+    C_i_string_length
+    C_i_string_ref
+    C_i_string_set
+    C_i_stringp
+    C_i_structurep
+    C_i_symbolp
+    C_i_vector_length
+    C_i_vector_ref
+    C_i_vectorp
+    C_i_zerop
+    C_immp
+    C_less_or_equal_p
+    C_lessp
+    C_make_symbol
+    C_minus
+    C_nequalp
+    C_null_pointerp
+    C_number_to_string
+    C_peek_byte
+    C_peek_fixnum
+    C_permanentp
+    C_plus
+    C_pointer_to_object
+    C_poke_double
+    C_poke_integer
+    C_return_to_host
+    C_s_a_i_arithmetic_shift
+    C_s_a_i_bitwise_and
+    C_s_a_i_bitwise_ior
+    C_s_a_i_bitwise_not
+    C_s_a_i_bitwise_xor
+    C_s_a_i_minus
+    C_s_a_i_modulo
+    C_s_a_i_plus
+    C_s_a_i_quotient
+    C_s_a_i_remainder
+    C_s_a_i_times
+    C_setbyte
+    C_setsubchar
+    C_slot
+    C_string_to_symbol
+    C_structurep
+    C_subbyte
+    C_subchar
+    C_times
+    C_u_call_with_values
+    C_u_fixnum_and
+    C_u_fixnum_decrease
+    C_u_fixnum_difference
+    C_u_fixnum_divide
+    C_u_fixnum_increase
+    C_u_fixnum_modulo
+    C_u_fixnum_negate
+    C_u_fixnum_or
+    C_u_fixnum_plus
+    C_u_i_16vector_length
+    C_u_i_32vector_length
+    C_u_i_64vector_length
+    C_u_i_8vector_length
+    C_u_i_assq
+    C_u_i_bit_to_bool
+    C_u_i_caaaar
+    C_u_i_caaar
+    C_u_i_caadar
+    C_u_i_caaddr
+    C_u_i_caar
+    C_u_i_cadaar
+    C_u_i_cadadr
+    C_u_i_cadar
+    C_u_i_caddar
+    C_u_i_cadddr
+    C_u_i_caddr
+    C_u_i_cadr
+    C_u_i_car
+    C_u_i_cdaaar
+    C_u_i_cdaadr
+    C_u_i_cdaar
+    C_u_i_cdadar
+    C_u_i_cdaddr
+    C_u_i_cdadr
+    C_u_i_cdar
+    C_u_i_cddaar
+    C_u_i_cddadr
+    C_u_i_cddar
+    C_u_i_cdddar
+    C_u_i_cddddr
+    C_u_i_cdddr
+    C_u_i_cddr
+    C_u_i_cdr
+    C_u_i_char_alphabeticp
+    C_u_i_char_downcase
+    C_u_i_char_equalp
+    C_u_i_char_greater_or_equal_p
+    C_u_i_char_greaterp
+    C_u_i_char_less_or_equal_p
+    C_u_i_char_lessp
+    C_u_i_char_lower_casep
+    C_u_i_char_numericp
+    C_u_i_char_upcase
+    C_u_i_char_upper_casep
+    C_u_i_char_whitespacep
+    C_u_i_exactp
+    C_u_i_f32vector_set
+    C_u_i_f64vector_set
+    C_u_i_fpintegerp
+    C_u_i_inexactp
+    C_u_i_list_ref
+    C_u_i_memq
+    C_u_i_pointer_f32_set
+    C_u_i_pointer_f64_set
+    C_u_i_pointer_s16_ref
+    C_u_i_pointer_s16_set
+    C_u_i_pointer_s32_set
+    C_u_i_pointer_s8_ref
+    C_u_i_pointer_s8_set
+    C_u_i_pointer_u16_ref
+    C_u_i_pointer_u16_set
+    C_u_i_pointer_u32_set
+    C_u_i_pointer_u8_ref
+    C_u_i_pointer_u8_set
+    C_u_i_s16vector_ref
+    C_u_i_s16vector_set
+    C_u_i_s32vector_set
+    C_u_i_s8vector_ref
+    C_u_i_s8vector_set
+    C_u_i_set_car
+    C_u_i_set_cdr
+    C_u_i_string_equal_p
+    C_u_i_u16vector_ref
+    C_u_i_u16vector_set
+    C_u_i_u32vector_set
+    C_u_i_u8vector_ref
+    C_u_i_u8vector_set
+    C_u_i_zerop
+    C_values
 
 
 NOTES: 
