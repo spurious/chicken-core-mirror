@@ -79,7 +79,7 @@
             (string-split (chicken-version #t) "\n") )
 	    "")
 	   "   command line: ")
-      (foreach (cut emit <> " ") opts)
+      (for-each (cut emit <> " ") opts)
       (unless (not unit-name)
 	(emit #t "   unit: " unit-name))
       (unless (null? used-units)
@@ -89,11 +89,7 @@
       (emit #t "#include \"" target-include-file "\""))
 
 (define (trailer)
-  (emit #t #t "/*" #t 
-       (uncommentify
-         (get-output-string
-            collected-debugging-output))
-       "*/" #t "/* end of file */" #t))
+  (emit #t "/* end of file */" #t))
 
 (define (init-target out user-options source-file)
   (set! output out)
@@ -278,6 +274,8 @@
        (emit "=")
        (expr (cadddr x))
        (emit ";")))
+    ((main_entry_point)
+     (emit #t "C_main_entry_point "))
     ((return)
      (emit #t "return ")
      (expr (cadr x))
@@ -311,7 +309,9 @@
         ((atom? x) (emit x))
         (else
           (case (car x)
-            ((adr) (emit "&" (cadr x)))
+            ((adr) 
+             (emit "&")
+             (expr (cadr x)))
             ((box) 
              (let ((aexp (cadr x)))
                (emit "(*")
@@ -411,6 +411,7 @@
                      (emit (car x))
                      (expr (caddr x))))
              (emit ")"))
+            ((C_restore) (emit "C_restore"))
             (else
               (emit (car x) "(")
               (expr-list (cdr x))
@@ -433,6 +434,7 @@
     ((s64) (emit "C_s64"))
     ((ptr) (emit "void *"))
     ((word) (emit "C_word"))
+    ((proc) (emit "C_proc"))
     (else
       (case (and (pair? x) (car x))
         ((ptr) 

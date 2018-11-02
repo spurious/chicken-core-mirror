@@ -54,6 +54,10 @@ Description of Backend Intermediate Language
     (let/unboxed TYPE VAR [EXP])
         Declare local unboxed variable.
 
+    (main_entry_point)
+        Startup code in an executable, ignored when compiling an 
+        embedded or shared binary.
+
     (return EXP)
 
     (set LVALUE EXP)
@@ -107,8 +111,8 @@ Description of Backend Intermediate Language
     (words EXP)
         Mutiplied by word size.
 
-    (ID EXP ...)
-        General function or macro call.
+    (INTRINSIC EXP ...)
+        Function call or macro use of intrinsic operation.
 
     (OP EXP ...)
         ~, +, *, -, /, &, |, ^, ==, !, !=, <, >, <=, >=
@@ -486,3 +490,6 @@ Description of Backend Intermediate Language
 NOTES: 
 - ptables are enabled by default
 - no "return" macro for foreign stubs
+- C_check_for_interrupt is hand-expanded (no paranoia mode)
+- dropped logging of optimizations in target-file
+- dropped PARANOIA

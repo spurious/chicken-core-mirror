@@ -30,7 +30,7 @@
 	 (uses data-structures extras file internal pathname port))
 
 (module chicken.compiler.support
-    (compiler-cleanup-hook bomb collected-debugging-output debugging
+    (compiler-cleanup-hook bomb debugging
      debugging-chicken with-debugging-output quit-compiling
      emit-syntax-trace-info check-signature stringify symbolify
      build-lambda-list c-ify-string valid-c-identifier?
@@ -117,11 +117,6 @@
       (apply error (string-append "[internal compiler error] " (car msg-and-args)) (cdr msg-and-args))
       (error "[internal compiler error]") ) )
 
-(define collected-debugging-output
-  (open-output-string))
-
-(define +logged-debugging-modes+ '(o x S))
-
 (define (test-debugging-mode mode enabled)
   (if (symbol? mode)
       (memq mode enabled)
@@ -138,36 +133,17 @@
 	   (lambda (x) (printf "~s " (force x))) 
 	   args) )
 	(newline))))
-  (define (dump txt)
-    (fprintf collected-debugging-output "~a|~a" mode txt))
-  (cond ((test-debugging-mode mode debugging-chicken)
-	 (let ((txt (text)))
-	   (display txt)
-	   (flush-output)
-	   (when (test-debugging-mode mode +logged-debugging-modes+)
-	     (dump txt))
-	   #t))
-	(else
-	 (when (test-debugging-mode mode +logged-debugging-modes+)
-	   (dump (text)))
-	 #f)))
+  (when (test-debugging-mode mode debugging-chicken)
+    (let ((txt (text)))
+      (display txt)
+      (flush-output)
+      #t)))
 
 (define (with-debugging-output mode thunk)
-  (define (collect text)
-    (for-each
-     (lambda (ln)
-       (fprintf collected-debugging-output "~a|~a~%"
-	 (if (pair? mode) (car mode) mode)
-	 ln))
-     (string-split text "\n")))
-  (cond ((test-debugging-mode mode debugging-chicken)
-	 (let ((txt (with-output-to-string thunk)))
-	   (display txt)
-	   (flush-output)
-	   (when (test-debugging-mode mode +logged-debugging-modes+)
-	     (collect txt))))
-	((test-debugging-mode mode +logged-debugging-modes+)
-	 (collect (with-output-to-string thunk)))))
+  (when (test-debugging-mode mode debugging-chicken)
+    (let ((txt (with-output-to-string thunk)))
+      (display txt)
+      (flush-output))))
 
 (define (quit-compiling msg . args)
   (let ([out (current-error-port)])

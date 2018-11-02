@@ -211,7 +211,7 @@
 		      (push-args args i (tvar nc))
 		      (if (or unsafe no-procedure-checks safe-to-call)
 			  (gen `(tailcall (slot ,(tvar nc) 1) ,nf av2))
-			  (gen `(tailcall (C_fast_retrieve_proc ,(tvar nc)) ,nf av2)))))))
+			  (gen `(tailcall (cast proc (C_fast_retrieve_proc ,(tvar nc))) ,nf av2)))))))
 	  
 	    ((##core#recurse) 
 	     (let* ([n (length subs)]
@@ -334,11 +334,11 @@
 	    ((##core#literal) 
 	     (let ((lit (first params)))
 	       (if (vector? lit)
-		   `(elt li ,(vector-ref lit 0))
+		   `(cast word ,(name "li" (vector-ref lit 0)))
 		   `(elt lf ,(first params)))))
 
 	    ((##core#proc)
-	     (first params))
+	     `(cast word ,(first params)))
 
 	    ((##core#ref) 
              `(slot ,(expr (car subs) i) ,(first params)))
@@ -448,7 +448,7 @@
 		     (eq? caller-rest-mode 'none)))
 	    (gen `(let/array av2 ,avl)))
 	   ((>= caller-argcount avl)   ; Argvec known to be re-usable?
-	    (gen '(let av2 av))) ; Re-use our own argvector
+	    (gen '(let/ptr av2 av))) ; Re-use our own argvector
 	   (else      ; Need to determine dynamically. This is slower.
 	    (gen `(let/ptr av2))
 	    (gen `(if (>= c ,avl)
@@ -474,7 +474,7 @@
       (let ((n (length literals)))
 	(for-each
 	 (lambda (uu)
-	   (gen `(declare extern ,(name "C_" uu) (word c) (ptr word) ((ptr word) av))))
+	   (gen `(declare extern noreturn void ,(name "C_" uu) (word c) ((ptr word) av))))
 	 (map toplevel used-units))
 	(unless (zero? n)
 	  (gen `(declare/array static word lf ,n)))
@@ -658,7 +658,7 @@
            (when (eq? 'toplevel id)
              (gen `(define/variable static int toplevel_initialized 0))
              (unless unit-name
-               (gen `(call C_main_entry_point))))
+               (gen '(main_entry_point))))
            (gen `(define ,(if direct 'word 'void)
                    ,(if (eq? 'toplevel id) (name "C_" topname) id)
                    ,@(if customizable '() '((word c)))
@@ -705,8 +705,8 @@
                              '(set C_heap_size_is_fixed 1)))
 		      (when target-stack-size
 			(gen `(call C_resize_stack ,target-stack-size))))
-		    (gen `(call C_check_nursery_minimum (C_calculate_demand ,demand c max-av))
-			 `(if (unlikely (! (C_demand (C_calculate_demand ,demand c max-av))))
+		    (gen `(call C_check_nursery_minimum (C_calculate_demand ,demand c ,max-av))
+			 `(if (unlikely (! (C_demand (C_calculate_demand ,demand c ,max-av))))
                              (tailcall C_save_and_reclaim ,(name "C_" topname) c av))
                          '(set toplevel_initialized 1)
 			 `(if (unlikely (! (C_demand_2 ,ldemand)))
@@ -732,7 +732,9 @@
                              (not empty-closure))
 		    (gen `(if (< c ,n) (call C_bad_min_argc_2 c ,n t0))))
 		  (when insert-timer-checks 
-                    (gen '(call C_check_for_interrupt)))
+                    (gen '(set C_timer_interrupt_counter (- C_timer_interrupt_counter 1))
+                         '(if (<= C_timer_interrupt_counter 0)
+                              (call C_raise_interrupt C_TIMER_INTERRUPT_NUMBER))))
 		  (gen `(if (unlikely (! (C_demand (C_calculate_demand (+ (* (- c ,n) C_SIZEOF_PAIR ,demand c ,max-av))))))
                          ,@(if looping
                                ;; Loop will update t_n copy of av[n]; refresh av.
@@ -783,7 +785,9 @@
                   ;; The interrupt handler may fill the stack, so we only
                   ;; check for an interrupt when the procedure is restartable
                   (when insert-timer-checks
-                    (gen '(call C_check_for_interrupt)))
+                    (gen '(set C_timer_interrupt_counter (- C_timer_interrupt_counter 1))
+                         '(if (<= C_timer_interrupt_counter 0)
+                              (call C_raise_interrupt C_TIMER_INTERRUPT_NUMBER))))
                   (gen `(if (unlikely (! (C_demand (C_calculate_demand ,demand
                                                                        ,(if customizable 0 'c)
                                                                        ,max-av))))
