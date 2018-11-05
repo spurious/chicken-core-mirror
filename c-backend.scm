@@ -104,9 +104,11 @@
 	  (case (node-class n)
 
 	    ((if)
-	     (gen `(if ,(expr (car subs) i)
-  	             ,(top-expr (cadr subs) i)
-                     ,(top-expr (caddr subs) i))))
+	     (gen `(if (!= C_SCHEME_FALSE ,(expr (car subs) i))))
+             (top-expr (cadr subs) i)
+             (gen '(else))
+             (top-expr (caddr subs) i)
+             (gen '(endif)))
 
 	    ((##core#bind) 
 	     (let loop ((bs subs) (i i) (count (first params)))
@@ -118,9 +120,6 @@
 	    ((##core#let_unboxed)
 	     (gen `(set ,(first params) ,(expr (first subs) i)))
 	     (top-expr (second subs) i))
-
-            ((##core#setlocal) 
-	     (gen `(set ,(tvar (first params)) ,(expr (car subs) i))))
 
 	    ((##core#call) 
 	     (let* ((args (cdr subs))
@@ -190,7 +189,7 @@
                                         (set! carg
                                           (if block
                                               `(elt lf ,index)
-                                              `(slot (elt lf ,index) 1)))
+                                              `(slot (elt lf ,index) 0)))
                                         `(slot ,carg 1))
                                       (block
                                         (set! carg `(elt lf ,index))
@@ -199,10 +198,10 @@
 				           `(C_retrieve2_symbol_proc ,carg 
                                               ,(##sys#symbol->qualified-string (fourth gparams)))))
                                       (safe
-                                       (set! carg `(slot (elt lf ,index) 1)) 
+                                       (set! carg `(slot (elt lf ,index) 0)) 
                                        `(C_fast_retrieve_proc ,carg))
                                       (else
-                                        (set! carg `(slot (elt lf ,index) 1)) 
+                                        (set! carg `(slot (elt lf ,index) 0)) 
                                         `(C_fast_retrieve_symbol_proc (elt lf ,index))))))
 			(push-args args i carg)
 			(gen `(tailcall tp ,nf av2))))
@@ -210,7 +209,7 @@
 		      (gen `(set ,(tvar nc) ,(expr fn i)))
 		      (push-args args i (tvar nc))
 		      (if (or unsafe no-procedure-checks safe-to-call)
-			  (gen `(tailcall (slot ,(tvar nc) 1) ,nf av2))
+			  (gen `(tailcall (cast proc (slot ,(tvar nc) 0)) ,nf av2))
 			  (gen `(tailcall (cast proc (C_fast_retrieve_proc ,(tvar nc))) ,nf av2)))))))
 	  
 	    ((##core#recurse) 
@@ -235,33 +234,6 @@
 		      (gen `(tailcall ,call-id 
                                    ,(if empty-closure '() '(t0))
                                    ,@(expr-args subs i)))))))
-
-	    ((##core#direct_call) 
-	     (let* ((args (cdr subs))
-		    (n (length args))
-		    (nf (add1 n))
-		    (dbi (first params))
-		    ;; (safe-to-call (second params))
-		    (name (third params))
-		    (name-str (source-info->string name))
-		    (call-id (fourth params))
-		    (demand (fifth params))
-		    (allocating (not (zero? demand)))
-		    (empty-closure (zero? (lambda-literal-closure-size (find-lambda call-id))))
-		    (fn (car subs)) )
-	       (when name
-		 (cond (emit-debug-info
-			(when dbi
-			  (gen `(call C_debugger (adr (elt C_debug_info ,dbi))
-                                  c ,(if non-av-proc '0 'av)))))
-		       (emit-trace-info
-			(gen `(call C_trace ,name-str)))))
-               `(tailcall ,call-id
-                      ,@(if allocating (list `(C_a_i ,demand)) '())
-                      ,@(if (or (not empty-closure) (pair? args))
-                            (list (expr fn i))
-                            '())
-                      ,@(if (pair? args) (expr-args args i) '()))))
 
 	    ((##core#provide)
 	     (gen `(call C_a_i_provide (adr a) 1 (elt lf ,(first params)))))
@@ -373,6 +345,9 @@
 	    ((##core#local)
              (tvar (first params)))
 
+            ((##core#setlocal) 
+	     `(set ,(tvar (first params)) ,(expr (car subs) i)))
+
 	    ((##core#global)
 	     (let ((index (first params))
 		   (safe (second params)) 
@@ -408,11 +383,13 @@
 	    ((##core#undefined) 'C_SCHEME_UNDEFINED)
 
             ((##core#inline)
-	     `(call ,(first params) ,@(expr-args subs i)))
+	     `(call ,(string->symbol (first params)) 
+                    ,@(expr-args subs i)))
 
 	    ((##core#inline_allocate)
-	     `(call ,(first params) (adr a) ,(length subs)
-                 ,@(expr-args subs i)))
+	     `(call ,(string->symbol (first params))
+                    (adr a) ,(length subs)
+                    ,@(expr-args subs i)))
 
 	    ((##core#inline_ref)
 	     ((foreign-result-conversion (second params) "a")
@@ -422,9 +399,36 @@
 	     (first params))
 
 	    ((##core#cond)
-	     `(cond ,(expr (first subs) i)
+	     `(cond (!= C_SCHEME_FALSE ,(expr (first subs) i))
                     ,(expr (second subs) i)
                     ,(expr (third subs) i)))
+
+	    ((##core#direct_call) 
+	     (let* ((args (cdr subs))
+		    (n (length args))
+		    (nf (add1 n))
+		    (dbi (first params))
+		    ;; (safe-to-call (second params))
+		    (name (third params))
+		    (name-str (source-info->string name))
+		    (call-id (fourth params))
+		    (demand (fifth params))
+		    (allocating (not (zero? demand)))
+		    (empty-closure (zero? (lambda-literal-closure-size (find-lambda call-id))))
+		    (fn (car subs)) )
+	       (when name
+		 (cond (emit-debug-info
+			(when dbi
+			  (gen `(call C_debugger (adr (elt C_debug_info ,dbi))
+                                  c ,(if non-av-proc '0 'av)))))
+		       (emit-trace-info
+			(gen `(call C_trace ,name-str)))))
+               `(call ,call-id
+                      ,@(if allocating (list `(C_a_i ,demand)) '())
+                      ,@(if (or (not empty-closure) (pair? args))
+                            (list (expr fn i))
+                            '())
+                      ,@(if (pair? args) (expr-args args i) '()))))
 
 	    (else (bomb "bad expr" (node-class n))) ) ) )
     
@@ -451,9 +455,11 @@
 	    (gen '(let/ptr av2 av))) ; Re-use our own argvector
 	   (else      ; Need to determine dynamically. This is slower.
 	    (gen `(let/ptr av2))
-	    (gen `(if (>= c ,avl)
-                	    (set av2 av) ; Re-use our own argvector
-	             (set av2 (C_alloc ,avl))))))
+	    (gen `(if (>= c ,avl))
+                	`(set av2 av) ; Re-use our own argvector
+	         '(else)
+                 `(set av2 (C_alloc ,avl))
+                 '(endif))))
 	  (when selfarg (gen `(set (elt av2 0) ,selfarg)))
 	  (do ((j (if selfarg 1 0) (add1 j))
 	       (args args (cdr args)))
@@ -472,6 +478,7 @@
 
     (define (declarations)
       (let ((n (length literals)))
+        (gen `(declare static (ptr C_PTABLE_ENTRY) create_ptable))
 	(for-each
 	 (lambda (uu)
 	   (gen `(declare extern noreturn void ,(name "C_" uu) (word c) ((ptr word) av))))
@@ -519,7 +526,8 @@
                       varlist
                       '(((ptr word) av)))))
             (cond ((not (eq? 'toplevel id))
-                   (gen `(declare static noreturn 
+                   (gen `(declare static 
+                                  ,@(if direct '() '(noreturn))
                                   ,(if direct 'word 'void)
                                   ,id
                                   ,@(args))))
@@ -549,7 +557,7 @@
 		  [empty-closure (and customizable (zero? (lambda-literal-closure-size ll)))] )
 	     (when empty-closure (set! argc (sub1 argc)))
 	     (when (and (not (lambda-literal-direct ll)) customizable)
-	       (gen `(define static noreturn void ,(name "tr" id)
+	       (gen `(define static void ,(name "tr" id)
                              (word c) ((ptr word) av)))
 	       (restore argc)
 	       (gen `(call ,id ,@(make-argument-list argc 't))
@@ -615,7 +623,7 @@
 	    ((and (not (##sys#immediate? lit)) ; nop
 		  (##core#inline "C_lambdainfop" lit)))
 	    ((or (fixnum? lit) (not (##sys#immediate? lit)))
-	     (gen `(set ,to (C_decode_literal C_heaptop ,(encode-literal lit)))))
+	     (gen `(set ,to (C_decode_literal C_heaptop (string ,(encode-literal lit))))))
 	    (else (bad-literal lit))))
 
     (define (utype t)
@@ -654,7 +662,6 @@
 		(topname (toplevel unit-name)))
            (when empty-closure 
              (debugging 'o "dropping unused closure argument" id))
-	   (gen `(comment ,rname))
            (when (eq? 'toplevel id)
              (gen `(define/variable static int toplevel_initialized 0))
              (unless unit-name
@@ -668,6 +675,7 @@
                    ,@(if (or customizable direct)
                          varlist
                          '(((ptr word) av)))))
+	   (gen `(comment ,rname))
 	   (when (eq? rest-mode 'none) (set! rest #f))
 	   (unless (or customizable direct)
 	     (do ((i 0 (add1 i)))
@@ -692,9 +700,11 @@
 		  (let ((ldemand (foldl (lambda (n lit) (+ n (literal-size lit))) 0 literals))
 			(llen (length literals)) )
 		    (gen '(let/ptr a)
-			 `(if toplevel_initialized 
-                              (tailcall C_kontinue t1 C_SCHEME_UNDEFINED)
-                              (tailcall C_toplevel_entry ,(or unit-name topname))))
+			 `(if toplevel_initialized )
+                         `(tailcall C_kontinue t1 C_SCHEME_UNDEFINED)
+                         '(else)
+                         `(tailcall C_toplevel_entry ,(or unit-name topname))
+                         '(endif))
 		    (when emit-debug-info
 		      (gen `(call C_register_debug_info C_debug_info)))
 		    (when disable-stack-overflow-checking
@@ -706,14 +716,15 @@
 		      (when target-stack-size
 			(gen `(call C_resize_stack ,target-stack-size))))
 		    (gen `(call C_check_nursery_minimum (C_calculate_demand ,demand c ,max-av))
-			 `(if (unlikely (! (C_demand (C_calculate_demand ,demand c ,max-av))))
-                             (tailcall C_save_and_reclaim ,(name "C_" topname) c av))
+			 `(if (unlikely (! (C_demand (C_calculate_demand ,demand c ,max-av)))))
+                         `(tailcall C_save_and_reclaim ,(name "C_" topname) c av)
+                         '(endif)
                          '(set toplevel_initialized 1)
-			 `(if (unlikely (! (C_demand_2 ,ldemand)))
-			     (begin 
-                               (call C_save t1)
-			       (call C_rereclaim2 (words ,ldemand) 1)
-			       (set t1 (C_restore))))
+			 `(if (unlikely (! (C_demand_2 ,ldemand))))
+                         '(call C_save t1)
+			 `(call C_rereclaim2 (words ,ldemand) 1)
+			 '(set t1 (C_restore))
+                         '(endif)
 			 `(set a (C_alloc ,demand)))
 		    (unless (zero? llen)
 		      (gen `(call C_initialize_lf lf ,llen))
@@ -730,21 +741,23 @@
                              (not no-argc-checks) 
                              (> n 2) 
                              (not empty-closure))
-		    (gen `(if (< c ,n) (call C_bad_min_argc_2 c ,n t0))))
+		    (gen `(if (< c ,n))
+                         `(call C_bad_min_argc_2 c ,n t0)
+                         '(endif)))
 		  (when insert-timer-checks 
                     (gen '(set C_timer_interrupt_counter (- C_timer_interrupt_counter 1))
-                         '(if (<= C_timer_interrupt_counter 0)
-                              (call C_raise_interrupt C_TIMER_INTERRUPT_NUMBER))))
-		  (gen `(if (unlikely (! (C_demand (C_calculate_demand (+ (* (- c ,n) C_SIZEOF_PAIR ,demand c ,max-av))))))
-                         ,@(if looping
-                               ;; Loop will update t_n copy of av[n]; refresh av.
-                               (let loop ((i 0))
-                                 (if (>= i n)
-                                     '()
-                                     (cons `(set (elt av ,i) ,(tvar i))
-                                           (loop (add1 i)))))
-                               '())
-			 `((tailcall C_save_and_reclaim ,id c av))))
+                         '(if (<= C_timer_interrupt_counter 0))
+                         '(call C_raise_interrupt C_TIMER_INTERRUPT_NUMBER)
+                         '(endif)))
+		  (gen `(if (unlikely (! (C_demand (C_calculate_demand (+ (* (- c ,n) C_SIZEOF_PAIR ,demand c ,max-av))))))))
+                  (when looping
+                    ;; Loop will update t_n copy of av[n]; refresh av.
+                    (let loop ((i 0))
+                      (if (>= i n)
+                          (gen `(set (elt av ,i) ,(tvar i)))
+                          (loop (add1 i))))
+                    `(tailcall C_save_and_reclaim ,id c av)
+                    '(endif))
                   (gen `(set a (C_alloc (+ (* (- c ,n) C_SIZEOF_PAIR ,demand))))
 		       `(set ,(tvar n) (C_build_rest (adr a) c ,n av)))
                   (do ((i (+ n 1) (+ i 1))
@@ -758,11 +771,9 @@
 
                 (direct
                   ;; non-toplevel, non-rest, directly callable procedure
-                  (assert (not customizable)) ; XXX is it?
-                  (assert (not external)) ; XXX is it?
 		  (when (and (not unsafe)
                              (not disable-stack-overflow-checking))
-		    (gen '(call C_stack_overflow_check)))
+		    (gen '(stack_overflow_check)))
 		  (when looping (gen '(label loop)))  ;XXX needed?
                   (set! non-av-proc #f) ; XXX ???
               	   (expression (lambda-literal-body ll)
@@ -780,32 +791,35 @@
 		    ;; (not customizable) implies empty-closure
 		    (if (eq? rest-mode 'none)
 			(when (> n 2)
-                          (gen `(if (< c ,n) (tailcall C_bad_min_argc_2 c ,n t0))))
-			(gen `(if (!= c ,n) (tailcall C_bad_argc_2 c ,n t0)))))
+                          (gen `(if (< c ,n))
+                               `(tailcall C_bad_min_argc_2 c ,n t0)
+                               '(endif)))
+			(gen `(if (!= c ,n))
+                             `(tailcall C_bad_argc_2 c ,n t0)
+                             '(endif))))
                   ;; The interrupt handler may fill the stack, so we only
                   ;; check for an interrupt when the procedure is restartable
                   (when insert-timer-checks
                     (gen '(set C_timer_interrupt_counter (- C_timer_interrupt_counter 1))
-                         '(if (<= C_timer_interrupt_counter 0)
-                              (call C_raise_interrupt C_TIMER_INTERRUPT_NUMBER))))
+                         '(if (<= C_timer_interrupt_counter 0))
+                         '(call C_raise_interrupt C_TIMER_INTERRUPT_NUMBER)
+                         '(endif)))
                   (gen `(if (unlikely (! (C_demand (C_calculate_demand ,demand
                                                                        ,(if customizable 0 'c)
-                                                                       ,max-av))))
-                            (begin
-                              ,@(if (and looping (not customizable))
-                                  ;; Loop will update t_n copy of av[n]; refresh av.
-                                  (let loop ((i 0))
-                                    (if (>= i n)
-                                        '()
-                                        (cons `(set (elt av ,i) ,(tvar i))
-                                              (loop (add1 i)))))
-                                  '())
-                              ,@(if (and customizable (> nec 0))
-                                  `((tailcall C_save_and_reclaim_args 
-                                              ,(name "tr" id) ,nec
-                                              ,@arglist))
-                                  `((tailcall C_save_and_reclaim ,id
-                                              ,n av))))))
+                                                                       ,max-av))))))
+                  (when (and looping (not customizable))
+                    ;; Loop will update t_n copy of av[n]; refresh av.
+                    (let loop ((i 0))
+                      (if (>= i n)
+                          (gen `(set (elt av ,i) ,(tvar i)))
+                          (loop (add1 i)))))
+                  (if (and customizable (> nec 0))
+                      (gen `(tailcall C_save_and_reclaim_args 
+                                      ,(name "tr" id) ,nec
+                                      ,@arglist))
+                      (gen `(tailcall C_save_and_reclaim ,id
+                                      ,n av)))
+                  (gen '(endif))
                   (when (> demand 0)
                     (gen `(set a (C_alloc ,demand))))
                   (set! non-av-proc customizable)

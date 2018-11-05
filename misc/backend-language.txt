@@ -35,7 +35,11 @@ Description of Backend Intermediate Language
         Define global non-array variable.
 
     (goto ID)
-    (if EXP TOP [TOP])
+
+    (if EXP)
+    (else)
+    (endif)
+
     (inline CODE)
     (label LABEL)
 
@@ -63,6 +67,8 @@ Description of Backend Intermediate Language
     (set LVALUE EXP)
         Set local or global variable or lvalue.
 
+    (stack_overflow_check)
+
     (switch EXP)
     ...
     (default)
@@ -80,6 +86,9 @@ Description of Backend Intermediate Language
 
     (box AEXP EXP)
         Allocate a one-element vector from allocation ptr AEXP.
+
+    (call EXP EXP ...)
+        Perform procedure call with arguments.
 
     (cast TYPE EXP)
 
@@ -100,10 +109,16 @@ Description of Backend Intermediate Language
     (mutate EXP IEXP XEXP)
         Mutate object slot with index.
 
+    (set LVALUE EXP)
+        Set local or global variable or lvalue.
+
     (setslot EXP IEXP XEXP)
 
     (slot EXP IEXP)
         Extract slot IEXP from object EXP.
+
+    (string STR)
+        Emit (possibly large) string constant.
 
     (unlikely EXP)
         Unlikely conditional expression.
