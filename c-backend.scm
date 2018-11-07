@@ -27,7 +27,8 @@
 
 (declare
   (unit c-backend)
-  (uses data-structures extras c-platform compiler internal support))
+  (uses data-structures extras c-platform compiler internal support
+        target))
 
 (module chicken.compiler.c-backend
     (generate-code
@@ -80,6 +81,11 @@
 
 (define (tvar i)
   (string->symbol (conc "t" i)))
+
+(define (->symbol x)
+  (if (symbol? x) 
+      x
+      (string->symbol x)))
 
 
 ;;; Generate target code:
@@ -235,9 +241,6 @@
                                    ,(if empty-closure '() '(t0))
                                    ,@(expr-args subs i)))))))
 
-	    ((##core#provide)
-	     (gen `(call C_a_i_provide (adr a) 1 (elt lf ,(first params)))))
-
 	    ((##core#callunit)
 	     ;; The code generated here does not use the extra temporary needed for standard calls, so we have
 	     ;;  one unused variable:
@@ -260,18 +263,6 @@
                                                 ,((foreign-argument-conversion 
                                                    t)
                                                    (expr (first subs) i)))))))
-
-	    ((##core#inline_loc_ref)
-	     (let ((t (first params)))
-	       (gen ((foreign-result-conversion t "a")
-                        `(deref (cast ,(foreign-type-declaration t)
-                                  (C_data_pointer ,(expr (first subs) i))))))))
-
-	    ((##core#inline_loc_update)
-	     (let ((t (first params)))
-	       (gen `(set (cast ,(foreign-type-declaration t)
-                                (C_data_pointer ,(expr (first subs) i)))
-                          ,((foreign-argument-conversion t) (expr (second subs) i))))))
 
 	    ((##core#unboxed_set!)
 	     (gen `(set ,(first params) ,(expr (first subs) i))))
@@ -312,6 +303,8 @@
 	    ((##core#proc)
 	     `(cast word ,(first params)))
 
+	    ((##core#provide)
+             `(call C_a_i_provide (adr a) 1 (elt lf ,(first params))))
 	    ((##core#ref) 
              `(slot ,(expr (car subs) i) ,(first params)))
 
@@ -383,17 +376,29 @@
 	    ((##core#undefined) 'C_SCHEME_UNDEFINED)
 
             ((##core#inline)
-	     `(call ,(string->symbol (first params)) 
+	     `(call ,(->symbol (first params)) 
                     ,@(expr-args subs i)))
 
 	    ((##core#inline_allocate)
-	     `(call ,(string->symbol (first params))
+	     `(call ,(->symbol (first params))
                     (adr a) ,(length subs)
                     ,@(expr-args subs i)))
 
 	    ((##core#inline_ref)
 	     ((foreign-result-conversion (second params) "a")
                `(inline ,(first params))))
+
+	    ((##core#inline_loc_ref)
+	     (let ((t (first params)))
+	       (list (foreign-result-conversion t "a")
+                     `(deref (cast ,(foreign-type-declaration t)
+                                  (C_data_pointer ,(expr (first subs) i)))))))
+     
+	    ((##core#inline_loc_update)
+	     (let ((t (first params)))
+	       `(set (cast ,(foreign-type-declaration t)
+                                (C_data_pointer ,(expr (first subs) i)))
+                          ,((foreign-argument-conversion t) (expr (second subs) i)))))
 
 	    ((##core#unboxed_ref)
 	     (first params))
@@ -422,10 +427,13 @@
 			  (gen `(call C_debugger (adr (elt C_debug_info ,dbi))
                                   c ,(if non-av-proc '0 'av)))))
 		       (emit-trace-info
-			(gen `(call C_trace ,name-str)))))
+			(gen `(call C_trace ,name-str)))
+                       (else (gen `(comment ,name-str)))))
                `(call ,call-id
-                      ,@(if allocating (list `(C_a_i ,demand)) '())
-                      ,@(if (or (not empty-closure) (pair? args))
+                      ,@(if allocating (list `(C_a_i (adr a) 
+                                                     ,demand))
+                            '())
+                      ,@(if (not empty-closure)
                             (list (expr fn i))
                             '())
                       ,@(if (pair? args) (expr-args args i) '()))))
@@ -472,7 +480,8 @@
       (when external-protos-first
 	(generate-foreign-callback-stub-prototypes foreign-callback-stubs) )
       (when (pair? foreign-declarations)
-	(for-each gen foreign-declarations) )
+	(for-each (lambda (x) (gen `(inline ,x)))
+           foreign-declarations) )
       (unless external-protos-first
 	(generate-foreign-callback-stub-prototypes foreign-callback-stubs) ) )
 
@@ -560,7 +569,7 @@
 	       (gen `(define static void ,(name "tr" id)
                              (word c) ((ptr word) av)))
 	       (restore argc)
-	       (gen `(call ,id ,@(make-argument-list argc 't))
+	       (gen `(tailcall ,id ,@(make-argument-list argc 't))
                     '(end)))))
 	 lambda-table*)))
   
@@ -742,23 +751,23 @@
                              (> n 2) 
                              (not empty-closure))
 		    (gen `(if (< c ,n))
-                         `(call C_bad_min_argc_2 c ,n t0)
+                         `(tailcall C_bad_min_argc_2 c ,n t0)
                          '(endif)))
 		  (when insert-timer-checks 
                     (gen '(set C_timer_interrupt_counter (- C_timer_interrupt_counter 1))
                          '(if (<= C_timer_interrupt_counter 0))
                          '(call C_raise_interrupt C_TIMER_INTERRUPT_NUMBER)
                          '(endif)))
-		  (gen `(if (unlikely (! (C_demand (C_calculate_demand (+ (* (- c ,n) C_SIZEOF_PAIR ,demand c ,max-av))))))))
+		  (gen `(if (unlikely (! (C_demand (C_calculate_demand (+ (* (- c ,n) C_SIZEOF_PAIR) ,demand) c ,max-av))))))
                   (when looping
                     ;; Loop will update t_n copy of av[n]; refresh av.
                     (let loop ((i 0))
                       (if (>= i n)
                           (gen `(set (elt av ,i) ,(tvar i)))
-                          (loop (add1 i))))
-                    `(tailcall C_save_and_reclaim ,id c av)
-                    '(endif))
-                  (gen `(set a (C_alloc (+ (* (- c ,n) C_SIZEOF_PAIR ,demand))))
+                          (loop (add1 i)))))
+                  (gen `(tailcall C_save_and_reclaim ,id c av)
+                       '(endif)
+                       `(set a (C_alloc (+ (* (- c ,n) C_SIZEOF_PAIR ,demand))))
 		       `(set ,(tvar n) (C_build_rest (adr a) c ,n av)))
                   (do ((i (+ n 1) (+ i 1))
                        (j temps (- j 1)))
@@ -917,7 +926,7 @@
 (define (generate-foreign-callback-stub-prototypes stubs)
   (for-each
    (lambda (stub)
-     (generate-foreign-callback-header 'export stub))
+     (generate-foreign-callback-header '(extern) stub))
    stubs) )
 
 (define (generate-foreign-stubs stubs db)
@@ -949,11 +958,12 @@
        (gen `(let C_r C_SCHEME_UNDEFINED)
             '(let/ptr C_a C_buf))
        (for-each
-	(lambda (type index name)
+	(lambda (type index vname)
 	  (gen `(let/unboxed ,(foreign-type-declaration type)
-                        ,(or name (tvar index))
+                        ,(or vname (tvar index))
 	             (cast ,(foreign-type-declaration type)
-                           ,((foreign-argument-conversion type) "C_a" index)))))
+                           ,((foreign-argument-conversion type)
+                             (name "C_a" index))))))
          types (iota n) names)
        (when callback
          (gen '(let C_level (C_save_callback_continuation (ptr C_a) C_k))))
@@ -1027,7 +1037,7 @@
                                                 (car vars) ns))))))
 	 (when rname
 	   (gen `(comment (conc "from " rname))))
-	 (generate-foreign-callback-header "" stub)
+	 (generate-foreign-callback-header '() stub)
 	 (gen '(let x)
               `(let s ,size)
               `(let/ptr a ,(if (eq? 0 size)
@@ -1036,8 +1046,7 @@
 	 (gen '(call C_callback_adjust_stack a s)) ; make sure content is below stack_bottom as well
 	 (for-each
 	  (lambda (v t)
-	    (gen `(set x (cast ,(foreign-result-conversion t "a")
-                               v))
+	    (gen `(set x ,((foreign-result-conversion t "a") v))
 		 '(call C_save x)))
 	  (reverse vlist)
 	  (reverse argtypes))
@@ -1054,11 +1063,11 @@
 	 (argtypes (foreign-callback-stub-argument-types stub))
 	 (n (length argtypes))
 	 (vlist (make-argument-list n "t")) )
-    (gen `(declare ,cls ,@quals
+    (gen `(declare ,@cls ,@(string-split quals)
                    ,(foreign-type-declaration rtype)
                    ,name
                    ,@(map (lambda (v t)
-                            (foreign-type-declaration v t))
+                            (foreign-type-declaration t v))
                        vlist argtypes)))))
 
 
@@ -1116,11 +1125,10 @@
 		       (memq (car type) '(pointer nonnull-pointer c-pointer 
 						  scheme-pointer nonnull-scheme-pointer
 						  nonnull-c-pointer) ) )
-		  `(ptr ,(foreign-type-declaration (cadr type) target)))
+		  (str `(ptr ,(foreign-type-declaration (cadr type)))))
 		 ((and (= 2 len)
 		       (eq? 'ref (car type)))
-		  `(ref ,(foreign-type-declaration (cadr type) 
-                                     target)))
+		  (str `(ref ,(foreign-type-declaration (cadr type)))))
 		 ((and (> len 2)
 		       (eq? 'template (car type)))
 		  (str
@@ -1128,7 +1136,7 @@
                        ,(foreign-type-declaration (cadr type))
 		       ,@(map foreign-type-declaration (cddr type)))))
 		 ((and (= len 2) (eq? 'const (car type)))
-		  `(const ,(foreign-type-declaration (cadr type) target)))
+		  (str `(const ,(foreign-type-declaration (cadr type)))))
 		 ((and (= len 2) (eq? 'struct (car type)))
 		  (str `(struct ,(cadr type))))
 		 ((and (= len 2) (eq? 'union (car type)))
@@ -1142,10 +1150,10 @@
 		 ((and (>= len 3) (eq? 'function (car type)))
 		  (let ((rtype (cadr type))
 			(argtypes (caddr type))
-			(callconv (optional (cdddr type) "")))
+			(callconv (cdddr type)))
 		    (str `(function
                             ,(foreign-type-declaration rtype)
-		            ,callconv
+		            ,@callconv
 		            ,@(map (lambda (at)
                                  (if (eq? '... at) 
 				    '...

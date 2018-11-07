@@ -106,8 +106,6 @@
 
 (define (top-expr x)
   (case (and (pair? x) (car x))
-    ((begin)
-     (for-each top-expr (cdr x)))
     ((call tailcall)
      (cond ((atom? (cadr x)) (emit #t (cadr x)))
            (else
@@ -295,7 +293,7 @@
      (emit #t "default:;"))
     ((endswitch)
      (emit "}"))
-    (else (bomb "bad top-expr" x))))
+    (else (bomb "target - bad top-expr" x))))
 
 (define (expr-list xs)
   (let loop ((xs xs))
@@ -310,6 +308,8 @@
         ((atom? x) (emit x))
         (else
           (case (car x)
+            ((begin)
+             (for-each expr (cdr x)))
             ((adr) 
              (emit "&")
              (expr (cadr x)))
@@ -428,6 +428,12 @@
                      (expr (caddr x))))
              (emit ")"))
             ((C_restore) (emit "C_restore"))
+            ((switch tailcall case declare declare/array define
+                     end define/array define/vaiable goto if else 
+                     endif label let let/var let/proc let/ptr
+                     let/array let/unboxed main_entry_point return
+                     stack_overflow_check default endswitch)
+             (bomb "target - top form in expr" x))
             (else
               (emit (car x) "(")
               (expr-list (cdr x))
@@ -465,7 +471,9 @@
          (emit-list (cddr x) type)
          (emit "<"))
         ((struct union enum)
-         (emit (car x) " ")
+         (emit (car x) " " (cadr x)))
+        ((const)
+         (emit "const ")
          (type (cadr x)))
         ((function)
          (type (cadr x))
