@@ -87,6 +87,13 @@
       x
       (string->symbol x)))
 
+(define av-count 0)
+
+(define (av-var)
+  (let ((av (name "av" av-count)))
+    (set! av-count (add1 av-count))
+    av))
+
 
 ;;; Generate target code:
 
@@ -136,7 +143,7 @@
 		    (safe-to-call (second params))
 		    (p2 (pair? (cddr params)))
 		    (name (and p2 (third params)))
-		    (name-str (source-info->string name))
+		    (name-str (->string (source-info->string name)))
 		    (call-id (and p2 (pair? (cdddr params)) (fourth params)))
 		    (customizable (and call-id (fifth params)))
 		    (empty-closure (and customizable (zero? (lambda-literal-closure-size (find-lambda call-id)))))
@@ -150,9 +157,9 @@
 		       (emit-trace-info
 			(gen `(call C_trace ,name-str)))))
 	       (cond ((eq? '##core#proc (node-class fn))
-		      (push-args args i 0)
-		      (let ([fpars (node-parameters fn)])
-			(gen `(tailcall ,(first fpars) ,nf av2))))
+		      (let* ((av2 (push-args args i 0))
+                             (fpars (node-parameters fn)))
+			(gen `(tailcall ,(first fpars) ,nf ,av2))))
 		     (call-id
 		      (cond ((and (eq? call-id (lambda-literal-id ll))
 				  (lambda-literal-looping ll) )
@@ -179,8 +186,8 @@
                                                    (list (tvar nc)))
                                              ,@(expr-args args i))))
 				   (else
-				    (push-args args i (and (not empty-closure) (tvar nc)))
-				    (gen `(tailcall ,call-id ,nf av2)))))))
+				    (let ((av2 (push-args args i (and (not empty-closure) (tvar nc)))))
+				      (gen `(tailcall ,call-id ,nf ,av2))))))))
 		     ((and (eq? '##core#global (node-class fn))
 			   (not unsafe) 
 			   (not no-procedure-checks)
@@ -209,14 +216,14 @@
                                       (else
                                         (set! carg `(slot (elt lf ,index) 0)) 
                                         `(C_fast_retrieve_symbol_proc (elt lf ,index))))))
-			(push-args args i carg)
-			(gen `(tailcall tp ,nf av2))))
+			(let ((av2 (push-args args i carg)))
+  			  (gen `(tailcall tp ,nf ,av2)))))
 		     (else
 		      (gen `(set ,(tvar nc) ,(expr fn i)))
-		      (push-args args i (tvar nc))
-		      (if (or unsafe no-procedure-checks safe-to-call)
-			  (gen `(tailcall (cast proc (slot ,(tvar nc) 0)) ,nf av2))
-			  (gen `(tailcall (cast proc (C_fast_retrieve_proc ,(tvar nc))) ,nf av2)))))))
+		      (let ((av2 (push-args args i (tvar nc))))
+  		        (if (or unsafe no-procedure-checks safe-to-call)
+			  (gen `(tailcall (cast proc (slot ,(tvar nc) 0)) ,nf ,av2))
+			  (gen `(tailcall (cast proc (C_fast_retrieve_proc ,(tvar nc))) ,nf ,av2))))))))
 	  
 	    ((##core#recurse) 
 	     (let* ([n (length subs)]
@@ -245,10 +252,10 @@
 	     ;; The code generated here does not use the extra temporary needed for standard calls, so we have
 	     ;;  one unused variable:
 	     (let* ((n (length subs))
-		    (nf (+ n 1)) )
-	       (push-args subs i 'C_SCHEME_UNDEFINED)
+		    (nf (+ n 1)) 
+	            (av2 (push-args subs i 'C_SCHEME_UNDEFINED)))
 	       (gen `(tailcall ,(name "C_" (toplevel (first params)))
-                           ,nf av2))))
+                           ,nf ,av2))))
 
 	    ((##core#return)
 	     (gen `(return ,(expr (first subs) i))))
@@ -385,20 +392,22 @@
                     ,@(expr-args subs i)))
 
 	    ((##core#inline_ref)
-	     ((foreign-result-conversion (second params) "a")
+	     ((foreign-result-conversion (second params) 'a)
                `(inline ,(first params))))
 
 	    ((##core#inline_loc_ref)
 	     (let ((t (first params)))
-	       (list (foreign-result-conversion t "a")
-                     `(deref (cast ,(foreign-type-declaration t)
-                                  (C_data_pointer ,(expr (first subs) i)))))))
+	       ((foreign-result-conversion t 'a)
+                 `(deref (cast (ptr ,(foreign-type-declaration t))
+                               (C_data_pointer ,(expr (first subs) i)))))))
      
 	    ((##core#inline_loc_update)
 	     (let ((t (first params)))
-	       `(set (cast ,(foreign-type-declaration t)
-                                (C_data_pointer ,(expr (first subs) i)))
-                          ,((foreign-argument-conversion t) (expr (second subs) i)))))
+	       `(begin 
+                  (set (deref (cast (ptr ,(foreign-type-declaration t))
+                                    (C_data_pointer ,(expr (first subs) i))))
+                       ,((foreign-argument-conversion t) (expr (second subs) i)))
+                  C_SCHEME_UNDEFINED)))
 
 	    ((##core#unboxed_ref)
 	     (first params))
@@ -415,7 +424,7 @@
 		    (dbi (first params))
 		    ;; (safe-to-call (second params))
 		    (name (third params))
-		    (name-str (source-info->string name))
+		    (name-str (->string (source-info->string name)))
 		    (call-id (fourth params))
 		    (demand (fifth params))
 		    (allocating (not (zero? demand)))
@@ -445,6 +454,7 @@
 
       (define (push-args args i selfarg)
 	(let* ((n (length args))
+               (av2 (av-var))
 	       (avl (+ n (if selfarg 1 0)))
 	       (caller-has-av? (not (or (lambda-literal-customizable ll)
 					(lambda-literal-direct ll))))
@@ -458,21 +468,22 @@
 	   ((or (not caller-has-av?)	     ; Argvec missing or
 		(and (< caller-argcount avl) ; known to be too small?
 		     (eq? caller-rest-mode 'none)))
-	    (gen `(let/array av2 ,avl)))
+	    (gen `(let/array ,av2 ,avl)))
 	   ((>= caller-argcount avl)   ; Argvec known to be re-usable?
-	    (gen '(let/ptr av2 av))) ; Re-use our own argvector
+	    (gen `(let/ptr ,av2 av))) ; Re-use our own argvector
 	   (else      ; Need to determine dynamically. This is slower.
-	    (gen `(let/ptr av2))
+	    (gen `(let/ptr ,av2))
 	    (gen `(if (>= c ,avl))
-                	`(set av2 av) ; Re-use our own argvector
+                	`(set ,av2 av) ; Re-use our own argvector
 	         '(else)
-                 `(set av2 (C_alloc ,avl))
+                 `(set ,av2 (C_alloc ,avl))
                  '(endif))))
-	  (when selfarg (gen `(set (elt av2 0) ,selfarg)))
+	  (when selfarg (gen `(set (elt ,av2 0) ,selfarg)))
 	  (do ((j (if selfarg 1 0) (add1 j))
 	       (args args (cdr args)))
 	      ((null? args))
-	    (gen `(set (elt av2 ,j) ,(expr (car args) i))))))
+	    (gen `(set (elt ,av2 ,j) ,(expr (car args) i))))
+          av2))
 
       (top-expr node temps) )
 
@@ -712,7 +723,7 @@
 			 `(if toplevel_initialized )
                          `(tailcall C_kontinue t1 C_SCHEME_UNDEFINED)
                          '(else)
-                         `(tailcall C_toplevel_entry ,(or unit-name topname))
+                         `(tailcall C_toplevel_entry ,(->string (or unit-name topname)))
                          '(endif))
 		    (when emit-debug-info
 		      (gen `(call C_register_debug_info C_debug_info)))
@@ -767,7 +778,7 @@
                           (loop (add1 i)))))
                   (gen `(tailcall C_save_and_reclaim ,id c av)
                        '(endif)
-                       `(set a (C_alloc (+ (* (- c ,n) C_SIZEOF_PAIR ,demand))))
+                       `(set a (C_alloc (+ (* (- c ,n) C_SIZEOF_PAIR) ,demand)))
 		       `(set ,(tvar n) (C_build_rest (adr a) c ,n av)))
                   (do ((i (+ n 1) (+ i 1))
                        (j temps (- j 1)))
@@ -926,7 +937,7 @@
 (define (generate-foreign-callback-stub-prototypes stubs)
   (for-each
    (lambda (stub)
-     (generate-foreign-callback-header '(extern) stub))
+     (generate-foreign-callback-header 'declare '(extern) stub))
    stubs) )
 
 (define (generate-foreign-stubs stubs db)
@@ -940,7 +951,7 @@
 	    [sname (foreign-stub-name stub)] 
 	    [body (foreign-stub-body stub)]
 	    [names (or (foreign-stub-argument-names stub) (make-list n #f))]
-	    [rconv (foreign-result-conversion rtype "C_a")] 
+	    [rconv (foreign-result-conversion rtype 'C_a)] 
 	    [cps (foreign-stub-cps stub)]
 	    [callback (foreign-stub-callback stub)] )
        (when rname
@@ -956,7 +967,7 @@
 	      (gen `(define static word ,id (word C_buf)
                        ,@(make-variable-list n "C_a")))))
        (gen `(let C_r C_SCHEME_UNDEFINED)
-            '(let/ptr C_a C_buf))
+            '(let/ptr C_a (cast (ptr word) C_buf)))
        (for-each
 	(lambda (type index vname)
 	  (gen `(let/unboxed ,(foreign-type-declaration type)
@@ -966,24 +977,29 @@
                              (name "C_a" index))))))
          types (iota n) names)
        (when callback
-         (gen '(let C_level (C_save_callback_continuation (ptr C_a) C_k))))
+         (gen '(let C_level (C_save_callback_continuation (adr C_a) C_k))))
        (cond (body
-	      (gen `(inline ,body))
-	      (cond (callback
-		     (gen '(set C_k (C_restore_callback_continuation2 C_level)
-			  '(tailcall C_kontinue C_k C_r))))
-		    (cps (gen '(tailcall C_kontinue C_k C_r)))
-		    (else (gen '(return C_r)))))
+               (gen `(let/unboxed ,(foreign-type-declaration 
+                                     (if (eq? 'void rtype)
+                                         'scheme-object
+                                         rtype)
+                                     #f #t)
+                       C_r1)
+                    `(trampoline C_r1 C_ret)
+                    `(inline ,body)
+                    '(label C_ret)
+                    `(set C_r ,(rconv 'C_r1))))
 	     (else
-	      (if (eq? rtype 'void)
+	      (if (not (eq? rtype 'void))
                   (gen `(set C_r ,(rconv (cons sname
-                                             (make-argument-list n "t")))))
-                  (cons sname (make-argument-list n "t")))
-	      (cond (callback
-		     (gen '(set C_k (C_restore_callback_continuation2 C_level))
-                          '(tailcall C_kontinue C_k C_r)))
-		    (cps (gen '(tailcall C_kontinue C_k C_r)))
-		    (else (gen '(return C_r)) ) ) ))))
+                                               (make-argument-list n "t")))))
+                  (gen `(call ,sname ,@(make-argument-list n "t"))))))
+       (cond (callback
+               (gen '(set C_k (C_restore_callback_continuation2 C_level))
+                    '(tailcall C_kontinue C_k C_r)))
+             (cps (gen '(tailcall C_kontinue C_k C_r)))
+             (else (gen '(return C_r)) ) )
+       (gen '(end))))
    stubs) )
 
 (define (generate-foreign-callback-stubs stubs db)
@@ -1036,8 +1052,8 @@
 				  (compute-size (car types) 
                                                 (car vars) ns))))))
 	 (when rname
-	   (gen `(comment (conc "from " rname))))
-	 (generate-foreign-callback-header '() stub)
+	   (gen `(comment ,(conc "from " rname))))
+	 (generate-foreign-callback-header 'define '() stub)
 	 (gen '(let x)
               `(let s ,size)
               `(let/ptr a ,(if (eq? 0 size)
@@ -1046,24 +1062,25 @@
 	 (gen '(call C_callback_adjust_stack a s)) ; make sure content is below stack_bottom as well
 	 (for-each
 	  (lambda (v t)
-	    (gen `(set x ,((foreign-result-conversion t "a") v))
+	    (gen `(set x ,((foreign-result-conversion t 'a) v))
 		 '(call C_save x)))
 	  (reverse vlist)
 	  (reverse argtypes))
 	 (if (eq? 'void rtype)
              (gen `(call C_callback_wrapper ,id ,n))
 	     (gen `(return ,((foreign-argument-conversion rtype)
-                      `(C_callback_wrapper ,id ,n))))))))       
+                      `(C_callback_wrapper ,id ,n)))))
+         (gen '(end)))))
    stubs) )
 
-(define (generate-foreign-callback-header cls stub)
+(define (generate-foreign-callback-header def cls stub)
   (let* ((name (foreign-callback-stub-name stub))
 	 (quals (foreign-callback-stub-qualifiers stub))
 	 (rtype (foreign-callback-stub-return-type stub))
 	 (argtypes (foreign-callback-stub-argument-types stub))
 	 (n (length argtypes))
 	 (vlist (make-argument-list n "t")) )
-    (gen `(declare ,@cls ,@(string-split quals)
+    (gen `(,def ,@cls ,@(string-split (->string quals))
                    ,(foreign-type-declaration rtype)
                    ,name
                    ,@(map (lambda (v t)
@@ -1073,7 +1090,7 @@
 
 ;; Create type declarations
 
-(define (foreign-type-declaration type #!optional target)
+(define (foreign-type-declaration type #!optional target nonconst)
   (let ((err (lambda () (quit-compiling "illegal foreign type `~A'" type)))
 	(str (lambda (ts) (if target (list ts target) ts))))
     (case type
@@ -1135,8 +1152,11 @@
                     `(template-instance
                        ,(foreign-type-declaration (cadr type))
 		       ,@(map foreign-type-declaration (cddr type)))))
-		 ((and (= len 2) (eq? 'const (car type)))
-		  (str `(const ,(foreign-type-declaration (cadr type)))))
+		 ((and (= len 2)
+                       (eq? 'const (car type)))
+                  (if nonconst
+                      (foreign-type-declaration (cadr type) target)
+   	    	      (str `(const ,(foreign-type-declaration (cadr type))))))
 		 ((and (= len 2) (eq? 'struct (car type)))
 		  (str `(struct ,(cadr type))))
 		 ((and (= len 2) (eq? 'union (car type)))

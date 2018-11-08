@@ -77,6 +77,10 @@ Description of Backend Intermediate Language
     (tailcall FEXP EXP ...)
         Perform procedure call with arguments.
 
+    (trampoline VAR LABEL)
+        Inject code to set VAR and jump to LABEL before returning from
+        a function.
+
 * EXP: Expressions
 
     (adr EXP)

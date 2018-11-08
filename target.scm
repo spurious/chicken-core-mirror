@@ -53,6 +53,7 @@
   (string-translate* (->string s) '(("*/" . "*_/"))))
 
 (define output #f)
+(define trampoline #f)
 
 (define (emit . xs)
   (for-each 
@@ -185,7 +186,11 @@
                           (emit " " (cadr arg))))
              ;; tmp var for box/closure allocation
              (emit ") " noreturn "{" #t "C_word tmp;"))))))
-    ((end) (emit "}"))
+    ((end) 
+     (emit "}")
+     (when trampoline
+       (set! trampoline #f)
+       (emit #t "#undef return")))
     ((define/array)
      (let ((class "")
            (aligned ""))
@@ -269,8 +274,8 @@
      (emit " " (caddr x))
      (unless (null? (cdddr x))
        (emit "=")
-       (expr (cadddr x))
-       (emit ";")))
+       (expr (cadddr x)))
+     (emit ";"))
     ((stack_overflow_check)
      (emit #t "C_stack_overflow_check;"))
     ((main_entry_point)
@@ -293,6 +298,10 @@
      (emit #t "default:;"))
     ((endswitch)
      (emit "}"))
+    ((trampoline)
+     (set! trampoline #t)
+     (emit #t "#define return(x) C_cblock " (cadr x) "=(x); goto "
+           (caddr x) "; C_cblockend"))
     (else (bomb "target - bad top-expr" x))))
 
 (define (expr-list xs)
@@ -304,12 +313,19 @@
         (loop (cdr xs))))))
 
 (define (expr x)
-  (cond ((string? x) (emit "C_text(\"" (backslashify x) "\")"))
+  (cond ((string? x) (emit "C_text(" (c-ify-string x) ")"))
         ((atom? x) (emit x))
         (else
           (case (car x)
             ((begin)
-             (for-each expr (cdr x)))
+             (emit "(")
+             (expr (cadr x))
+             (for-each 
+               (lambda (y)
+                 (emit ",")
+                 (expr y))
+               (cddr x))
+             (emit ")"))
             ((adr) 
              (emit "&")
              (expr (cadr x)))
