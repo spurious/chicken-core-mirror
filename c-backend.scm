@@ -504,7 +504,7 @@
 	   (gen `(declare extern noreturn void ,(name "C_" uu) (word c) ((ptr word) av))))
 	 (map toplevel used-units))
 	(unless (zero? n)
-	  (gen `(declare/array static word lf ,n)))
+	  (gen `(define/array static word lf ,n)))
 	(do ((i 0 (add1 i))
 	     (llits lliterals (cdr llits)))
 	    ((null? llits))
@@ -870,10 +870,11 @@
 ;;; Emit global tables for debug-info
 
 (define (emit-debug-table dbg-info-table)
-  (gen `(declare/array static C_DEBUG_INFO C_debug_info #f
+  (gen `(define/array static C_DEBUG_INFO C_debug_info ()
                  ,@(map (lambda (info)
-                          (list (second info) 0
-                                (map ->string (cddr info))))
+                          (list->vector
+                            (cons* (second info) 0
+                                   (map ->string (cddr info)))))
                      (sort dbg-info-table (lambda (i1 i2)
                                             (< (car i1) (car i2)))))
                  (0 0 0 0))))

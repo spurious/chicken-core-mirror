@@ -15,9 +15,6 @@ Description of Backend Intermediate Language
     (declare [extern|static] [noreturn] TYPE ID (TYPE VAR) ...)
         Declare extern or static function prototype.
 
-    (declare/array [static] [aligned] TYPE ID SIZE|())
-        Declare global array variable.
-
     (define [extern|static] [noreturn] TYPE ID (TYPE VAR) ...)
         ...
     (end)
