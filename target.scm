@@ -108,7 +108,8 @@
 (define (top-expr x)
   (case (and (pair? x) (car x))
     ((call tailcall)
-     (cond ((atom? (cadr x)) (emit #t (cadr x)))
+     (cond ((and (pair? (cadr x)) (eq? '$ (caadr x)))
+            (emit #t (cadadr x)))
            (else
              (emit #t "(")
              (expr (cadr x))
@@ -207,7 +208,8 @@
                               (emit "C_lihdr(" b1 "," b2 "," b3 "),")))
                            (else (emit val ",")))
                      (loop (cdr x)))))
-               (emit "};")))))))
+               (emit "}"))
+             (emit ";"))))))
     ((define/variable)
      (let ((class ""))
        (when (memq (cadr x) '(static extern))
@@ -302,6 +304,7 @@
         ((atom? x) (emit x))
         (else
           (case (car x)
+            (($) (emit (cadr x)))
             ((begin)
              (emit "(")
              (expr (cadr x))
@@ -333,7 +336,8 @@
              (emit ")")
              (expr (caddr x)))
             ((call)
-             (cond ((atom? (cadr x)) (emit (cadr x)))
+             (cond ((and (pair? (cadr x)) (eq? '$ (caadr x)))
+                    (emit (cadadr x)))
                    (else
                      (emit "(")
                      (expr (cadr x))
