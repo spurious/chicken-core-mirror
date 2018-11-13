@@ -151,15 +151,15 @@
 	       (when name
 		 (cond (emit-debug-info
 			(when dbi
-			  (gen `(call C_debugger (adr (elt C_debug_info ,dbi)) 
+			  (gen `(call C_debugger (adr (elt ($ C_debug_info) ,dbi)) 
                                    c 
                                    ,(if non-av-proc '0 'av)))))
 		       (emit-trace-info
-			(gen `(call C_trace ,name-str)))))
+			(gen `(call ($ C_trace) ,name-str)))))
 	       (cond ((eq? '##core#proc (node-class fn))
 		      (let* ((av2 (push-args args i 0))
                              (fpars (node-parameters fn)))
-			(gen `(tailcall ,(first fpars) ,nf ,av2))))
+			(gen `(tailcall ($ ,(first fpars)) ,nf ,av2))))
 		     (call-id
 		      (cond ((and (eq? call-id (lambda-literal-id ll))
 				  (lambda-literal-looping ll) )
@@ -180,14 +180,14 @@
 			     (unless empty-closure
 			       (gen `(set ,(tvar nc) ,(expr fn i))))
 			     (cond (customizable
-				    (gen `(tailcall ,call-id
+				    (gen `(tailcall ($ ,call-id)
                                              ,@(if empty-closure
                                                    '()
                                                    (list (tvar nc)))
                                              ,@(expr-args args i))))
 				   (else
 				    (let ((av2 (push-args args i (and (not empty-closure) (tvar nc)))))
-				      (gen `(tailcall ,call-id ,nf ,av2))))))))
+				      (gen `(tailcall ($ ,call-id) ,nf ,av2))))))))
 		     ((and (eq? '##core#global (node-class fn))
 			   (not unsafe) 
 			   (not no-procedure-checks)
@@ -201,20 +201,20 @@
                                 ,(cond (no-global-procedure-checks
                                         (set! carg
                                           (if block
-                                              `(elt lf ,index)
-                                              `(slot (elt lf ,index) 0)))
+                                              `(elt ($ lf) ,index)
+                                              `(slot (elt ($ lf) ,index) 0)))
                                         `(slot ,carg 1))
                                       (block
-                                        (set! carg `(elt lf ,index))
+                                        (set! carg `(elt ($ lf) ,index))
 			                (if safe
 				           `(C_fast_retrieve_proc ,carg)
 				           `(C_retrieve2_symbol_proc ,carg 
                                               ,(##sys#symbol->qualified-string (fourth gparams)))))
                                       (safe
-                                       (set! carg `(slot (elt lf ,index) 0)) 
+                                       (set! carg `(slot (elt ($ lf) ,index) 0)) 
                                        `(C_fast_retrieve_proc ,carg))
                                       (else
-                                        (set! carg `(slot (elt lf ,index) 0)) 
+                                        (set! carg `(slot (elt ($ lf) ,index) 0)) 
                                         `(C_fast_retrieve_symbol_proc (elt lf ,index))))))
 			(let ((av2 (push-args args i carg)))
   			  (gen `(tailcall tp ,nf ,av2)))))
@@ -244,7 +244,7 @@
 			 ts (list-tabulate n add1))
 			(gen '(goto loop))))
 		     (else
-		      (gen `(tailcall ,call-id 
+		      (gen `(tailcall ($ ,call-id)
                                    ,(if empty-closure '() '(t0))
                                    ,@(expr-args subs i)))))))
 
@@ -254,14 +254,14 @@
 	     (let* ((n (length subs))
 		    (nf (+ n 1)) 
 	            (av2 (push-args subs i 'C_SCHEME_UNDEFINED)))
-	       (gen `(tailcall ,(name "C_" (toplevel (first params)))
+	       (gen `(tailcall ($ ,(name "C_" (toplevel (first params))))
                            ,nf ,av2))))
 
 	    ((##core#return)
 	     (gen `(return ,(expr (first subs) i))))
 
             ((##core#debug-event)
-	     (gen `(call C_debugger (adr (elt C_debug_info ,(first params)))
+	     (gen `(call ($ C_debugger) (adr (elt ($ C_debug_info) ,(first params)))
                            c ,(if non-av-proc '0 'av))))
 
 	    ((##core#inline_update)
@@ -304,14 +304,14 @@
 	    ((##core#literal) 
 	     (let ((lit (first params)))
 	       (if (vector? lit)
-		   `(cast word ,(name "li" (vector-ref lit 0)))
-		   `(elt lf ,(first params)))))
+		   `(cast word ($ ,(name "li" (vector-ref lit 0))))
+		   `(elt ($ lf) ,(first params)))))
 
 	    ((##core#proc)
 	     `(cast word ,(first params)))
 
 	    ((##core#provide)
-             `(call C_a_i_provide (adr a) 1 (elt lf ,(first params))))
+             `(C_a_i_provide (adr a) 1 (elt ($ lf) ,(first params))))
 	    ((##core#ref) 
              `(slot ,(expr (car subs) i) ,(first params)))
 
@@ -354,12 +354,12 @@
 		   (block (third params)) )
 	       (cond (block
 		      (if safe
-			  `(elt lf ,index)
-			  `(C_retrieve2 (elt lf ,index) 
+			  `(elt ($ lf) ,index)
+			  `(C_retrieve2 (elt ($ lf) ,index) 
                               ,(##sys#symbol->qualified-string
                                  (fourth params)))))
-		     (safe `(slot (elt lf ,index) 0))
-		     (else `(C_fast_retrieve (elt lf ,index))))))
+		     (safe `(slot (elt ($ lf) ,index) 0))
+		     (else `(C_fast_retrieve (elt ($ lf) ,index))))))
 
 	    ((##core#setglobal)
 	     (let ((index (first params))
@@ -367,29 +367,28 @@
 		   (var (third params))
                    (exp (expr (car subs) i)))
 	       (if block
-		   `(mutate (adr (elt lf ,index)) 0 ,exp)
-                   `(mutate (elt lf ,index) 1 ,exp))))
+		   `(mutate (adr (elt ($ lf) ,index)) 0 ,exp)
+                   `(mutate (elt ($ lf) ,index) 1 ,exp))))
 
 	    ((##core#setglobal_i)
 	     (let ((index (first params))
 		   (block (second params)) 
 		   (var (third params)) )
 	       (cond (block
-		      `(set (elt lf ,index) ,(expr (car subs) i)))
+		      `(set (elt ($ lf) ,index) ,(expr (car subs) i)))
 		     (else
-		      `(setslot (elt lf ,index) 0 
+		      `(setslot (elt ($ lf) ,index) 0 
                                 ,(expr (car subs) i))))))
 
 	    ((##core#undefined) 'C_SCHEME_UNDEFINED)
 
             ((##core#inline)
-	     `(call ,(->symbol (first params)) 
-                    ,@(expr-args subs i)))
+	     (cons (->symbol (first params)) (expr-args subs i)))
 
 	    ((##core#inline_allocate)
-	     `(call ,(->symbol (first params))
-                    (adr a) ,(length subs)
-                    ,@(expr-args subs i)))
+	     (cons* (->symbol (first params))
+                    '(adr a) (length subs)
+                    (expr-args subs i)))
 
 	    ((##core#inline_ref)
 	     ((foreign-result-conversion (second params) 'a)
@@ -417,7 +416,7 @@
                     ,(expr (second subs) i)
                     ,(expr (third subs) i)))
 
-	    ((##core#direct_call) 
+     	    ((##core#direct_call) 
 	     (let* ((args (cdr subs))
 		    (n (length args))
 		    (nf (add1 n))
@@ -430,14 +429,6 @@
 		    (allocating (not (zero? demand)))
 		    (empty-closure (zero? (lambda-literal-closure-size (find-lambda call-id))))
 		    (fn (car subs)) )
-	       (when name
-		 (cond (emit-debug-info
-			(when dbi
-			  (gen `(call C_debugger (adr (elt C_debug_info ,dbi))
-                                  c ,(if non-av-proc '0 'av)))))
-		       (emit-trace-info
-			(gen `(call C_trace ,name-str)))
-                       (else (gen `(comment ,name-str)))))
                `(call ,call-id
                       ,@(if allocating (list `(C_a_i (adr a) 
                                                      ,demand))
@@ -580,7 +571,7 @@
 	       (gen `(define static void ,(name "tr" id)
                              (word c) ((ptr word) av)))
 	       (restore argc)
-	       (gen `(tailcall ,id ,@(make-argument-list argc 't))
+	       (gen `(tailcall ($ ,id) ,@(make-argument-list argc 't))
                     '(end)))))
 	 lambda-table*)))
   
@@ -588,7 +579,7 @@
       (do ([i 0 (add1 i)]
 	   [lits literals (cdr lits)] )
 	  ((null? lits))
-	(gen-lit (car lits) `(elt lf ,i))))
+	(gen-lit (car lits) `(elt ($ lf) ,i))))
 
     (define (bad-literal lit)
       (bomb "type of literal not supported" lit) )
@@ -720,36 +711,37 @@
 		  (let ((ldemand (foldl (lambda (n lit) (+ n (literal-size lit))) 0 literals))
 			(llen (length literals)) )
 		    (gen '(let/ptr a)
-			 `(if toplevel_initialized )
-                         `(tailcall C_kontinue t1 C_SCHEME_UNDEFINED)
+			 `(if ($ toplevel_initialized))
+                         `(tailcall ($ C_kontinue) t1 C_SCHEME_UNDEFINED)
                          '(else)
-                         `(tailcall C_toplevel_entry ,(->string (or unit-name topname)))
+                         `(tailcall ($ C_toplevel_entry) ,(->string (or unit-name topname)))
                          '(endif))
 		    (when emit-debug-info
-		      (gen `(call C_register_debug_info C_debug_info)))
+		      (gen `(call ($ C_register_debug_info) ($ C_debug_info))))
 		    (when disable-stack-overflow-checking
-		      (gen `(set C_disable_overflow_check 1)))
+		      (gen `(set ($ C_disable_overflow_check) 1)))
 		    (unless unit-name
 		      (when target-heap-size
-			(gen `(call C_set_or_change_heap_size ,target-heap-size 1)
-                             '(set C_heap_size_is_fixed 1)))
+			(gen `(call ($ C_set_or_change_heap_size) ,target-heap-size 1)
+                             '(set ($ C_heap_size_is_fixed) 1)))
 		      (when target-stack-size
-			(gen `(call C_resize_stack ,target-stack-size))))
-		    (gen `(call C_check_nursery_minimum (C_calculate_demand ,demand c ,max-av))
+			(gen `(call ($ C_resize_stack) ,target-stack-size))))
+		    (gen `(call ($ C_check_nursery_minimum) (C_calculate_demand ,demand c ,max-av))
 			 `(if (unlikely (! (C_demand (C_calculate_demand ,demand c ,max-av)))))
-                         `(tailcall C_save_and_reclaim ,(name "C_" topname) c av)
+                         `(tailcall ($ C_save_and_reclaim) ($ ,(name "C_" topname)) c av)
                          '(endif)
-                         '(set toplevel_initialized 1)
+                         '(set ($ toplevel_initialized) 1)
 			 `(if (unlikely (! (C_demand_2 ,ldemand))))
-                         '(call C_save t1)
-			 `(call C_rereclaim2 (words ,ldemand) 1)
+                         '(set ($ C_temporary_stack) (- ($ C_temporary_stack) 1))
+                         '(set (deref ($ C_temporary_stack)) (cast word t1))
+			 `(call ($ C_rereclaim2) (words ,ldemand) 1)
 			 '(set t1 (C_restore))
                          '(endif)
 			 `(set a (C_alloc ,demand)))
 		    (unless (zero? llen)
-		      (gen `(call C_initialize_lf lf ,llen))
+		      (gen `(call ($ C_initialize_lf) ($ lf) ,llen))
 		      (literal-frame)
-		      (gen `(call C_register_lf2 lf ,llen (create_ptable))))
+		      (gen `(call ($ C_register_lf2) ($ lf) ,llen (create_ptable))))
                     (set! non-av-proc #f)
                 	   (expression (lambda-literal-body ll) n ll)))
 
@@ -762,12 +754,12 @@
                              (> n 2) 
                              (not empty-closure))
 		    (gen `(if (< c ,n))
-                         `(tailcall C_bad_min_argc_2 c ,n t0)
+                         `(tailcall ($ C_bad_min_argc_2) c ,n t0)
                          '(endif)))
 		  (when insert-timer-checks 
-                    (gen '(set C_timer_interrupt_counter (- C_timer_interrupt_counter 1))
-                         '(if (<= C_timer_interrupt_counter 0))
-                         '(call C_raise_interrupt C_TIMER_INTERRUPT_NUMBER)
+                    (gen '(set ($ C_timer_interrupt_counter) (- ($ C_timer_interrupt_counter) 1))
+                         '(if (<= ($ C_timer_interrupt_counter) 0))
+                         '(call ($ C_raise_interrupt) C_TIMER_INTERRUPT_NUMBER)
                          '(endif)))
 		  (gen `(if (unlikely (! (C_demand (C_calculate_demand (+ (* (- c ,n) C_SIZEOF_PAIR) ,demand) c ,max-av))))))
                   (when looping
@@ -776,7 +768,7 @@
                       (if (>= i n)
                           (gen `(set (elt av ,i) ,(tvar i)))
                           (loop (add1 i)))))
-                  (gen `(tailcall C_save_and_reclaim ,id c av)
+                  (gen `(tailcall ($ C_save_and_reclaim) ,id c av)
                        '(endif)
                        `(set a (C_alloc (+ (* (- c ,n) C_SIZEOF_PAIR) ,demand)))
 		       `(set ,(tvar n) (C_build_rest (adr a) c ,n av)))
@@ -812,17 +804,17 @@
 		    (if (eq? rest-mode 'none)
 			(when (> n 2)
                           (gen `(if (< c ,n))
-                               `(tailcall C_bad_min_argc_2 c ,n t0)
+                               `(tailcall ($ C_bad_min_argc_2) c ,n t0)
                                '(endif)))
 			(gen `(if (!= c ,n))
-                             `(tailcall C_bad_argc_2 c ,n t0)
+                             `(tailcall ($ C_bad_argc_2) c ,n t0)
                              '(endif))))
                   ;; The interrupt handler may fill the stack, so we only
                   ;; check for an interrupt when the procedure is restartable
                   (when insert-timer-checks
-                    (gen '(set C_timer_interrupt_counter (- C_timer_interrupt_counter 1))
-                         '(if (<= C_timer_interrupt_counter 0))
-                         '(call C_raise_interrupt C_TIMER_INTERRUPT_NUMBER)
+                    (gen '(set ($ C_timer_interrupt_counter) (- ($ C_timer_interrupt_counter) 1))
+                         '(if (<= ($ C_timer_interrupt_counter) 0))
+                         '(call ($ C_raise_interrupt) C_TIMER_INTERRUPT_NUMBER)
                          '(endif)))
                   (gen `(if (unlikely (! (C_demand (C_calculate_demand ,demand
                                                                        ,(if customizable 0 'c)
@@ -834,10 +826,10 @@
                           (gen `(set (elt av ,i) ,(tvar i)))
                           (loop (add1 i)))))
                   (if (and customizable (> nec 0))
-                      (gen `(tailcall C_save_and_reclaim_args 
-                                      ,(name "tr" id) ,nec
+                      (gen `(tailcall ($ C_save_and_reclaim_args) 
+                                      ($ ,(name "tr" id)) ,nec
                                       ,@arglist))
-                      (gen `(tailcall C_save_and_reclaim ,id
+                      (gen `(tailcall ($ C_save_and_reclaim) ($ ,id)
                                       ,n av)))
                   (gen '(endif))
                   (when (> demand 0)
@@ -994,11 +986,11 @@
 	      (if (not (eq? rtype 'void))
                   (gen `(set C_r ,(rconv (cons sname
                                                (make-argument-list n "t")))))
-                  (gen `(call ,sname ,@(make-argument-list n "t"))))))
+                  (gen `(call ($ ,sname) ,@(make-argument-list n "t"))))))
        (cond (callback
                (gen '(set C_k (C_restore_callback_continuation2 C_level))
-                    '(tailcall C_kontinue C_k C_r)))
-             (cps (gen '(tailcall C_kontinue C_k C_r)))
+                    '(tailcall ($ C_kontinue) C_k C_r)))
+             (cps (gen '(tailcall ($ C_kontinue) C_k C_r)))
              (else (gen '(return C_r)) ) )
        (gen '(end))))
    stubs) )
@@ -1060,15 +1052,16 @@
               `(let/ptr a ,(if (eq? 0 size)
                                  'C_stack_pointer
                                  '(C_alloc s))))
-	 (gen '(call C_callback_adjust_stack a s)) ; make sure content is below stack_bottom as well
+	 (gen '(call ($ C_callback_adjust_stack) a s)) ; make sure content is below stack_bottom as well
 	 (for-each
 	  (lambda (v t)
 	    (gen `(set x ,((foreign-result-conversion t 'a) v))
-		 '(call C_save x)))
+                 '(set ($ C_temporary_stack) (- ($ C_temporary_stack) 1))
+		 '(set (deref ($ C_temporary_stack)) (cast word x))))
 	  (reverse vlist)
 	  (reverse argtypes))
 	 (if (eq? 'void rtype)
-             (gen `(call C_callback_wrapper ,id ,n))
+             (gen `(call ($ C_callback_wrapper) ($ ,id) ,n))
 	     (gen `(return ,((foreign-argument-conversion rtype)
                       `(C_callback_wrapper ,id ,n)))))
          (gen '(end)))))
