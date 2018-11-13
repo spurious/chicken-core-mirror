@@ -714,7 +714,7 @@
 			 `(if ($ toplevel_initialized))
                          `(tailcall ($ C_kontinue) t1 C_SCHEME_UNDEFINED)
                          '(else)
-                         `(tailcall ($ C_toplevel_entry) ,(->string (or unit-name topname)))
+                         `(tailcall ($ C_toplevel_entry) (string ,(->string (or unit-name topname))))
                          '(endif))
 		    (when emit-debug-info
 		      (gen `(call ($ C_register_debug_info) ($ C_debug_info))))

@@ -300,8 +300,7 @@
         (loop (cdr xs))))))
 
 (define (expr x)
-  (cond ((string? x) (emit "C_text(" (c-ify-string x) ")"))
-        ((atom? x) (emit x))
+  (cond ((atom? x) (emit x))
         (else
           (case (car x)
             (($) (emit (cadr x)))
