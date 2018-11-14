@@ -245,7 +245,7 @@
      (emit #t "C_proc " (cadr x) "=")
      (expr (caddr x))
      (emit ";"))
-    ((let/ptr)
+    ((let/ptr let/cell)
      (emit #t "C_word* " (cadr x))
      (unless (null? (cddr x))
        (emit "=")
