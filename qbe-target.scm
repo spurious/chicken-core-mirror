@@ -11,6 +11,7 @@
 (define ifstack '())
 (define string-counter 0)
 (define strings '())
+(define cells #f)
 
 (define (temp #!optional (name "x"))
   (let ((str (conc name counter)))
@@ -98,6 +99,7 @@
                    (loop (cdr args)))))
              (emit "){" #t "@start")
              (set! counter 0)
+             (set! cells '())
              (set! ifstack '())
              (set! lastcase #f)
              (set! switch #f))))))   
@@ -147,7 +149,7 @@
      (assert (pair? ifstack))
      (let ((end (temp "endif")))
        (emit #t "jmp @" end
-             #t "@" (car ifstack))
+             #t "@" (caar ifstack))
        (set-car! ifstack end)))
     ((endif)
      (assert (pair? ifstack))
@@ -161,6 +163,12 @@
      (unless (null? (cddr x))
        (let ((x (expression (caddr x))))
          (emit #t "%" (cadr x) " =l %" x))))
+    ((let/cell)
+     (set! cells (cons (cadr x) cells))
+     (emit #t "%" (cadr x) " =l alloc8 8")
+     (unless (null? (cddr x))
+       (let ((x (expression (caddr x))))
+         (emit #t "storel %" x ",%" (cadr x)))))
     ((let/proc)
      (let ((x (expression (caddr x))))
        (emit #t "%" (cadr x) " =l %" x)))
@@ -179,8 +187,7 @@
      (let ((x (expression (cadr x))))
        (emit #t "ret %" x)))
     ((set)
-     (let ((x (expression (caddr x))))
-       (emit #t "%" (cadr x) " =l %" x)))
+     (expression x))
     ((switch)
      (set! endswitch (temp "endswitch"))
      (set! lastcase #f)
@@ -196,35 +203,36 @@
 (define (expression x)
   (let ((r (temp)))
     (cond ((symbol? x) 
-           (emit #t "%" r " =l %" x)
-           r)
-          ((atom? x) 
-           (emit #t "%" r " =l " x))
+           (if (memq x cells)
+               (emit #t "%" r " =l loadl %" x)
+               x))
+          ((atom? x) x)
           (else
-            (case (and (pair? x) (car x))
+            (case (car x)
               (($) 
-               (emit #t "%" r " =l $" (cadr x)))
+               (emit #t "%" r " =l copy $" (cadr x)))
               ((begin)
                (let loop ((x (cdr x)))
                  (let ((r (expression (car x))))
                    (if (null? (cdr x))
                        r
                        (loop (cdr x))))))
-              ((adr) (lvalue (cadr x)))
+              ((adr) (mvalue (cadr x)))
               ((box)
+               (assert (memq (cadr x) cells))
                (let* ((aexp (expression (cadr x)))
                       (val (expression (caddr x)))
-                      (aexp2 (temp))
-                      (aexp3 (temp)))
-                 XXX wrong
-                 (emit #t "storel "
+                      (aptr (temp "a")))
+                 (emit #t "%" aptr " =l loadl %" aexp
+                       #t "storel "
                        (bitwise-ior (foreign-value "C_VECTOR_TYPE" int)
                                     1)
-                       ",%" aexp
-                       #t "%" r " =l copy %" aexp
-                       #t "%" aexp2 " =l add %" aexp ",8"
-                       #t "storel %" val ",%" aexp2
-                       #t "%" aexp3 " =l add %" aexp2 ",8")
+                       ",%" aptr
+                       #t "%" r " =l copy %" aptr
+                       #t "%" aptr " =l add %" aptr ",8"
+                       #t "storel %" val ",%" aptr
+                       #t "%" aptr " =l add %" aptr ",8"
+                       #t "storel %" aptr ",%" aexp)
                  r))
               ((cast) (expression (caddr x)))
               ((call)
@@ -240,35 +248,181 @@
                ((closure)
                 (let ((size (cadr x))
                       (aexp (expression (caddr x)))
-                      (aexp2 (temp))
+                      (aptr (temp "a"))
                       (args (map expression (cdddr x))))
-                 XXX wrong
-                  (emit #t "storel " 
+                  (emit #t "%" aptr " =l loadl %" aexp
+                        #t "storel " 
                         (bitwise-ior (foreign-value "C_CLOSURE_TYPE" int)
                                      size)
-                        ",%" aexp
-                        #t "%" r " =l copy %" aexp
-                        #t "%" aexp2 " =l add %" aexp ",8")
-                  (let loop ((args args) (aexp aexp2))
-                    (cond ((null? args)
-                           (
-                      (emit #t "storel %" (car args) ",%" aexp)
-                      (loop (cdr args) (temp))
-               (for-each
-                 (lambda (arg i)
-                   (expr aexp)
-                   (emit "[" i "]=")
-                   (expr arg)
-                   (emit ","))
-                 (cdddr x) 
-                 (list-tabulate size add1))
-               (emit "tmp=(C_word)")
-               (expr aexp)
-               (emit ",")
-               (expr aexp)
-               (emit "+=" (add1 size) ",tmp)")))
-                (
-    
+                        ",%" aptr
+                        #t "%" r " =l copy %" aptr
+                        #t "%" aptr " =l add %" aptr ",8")
+                  (for-each
+                    (lambda (arg)
+                      (emit #t "storel %" arg ",%" aptr
+                            #t "%" aptr " =l add %" aptr ",8"))
+                    args)
+                  (emit #t "storel %" aptr ",%" aexp)))
+               ((cond)
+                (let ((c (expression (cadr x)))
+                      (yes (temp "if"))
+                      (no (temp "else"))
+                      (tmp (temp)))
+                  (emit #t "%" tmp " =w cnel 6,%" c
+                        #t "jnz %" tmp ",@" yes ",@" no
+                        #t "@" yes)
+                  (let ((x1 (expression (caddr x)))
+                        (end (temp "endif")))
+                    (emit #t "%" r " =l copy %" x1
+                          #t "jmp @" end
+                          #t "@" yes)
+                    (let ((x2 (expression (cadddr x))))
+                      (emit #t "%" r " =l copy %" x2
+                            #t "@" end)))))
+               ((deref)
+                (let ((x (expression (cadr x))))
+                  (emit #t "%" r " =l loadl %" x)))
+               ((elt)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x)))
+                      (tmp (temp)))
+                  (emit #t "%" tmp " =l shl %" x2 ",3"
+                        #t "%" tmp " =l add %" tmp ",%" x1
+                        #t "%" r " =l loadl %" tmp)))
+               ((slot)
+                (expression `(elt ,(cadr x) (+ 1 ,(caddr x)))))
+               ((inline)
+                (emit #t (cadr x)
+                      #t "%" r " =l copy %result"))  ; weak
+               ((mutate)
+                (let ((ptr (expression (cadr x)))
+                      (idx (expression (caddr x)))
+                      (val (expression (cadddr x)))
+                      (l1 (temp "l"))
+                      (l2 (temp "l"))
+                      (l3 (temp "l"))
+                      (t1 (temp))
+                      (t2 (temp))
+                      (imb (foreign-value "C_IMMEDIATE_MARK_BITS" int)))
+                  (emit #t "%" t2 " =l shl %" idx ",3"
+                        #t "%" t2 " =l add %" t2 ",%" ptr
+                        #t "%" t1 " =l and %" val "," imb
+                        #t "jnz %" t1 ",@" l2 ",@" l1
+                        #t "@" l1 
+                        #t "storel %" val ",%" ptr
+                        #t "%" r " =l copy %" val
+                        #t "jmp @" l3
+                        #t "@" l2
+                        #t "%" r " =l call $C_mutate_slot(l %" ptr ",l %" val ")"
+                        #t "@" l3)))
+               ((unlikely)
+                (expression (cadr x)))
+               ((words)
+                (let ((x1 (expression (cadr x))))
+                  (emit #t "%" r " =l shl %" x1 ",3")))
+               ((set)
+                (let ((dest (cadr x))
+                      (val (expression (caddr x))))
+                  (case (and (pair? dest) (car dest))
+                    ((deref)
+                     (let ((dest (expression (cadr dest))))
+                       (emit #t "storel %" val ",%" dest)))
+                    (($)
+                     (emit #t "$" (cadr dest) " =l copy %" val))
+                    ((elt)
+                     (let ((ptr (expression (cadr dest)))
+                           (idx (expression (caddr dest)))
+                           (t1 (temp))
+                           (t2 (temp)))
+                       (emit #t "%" t1 " =l shl %" idx ",3"
+                             #t "%" t2 " =l add %" ptr ",%" t1
+                             #t "storel %" val ",%" t2)))
+                    ((slot)
+                     (let ((ptr (expression (cadr dest)))
+                           (idx (expression (caddr dest)))
+                           (t0 (temp))
+                           (t1 (temp))
+                           (t2 (temp)))
+                       (emit #t "%" t0 " =l add %" idx ",1"
+                             #t "%" t1 " =l shl %" idx ",3"
+                             #t "%" t2 " =l add %" ptr ",%" t1
+                             #t "storel %" val ",%" t2)))
+                    (else 
+                      (if (memq dest cells)
+                          (emit #t "storel %" val ",%" dest)
+                          (emit #t "%" dest " =l copy %" val))))
+                  (emit #t "%" r " =l copy %" val)))
+               ((!)
+                (let ((val (expression (cadr x))))
+                  (emit #t "%" r " =l ceql %" val ",0")))
+               ((~)
+                (let ((val (expression (cadr x))))
+                  (emit #t "%" r " =l xor %" val ",-1")))
+               ((+)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l add %" x1 ",%" x2)))
+               ((-)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l sub %" x1 ",%" x2)))
+               ((*)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l mul %" x1 ",%" x2)))
+               ((/)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l div %" x1 ",%" x2)))
+               ((<)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l csltl %" x1 ",%" x2)))
+               ((>)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l csgtl %" x1 ",%" x2)))
+               ((<)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l csltl %" x1 ",%" x2)))
+               ((<=)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l cslel %" x1 ",%" x2)))
+               ((>=)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l csgel %" x1 ",%" x2)))
+               ((==)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l ceql %" x1 ",%" x2)))
+               ((!=)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l cnel %" x1 ",%" x2)))
+               ((&)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l and %" x1 ",%" x2)))
+               ((|\||)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l or %" x1 ",%" x2)))
+               ((^)
+                (let ((x1 (expression (cadr x)))
+                      (x2 (expression (caddr x))))
+                  (emit #t "%" r " =l xor %" x1 ",%" x2)))
+               ((switch tailcall case declare declare/array define
+                        end define/array define/vaiable goto if else 
+                        endif label let let/var let/proc let/ptr
+                        let/array let/unboxed main_entry_point 
+                        return let/cell stack_overflow_check 
+                        default endswitch)
+                (bomb "target - top form in expr" x))
+               (else (intrinsic x)))))))
+                                                   
 (define (type-size type)
   (case type
     ((C_DEBUG_INFO) 24)
@@ -306,4 +460,52 @@
     (set! string-counter (add1 string-counter))
     (set! strings (alist-cons name str strings))
     name))
-                
+                 
+(define (emit-strings)
+  (for-each
+    (lambda (a)
+      (emit #t "data $" (car a) "={b ")
+      (for-each 
+        (lambda (c) (emit (char->integer c) " "))
+        (string->list (cdr a)))
+      emit "0}")
+    strings))
+
+(define intrinsics (make-vector 256))
+  
+(define (hash str)
+  (let ((len (string-length str)))
+    (let loop ((i 0) (h (string-length str)))
+      (if (or (fx>= i len) (fx>= i 8))
+          h
+          (loop (fx+ i 1) 
+                (fxxor h (char->integer (string-ref str i))))))))
+  
+(define (lookup str)
+  (let loop ((key (fxand 255 (hash str))))
+    (let ((s (vector-ref intrinsics key)))
+      (cond ((not s)
+             (let ((s (cons* str #f #f)))
+               (vector-set! intrinsics key s)
+               (cdr s)))
+            ((string=? str (car s)) (cdr s))
+            (else (loop (fxand 255 (fx+ key 1))))))))
+ 
+(define (register-intrinsic name arity body)
+  (let ((s (lookup (symbol->string name))))
+    (set-car! s arity)
+    (set-cdr! s body)))
+  
+(define-syntax define-intrinsic
+  (syntax-rules ()
+    ((_ (name args ...) body ...)
+        (register-intrinsic 'name (length '(args ...))
+                            (lambda (args ...) body ...)))))
+
+(define (intrinsic x)
+  (let ((s (lookup (->string (car x)))))
+    (cond ((not (car s)) (bomb "target - unknown intrinsic" x))
+          ((not (= (car s) (length (cdr x))))
+           (bomb "target - wrong number of arguments to intrinsic"
+                 x))
+          (else (apply body (cdr x))))))
