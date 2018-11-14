@@ -155,7 +155,7 @@
                                    c 
                                    ,(if non-av-proc '0 'av)))))
 		       (emit-trace-info
-			(gen `(call ($ C_trace) ,name-str)))))
+			(gen `(call ($ C_trace) (string ,name-str))))))
 	       (cond ((eq? '##core#proc (node-class fn))
 		      (let* ((av2 (push-args args i 0))
                              (fpars (node-parameters fn)))
@@ -209,7 +209,7 @@
 			                (if safe
 				           `(C_fast_retrieve_proc ,carg)
 				           `(C_retrieve2_symbol_proc ,carg 
-                                              ,(##sys#symbol->qualified-string (fourth gparams)))))
+                                              (string ,(##sys#symbol->qualified-string (fourth gparams))))))
                                       (safe
                                        (set! carg `(slot (elt ($ lf) ,index) 0)) 
                                        `(C_fast_retrieve_proc ,carg))
@@ -356,8 +356,8 @@
 		      (if safe
 			  `(elt ($ lf) ,index)
 			  `(C_retrieve2 (elt ($ lf) ,index) 
-                              ,(##sys#symbol->qualified-string
-                                 (fourth params)))))
+                              (string ,(##sys#symbol->qualified-string
+                                 (fourth params))))))
 		     (safe `(slot (elt ($ lf) ,index) 0))
 		     (else `(C_fast_retrieve (elt ($ lf) ,index))))))
 
@@ -628,7 +628,7 @@
 	    ((symbol? lit)		; handled slightly specially (see C_h_intern_in)
 	     (let* ([str (##sys#slot lit 1)]
 		    [len (##sys#size str)] )
-	       (gen `(set ,to (C_h_intern (adr ,to) ,len ,str)))))
+	       (gen `(set ,to (C_h_intern (adr ,to) ,len (string ,str))))))
 	    ((null? lit) 
 	     (gen `(set ,to C_SCHEME_END_OF_LIST)))
 	    ((and (not (##sys#immediate? lit)) ; nop
@@ -710,11 +710,11 @@
                   (assert (not direct))
 		  (let ((ldemand (foldl (lambda (n lit) (+ n (literal-size lit))) 0 literals))
 			(llen (length literals)) )
-		    (gen '(let/ptr a)
+		    (gen '(let/cell a)
 			 `(if ($ toplevel_initialized))
                          `(tailcall ($ C_kontinue) t1 C_SCHEME_UNDEFINED)
                          '(else)
-                         `(tailcall ($ C_toplevel_entry) ,(->string (or unit-name topname)))
+                         `(tailcall ($ C_toplevel_entry) (string ,(->string (or unit-name topname))))
                          '(endif))
 		    (when emit-debug-info
 		      (gen `(call ($ C_register_debug_info) ($ C_debug_info))))
@@ -748,7 +748,7 @@
                 (rest
                   ;; non-toplevel procedure with rest arguments
                   (assert (not customizable)) ;;XXX is it?
-		  (gen `(let/ptr a))
+		  (gen `(let/cell a))
 		  (when (and (not unsafe) 
                              (not no-argc-checks) 
                              (> n 2) 
@@ -794,7 +794,7 @@
 
                 (else
                   ;; non-toplevel, non-rest, non-direct procedure
-    		  (gen '(let/ptr a))
+    		  (gen '(let/cell a))
 		  (when looping (gen '(label loop)))
 		  (when (and external 
                              (not unsafe) 
@@ -880,10 +880,10 @@
                  ,@(map (lambda (p)
                           (let ((id (car p))
                                 (ll (cdr p)))
-                            (vector (conc id ":" (string->c-identifier sf))
-                                    (if (eq? 'toplevel id)
-                                        (conc "C_" (toplevel unit-name))
-                                        id))))
+                            (vector `(string ,(conc id ":" (string->c-identifier sf)))
+                                    `(string ,(if (eq? 'toplevel id)
+                                                  (conc "C_" (toplevel unit-name))
+                                                  id)))))
                      lambda-table*)
                  #(0 0)))
   (gen `(define static (ptr C_PTABLE_ENTRY) create_ptable)
@@ -960,7 +960,7 @@
 	      (gen `(define static word ,id (word C_buf)
                        ,@(make-variable-list n "C_a")))))
        (gen `(let C_r C_SCHEME_UNDEFINED)
-            '(let/ptr C_a (cast (ptr word) C_buf)))
+            '(let/cell C_a (cast (ptr word) C_buf)))
        (for-each
 	(lambda (type index vname)
 	  (gen `(let/unboxed ,(foreign-type-declaration type)
@@ -1049,7 +1049,7 @@
 	 (generate-foreign-callback-header 'define '() stub)
 	 (gen '(let x)
               `(let s ,size)
-              `(let/ptr a ,(if (eq? 0 size)
+              `(let/cell a ,(if (eq? 0 size)
                                  'C_stack_pointer
                                  '(C_alloc s))))
 	 (gen '(call ($ C_callback_adjust_stack) a s)) ; make sure content is below stack_bottom as well

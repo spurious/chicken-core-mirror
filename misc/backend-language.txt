@@ -41,6 +41,9 @@ Description of Backend Intermediate Language
     (let VAR [EXP])
         Declare local variable of type "word".
 
+    (let/cell VAR [EXP])
+        Declare memory variable holding a ptr (to "word").
+
     (let/proc VAR PEXP)
         Declare a local variable holding a procedure ptr ("C_proc").
 
