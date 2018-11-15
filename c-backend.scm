@@ -94,6 +94,11 @@
     (set! av-count (add1 av-count))
     av))
 
+(define (tempvar)
+  (let ((t (name "tp" av-count)))
+    (set! av-count (add1 av-count))
+    t))
+
 
 ;;; Generate target code:
 
@@ -196,8 +201,9 @@
 			     (index (first gparams))
 			     (safe (second gparams)) 
 			     (block (third gparams)) 
-			     (carg #f))
-			(gen `(let/proc tp 
+			     (carg #f)
+                             (tp (tempvar)))
+			(gen `(let/proc ,tp
                                 ,(cond (no-global-procedure-checks
                                         (set! carg
                                           (if block
@@ -217,7 +223,7 @@
                                         (set! carg `(slot (elt ($ lf) ,index) 0)) 
                                         `(C_fast_retrieve_symbol_proc (elt lf ,index))))))
 			(let ((av2 (push-args args i carg)))
-  			  (gen `(tailcall tp ,nf ,av2)))))
+  			  (gen `(tailcall ,tp ,nf ,av2)))))
 		     (else
 		      (gen `(set ,(tvar nc) ,(expr fn i)))
 		      (let ((av2 (push-args args i (tvar nc))))
@@ -308,7 +314,7 @@
 		   `(elt ($ lf) ,(first params)))))
 
 	    ((##core#proc)
-	     `(cast word ,(first params)))
+	     `(cast word ($ ,(first params))))
 
 	    ((##core#provide)
              `(C_a_i_provide (adr a) 1 (elt ($ lf) ,(first params))))
@@ -741,7 +747,7 @@
 		    (unless (zero? llen)
 		      (gen `(call ($ C_initialize_lf) ($ lf) ,llen))
 		      (literal-frame)
-		      (gen `(call ($ C_register_lf2) ($ lf) ,llen (create_ptable))))
+		      (gen `(call ($ C_register_lf2) ($ lf) ,llen ($ create_ptable))))
                     (set! non-av-proc #f)
                 	   (expression (lambda-literal-body ll) n ll)))
 
@@ -887,7 +893,7 @@
                      lambda-table*)
                  #(0 0)))
   (gen `(define static (ptr C_PTABLE_ENTRY) create_ptable)
-       '(return ptable)
+       '(return ($ ptable))
        '(end)))
 
 
