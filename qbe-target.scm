@@ -25,7 +25,8 @@
         ((#t) (newline output))
         ((#f) #f)
         (else (display x output))))
-    xs))
+    xs)
+  #f)
 
 (define (emit-list xs proc)
   (let loop ((xs xs))
@@ -35,10 +36,11 @@
         (emit ",")
         (loop (cdr xs))))))
 
-(define (init-target out user-options source-file)
-  (set! output out))
+(define (init-target out opts src)
+  (set! output out)
+  (header opts src))
 
-(define (finalize-target) #f)
+(define (finalize-target) (trailer))
 
 (define (generate-target-code form)
   (when (memq 'y debugging-chicken)
@@ -46,14 +48,32 @@
     (pp form))
   (statement form))
 
-(define (statement form)
+(define (header opts src)
+  (emit "# Generated from " src " by the CHICKEN compiler" #t
+        "#   http://www.call-cc.org" #t "# "
+       (string-intersperse
+         (map (cut string-append "   " <> "\n")
+            (string-split (chicken-version #t) "\n") )
+	    "")
+	   "   command line: ")
+      (for-each (cut emit <> " ") opts)
+      (unless (not unit-name)
+	(emit #t "#   unit: " unit-name))
+      (unless (null? used-units)
+	(emit #t "#   uses: ")
+	(emit-list used-units emit)))
+
+(define (trailer)
+  (emit #t "# end of file" #t))
+
+(define (statement x)
   (case (and (pair? x) (car x))
     ((call tailcall)
      (let ((f (if (and (pair? (cadr x)) (eq? '$ (caadr x)))
                   (conc "$" (cadr x))
                   (expression (cadr x)))))
        (emit #t "call %" f "(")
-       (unless (null? args)
+       (unless (null? (cddr x))
          (let loop ((args (cddr x)))
            (let ((a (expression (car args))))
              (emit "l %" a)
@@ -180,9 +200,9 @@
        (let ((x (expression (cadddr x))))
          (emit #t "%" (cadr x) " =" (type-code (cadr x)) " %" x))))
     ((stack_overflow_check)
-     (intrinsic '(stack_overflow_check)))
+     (intrinsic '(stack_overflow_check) #t))
     ((main_entry_point)
-     (intrinsic '(main_entry_point)))
+     (intrinsic '(main_entry_point) #t))
     ((return)
      (let ((x (expression (cadr x))))
        (emit #t "ret %" x)))
@@ -225,7 +245,7 @@
                       (aptr (temp "a")))
                  (emit #t "%" aptr " =l loadl %" aexp
                        #t "storel "
-                       (bitwise-ior (foreign-value "C_VECTOR_TYPE" int)
+                       (fxior (foreign-value "C_VECTOR_TYPE" int)
                                     1)
                        ",%" aptr
                        #t "%" r " =l copy %" aptr
@@ -241,7 +261,7 @@
                      (emit #t "%" r " =l call $" (cadadr x) "(")
                            (let ((proc (expression (cadr x))))
                              (emit #t "%" r " =l call %" proc "(")))
-                 (emit-list args (cut emit "%" arg))
+                 (emit-list args (cut emit "%" <>))
                  (emit ")")))
                ((string)
                 (emit #t "%" r " =l $" (push-string x)))
@@ -252,7 +272,7 @@
                       (args (map expression (cdddr x))))
                   (emit #t "%" aptr " =l loadl %" aexp
                         #t "storel " 
-                        (bitwise-ior (foreign-value "C_CLOSURE_TYPE" int)
+                        (fxior (foreign-value "C_CLOSURE_TYPE" int)
                                      size)
                         ",%" aptr
                         #t "%" r " =l copy %" aptr
@@ -422,7 +442,27 @@
                         default endswitch)
                 (bomb "target - top form in expr" x))
                (else (intrinsic x)))))))
-                                                   
+               
+(define (mvalue x)
+  (define (fail)
+    (bomb "target - can't take address of expression" x))  
+  (let ((r (temp)))
+    (cond ((symbol? x) 
+           (if (memq x cells)
+               (emit #t "%" r " =l copy %" x)
+               (fail)))
+          ((atom? x) (fail))
+          (else
+            (case (car x)
+              (($) (emit #t "%" r " =l copy $" (cadr x)))
+              ((elt)
+               (let ((x1 (expression (cadr x)))
+                     (x2 (expression (caddr x)))
+                     (t1 (temp)))
+                 (emit #t "%" t1 " =l shl %" x2 ",3"
+                       #t "%" r " =l add %" x1 ",%" x2)))
+              (else (fail)))))))
+  
 (define (type-size type)
   (case type
     ((C_DEBUG_INFO) 24)
@@ -502,10 +542,26 @@
         (register-intrinsic 'name (length '(args ...))
                             (lambda (args ...) body ...)))))
 
-(define (intrinsic x)
+(define (intrinsic x #!optional stmt)
   (let ((s (lookup (->string (car x)))))
     (cond ((not (car s)) (bomb "target - unknown intrinsic" x))
           ((not (= (car s) (length (cdr x))))
            (bomb "target - wrong number of arguments to intrinsic"
                  x))
-          (else (apply body (cdr x))))))
+          (else
+            (let ((r (apply (cdr s) (cdr x))))
+              (when (pair? r)
+                ((if stmt statement expression) r)))))))
+
+  
+;; intrinsics
+  
+(define-intrinsic (main_entry_point)
+  (emit #t "export function w $main(w %argc, l %argv) {"
+        #t "storew 0, $C_gui_mode"
+        #t "%top =l copy $C_toplevel"
+        #t "%r =w call $CHICKEN_main(w %argc, l %argv, l %top)"))
+
+(define-intrinsic (stack_overflow_check)
+  (emit #t "# stack_overflow_check"))
+  

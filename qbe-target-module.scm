@@ -6,13 +6,16 @@
                                    generate-target-code)
 (import (scheme) 
         (chicken base)
-	(chicken nternal)
+	(chicken internal)
 	(chicken platform)
         (chicken string)
+        (chicken foreign)
         (chicken pretty-print)
+        (chicken fixnum)
 	(chicken compiler core)
 	(chicken compiler c-platform)
 	(chicken compiler support))
+(import (srfi 1))
 
 (include "qbe-target.scm")
 
