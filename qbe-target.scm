@@ -223,9 +223,26 @@
 (define (expression x)
   (let ((r (temp)))
     (cond ((symbol? x) 
-           (if (memq x cells)
-               (emit #t "%" r " =l loadl %" x)
-               x))
+           (case x
+             ((C_SCHEME_UNDEFINED) 
+              (emit #t "%" r " =l copy " 
+                    (foreign-value "C_SCHEME_UNDEFINED" long)))
+             ((C_SCHEME_END_OF_LIST) 
+              (emit #t "%" r " =l copy " 
+                    (foreign-value "C_SCHEME_END_OF_LIST" long)))
+             ((C_SCHEME_TRUE) 
+              (emit #t "%" r " =l copy " 
+                    (foreign-value "C_SCHEME_TRUE" long)))
+             ((C_SCHEME_FALSE) 
+              (emit #t "%" r " =l copy " 
+                    (foreign-value "C_SCHEME_FALSE" long)))
+             ((C_SCHEME_END_OF_FILE) 
+              (emit #t "%" r " =l copy " 
+                    (foreign-value "C_SCHEME_END_OF_FILE" long)))
+             (else
+               (if (memq x cells)
+                   (emit #t "%" r " =l loadl %" x)
+                   x))))
           ((atom? x) x)
           (else
             (case (car x)
