@@ -114,9 +114,7 @@ Description of Backend Intermediate Language
         Mutate object slot with index.
 
     (set LVALUE EXP)
-        Set local or global variable or lvalue.
-
-    (setslot EXP IEXP XEXP)
+        Set local or global variable, slot or elt.
 
     (slot EXP IEXP)
         Extract slot IEXP from object EXP.
@@ -392,6 +390,8 @@ Description of Backend Intermediate Language
 
 
 NOTES: 
+- no "C_set_main_exe", private repo
+- no stack overflow checks
 - ptables are enabled by default
 - no "return" macro for foreign stubs
 - C_check_for_interrupt is hand-expanded (no paranoia mode)

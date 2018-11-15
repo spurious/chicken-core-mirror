@@ -345,7 +345,7 @@
              (emit-list (cddr x) expr)
              (emit ")"))
             ((string)
-             (emit-strings (cadr x)))
+             (emit-string-literal (cadr x)))
             ((closure)
              (let ((size (cadr x))
                    (aexp (caddr x)))
@@ -391,14 +391,6 @@
              (emit ",")
              (expr (cadddr x))
              (emit ")"))
-            ((setslot)
-             (emit "(*((C_word *)")
-             (expr (cadr x))
-             (emit "+1+")
-             (expr (caddr x))
-             (emit ")=" )
-             (expr (cadddr x))
-             (emit ")"))
             ((slot)
              (emit "*((C_word *)")
              (expr (cadr x))
@@ -435,6 +427,7 @@
             ((switch tailcall case declare declare/array define
                      end define/array define/vaiable goto if else 
                      endif label let let/var let/proc let/ptr
+                     let/cell
                      let/array let/unboxed main_entry_point return
                      stack_overflow_check default endswitch)
              (bomb "target - top form in expr" x))
@@ -487,7 +480,7 @@
          (emit ")"))
         (else (bomb "bad type" x))))))
 
-(define (emit-strings str)
+(define (emit-string-literal str)
   (define (gen-string-constant str)
     (let* ((len (##sys#size str))
            (ns (fx/ len 80))

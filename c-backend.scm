@@ -319,8 +319,7 @@
 	     `(slot ,(expr (car subs) i) 0))
 
 	    ((##core#update_i)
-	     `(setslot ,(expr (car subs) i)
-                ,(first params)
+	     `(set (slot ,(expr (car subs) i) ,(first params))
                 ,(expr (cadr subs) i) ))
 
 	    ((##core#update)
@@ -329,7 +328,8 @@
                ,(expr (cadr subs) i) ))
 
 	    ((##core#updatebox_i)
-	     `(setslot ,(expr (car subs) i) 0 ,(expr (cadr subs) i)))
+	     `(set (slot ,(expr (car subs) i) 0)
+                ,(expr (cadr subs) i)))
 
 	    ((##core#updatebox)
 	     `(mutate ,(expr (car subs) i) 1
@@ -377,8 +377,8 @@
 	       (cond (block
 		      `(set (elt ($ lf) ,index) ,(expr (car subs) i)))
 		     (else
-		      `(setslot (elt ($ lf) ,index) 0 
-                                ,(expr (car subs) i))))))
+		      `(set (slot (elt ($ lf) ,index) 0)
+                          ,(expr (car subs) i))))))
 
 	    ((##core#undefined) 'C_SCHEME_UNDEFINED)
 
@@ -881,9 +881,9 @@
                           (let ((id (car p))
                                 (ll (cdr p)))
                             (vector `(string ,(conc id ":" (string->c-identifier sf)))
-                                    `(string ,(if (eq? 'toplevel id)
-                                                  (conc "C_" (toplevel unit-name))
-                                                  id)))))
+                                    `($ ,(if (eq? 'toplevel id)
+                                             (conc "C_" (toplevel unit-name))
+                                             id)))))
                      lambda-table*)
                  #(0 0)))
   (gen `(define static (ptr C_PTABLE_ENTRY) create_ptable)
