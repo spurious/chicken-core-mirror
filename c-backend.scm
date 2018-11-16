@@ -747,7 +747,7 @@
 		    (unless (zero? llen)
 		      (gen `(call ($ C_initialize_lf) ($ lf) ,llen))
 		      (literal-frame)
-		      (gen `(call ($ C_register_lf2) ($ lf) ,llen ($ create_ptable))))
+		      (gen `(call ($ C_register_lf2) ($ lf) ,llen (call ($ create_ptable)))))
                     (set! non-av-proc #f)
                 	   (expression (lambda-literal-body ll) n ll)))
 
