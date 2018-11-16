@@ -52,7 +52,7 @@
   (emit "# Generated from " src " by the CHICKEN compiler" #t
         "#   http://www.call-cc.org" #t "# "
        (string-intersperse
-         (map (cut string-append "   " <> "\n")
+         (map (cut string-append "#   " <> "\n")
             (string-split (chicken-version #t) "\n") )
 	    "")
 	   "   command line: ")
@@ -181,8 +181,8 @@
      (emit #t "@" (cadr x)))
     ((let let/ptr)
      (unless (null? (cddr x))
-       (let ((x (expression (caddr x))))
-         (emit #t "%" (cadr x) " =l %" x))))
+       (let ((x1 (expression (caddr x))))
+         (emit #t "%" (cadr x) " =l %" x1))))
     ((let/cell)
      (set! cells (cons (cadr x) cells))
      (emit #t "%" (cadr x) " =l alloc8 8")
@@ -528,7 +528,7 @@
       emit "0}")
     strings))
 
-(define intrinsics (make-vector 256))
+(define intrinsics (make-vector 256 #f))
   
 (define (hash str)
   (let ((len (string-length str)))
