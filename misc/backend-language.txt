@@ -390,7 +390,7 @@ Description of Backend Intermediate Language
 
 
 NOTES: 
-- no "C_set_main_exe", private repo
+- no "C_set_main_exe", no private repo
 - no stack overflow checks
 - ptables are enabled by default
 - no "return" macro for foreign stubs
