@@ -9,6 +9,9 @@ Description of Backend Intermediate Language
     (case EXP)
         Marks "switch" case branch.
 
+    (continue KEXP REXP)
+        Invoke continuation closure KEXP with result REXP.
+
     (comment STR)
         Inline comment.
 
@@ -99,7 +102,7 @@ Description of Backend Intermediate Language
     (closure SIZE AEXP EXP ...)
         Allocate a closure with given size from allocation ptr AEXP.
     
-    (cond EXP EXP EXP)
+    (when EXP EXP EXP)
         Conditional expression.
 
     (deref EXP)
@@ -112,6 +115,10 @@ Description of Backend Intermediate Language
 
     (mutate EXP IEXP XEXP)
         Mutate object slot with index.
+
+    (ref EXP)
+        Explicitly dereference variable access (needed for targets that
+        treat all global variables as pointers).
 
     (set LVALUE EXP)
         Set local or global variable, slot or elt.
@@ -168,7 +175,6 @@ Description of Backend Intermediate Language
     (function TYPE CCONV|#f TYPE ... ["..."])
 
 * Intrinsics
-
     C_a_i_address_to_pointer
     C_a_i_cons
     C_a_i_flonum_abs
@@ -209,6 +215,7 @@ Description of Backend Intermediate Language
     C_anypointerp
     C_block_size
     C_booleanp
+    C_bytes
     C_bytevectorp
     C_charp
     C_eofp
@@ -239,6 +246,7 @@ Description of Backend Intermediate Language
     C_flonum_less_or_equal_p
     C_flonum_lessp
     C_i_bignump
+    C_i_bit_to_bool
     C_i_check_boolean
     C_i_check_bytevector
     C_i_check_char
@@ -248,53 +256,89 @@ Description of Backend Intermediate Language
     C_i_check_locative
     C_i_check_number
     C_i_check_pair
+    C_i_check_port
+    C_i_check_port_2
     C_i_check_string
     C_i_check_structure
     C_i_check_symbol
     C_i_check_vector
     C_i_closurep
     C_i_cplxnump
+    C_i_debug_modep
     C_i_equalp
     C_i_eqvp
+    C_i_evenp
     C_i_exact_integerp
+    C_i_finitep
     C_i_fixnum_arithmetic_shift
+    C_i_fixnum_bit_to_bool
     C_i_fixnum_gcd
     C_i_fixnum_length
     C_i_fixnum_max
     C_i_fixnum_min
+    C_i_fixnum_negativep
+    C_i_fixnum_positivep
     C_i_fixnum_remainder_checked
+    C_i_fixnum_signum
     C_i_fixnumevenp
     C_i_fixnumoddp
     C_i_flonum_max
     C_i_flonum_min
     C_i_flonump
+    C_i_getprop
+    C_i_greater_or_equalp
+    C_i_greaterp
+    C_i_infinitep
+    C_i_integer_equalp
+    C_i_integer_evenp
+    C_i_integer_greater_or_equalp
+    C_i_integer_greaterp
+    C_i_integer_length
+    C_i_integer_less_or_equalp
+    C_i_integer_lessp
+    C_i_integer_negativep
+    C_i_integer_oddp
+    C_i_integer_positivep
     C_i_integerp
+    C_i_less_or_equalp
+    C_i_lessp
     C_i_list_ref
     C_i_locativep
+    C_i_nanp
+    C_i_negativep
+    C_i_nequalp
     C_i_not
     C_i_not_pair_p
     C_i_nullp
     C_i_numberp
+    C_i_oddp
     C_i_pairp
     C_i_portp
+    C_i_positivep
+    C_i_providedp
     C_i_rationalp
     C_i_ratnump
     C_i_realp
     C_i_safe_pointerp
     C_i_set_i_slot
     C_i_setslot
+    C_i_string_ref
+    C_i_string_set
     C_i_stringp
     C_i_structurep
     C_i_symbolp
     C_i_vectorp
+    C_i_zerop
     C_immp
     C_null_pointerp
     C_peek_byte
     C_peek_fixnum
     C_permanentp
+    C_pointer_eqp
     C_pointer_to_object
     C_poke_double
     C_poke_integer
+    C_random_fixnum
     C_setbyte
     C_setsubchar
     C_slot
@@ -356,12 +400,20 @@ Description of Backend Intermediate Language
     C_u_i_char_upcase
     C_u_i_char_upper_casep
     C_u_i_char_whitespacep
+    C_u_i_cplxnum_imag
+    C_u_i_cplxnum_real
     C_u_i_exactp
     C_u_i_f32vector_set
     C_u_i_f64vector_set
+    C_u_i_flonum_finitep
+    C_u_i_flonum_infinitep
+    C_u_i_flonum_nanp
     C_u_i_fpintegerp
     C_u_i_inexactp
+    C_u_i_integer_signum
+    C_u_i_length
     C_u_i_list_ref
+    C_u_i_memq
     C_u_i_pointer_f32_set
     C_u_i_pointer_f64_set
     C_u_i_pointer_s16_ref
@@ -374,6 +426,8 @@ Description of Backend Intermediate Language
     C_u_i_pointer_u32_set
     C_u_i_pointer_u8_ref
     C_u_i_pointer_u8_set
+    C_u_i_ratnum_denom
+    C_u_i_ratnum_num
     C_u_i_s16vector_ref
     C_u_i_s16vector_set
     C_u_i_s32vector_set
@@ -387,6 +441,7 @@ Description of Backend Intermediate Language
     C_u_i_u32vector_set
     C_u_i_u8vector_ref
     C_u_i_u8vector_set
+    C_u_i_zerop
 
 
 NOTES: 

@@ -121,6 +121,12 @@
      (emit #t "case ")
      (expr (cadr x))
      (emit ":"))
+    ((continue)
+     (emit #t "C_kontinue(")
+     (expr (cadr x))
+     (emit ",")
+     (expr (caddr x))
+     (emit ");"))
     ((comment)
      (emit #t "/* " (uncommentify (cadr x)) " */"))
     ((declare)
@@ -267,6 +273,10 @@
      (emit #t "C_stack_overflow_check;"))
     ((main_entry_point)
      (emit #t "C_main_entry_point "))
+    ((save)
+     (emit #t "C_save(")
+     (expr (cadr x))
+     (emit ");"))
     ((return)
      (emit #t "return ")
      (expr (cadr x))
@@ -304,6 +314,7 @@
         (else
           (case (car x)
             (($) (emit (cadr x)))
+            ((ref) (expr (cadr x)))
             ((begin)
              (emit "(")
              (expr (cadr x))
@@ -423,7 +434,7 @@
                      (emit (car x))
                      (expr (caddr x))))
              (emit ")"))
-            ((C_restore) (emit "C_restore"))
+            ((restore) (emit "C_restore"))
             ((switch tailcall case declare declare/array define
                      end define/array define/vaiable goto if else 
                      endif label let let/var let/proc let/ptr

@@ -221,7 +221,7 @@
                                        `(C_fast_retrieve_proc ,carg))
                                       (else
                                         (set! carg `(slot (elt ($ lf) ,index) 0)) 
-                                        `(C_fast_retrieve_symbol_proc (elt lf ,index))))))
+                                        `(C_fast_retrieve_symbol_proc (elt ($ lf) ,index))))))
 			(let ((av2 (push-args args i carg)))
   			  (gen `(tailcall ,tp ,nf ,av2)))))
 		     (else
@@ -634,7 +634,8 @@
 	    ((symbol? lit)		; handled slightly specially (see C_h_intern_in)
 	     (let* ([str (##sys#slot lit 1)]
 		    [len (##sys#size str)] )
-	       (gen `(set ,to (C_h_intern (adr ,to) ,len (string ,str))))))
+	       (gen `(set ,to (call ($ C_h_intern) 
+                             (adr ,to) ,len (string ,str))))))
 	    ((null? lit) 
 	     (gen `(set ,to C_SCHEME_END_OF_LIST)))
 	    ((and (not (##sys#immediate? lit)) ; nop
@@ -717,10 +718,10 @@
 		  (let ((ldemand (foldl (lambda (n lit) (+ n (literal-size lit))) 0 literals))
 			(llen (length literals)) )
 		    (gen '(let/cell a)
-			 `(if ($ toplevel_initialized))
-                         `(tailcall ($ C_kontinue) t1 C_SCHEME_UNDEFINED)
+			 `(if (ref ($ toplevel_initialized)))
+                         `(continue t1 C_SCHEME_UNDEFINED)
                          '(else)
-                         `(tailcall ($ C_toplevel_entry) (string ,(->string (or unit-name topname))))
+                         `(call ($ C_toplevel_entry) (string ,(->string (or unit-name topname))))
                          '(endif))
 		    (when emit-debug-info
 		      (gen `(call ($ C_register_debug_info) ($ C_debug_info))))
@@ -738,10 +739,9 @@
                          '(endif)
                          '(set ($ toplevel_initialized) 1)
 			 `(if (unlikely (! (C_demand_2 ,ldemand))))
-                         '(set ($ C_temporary_stack) (- ($ C_temporary_stack) 1))
-                         '(set (deref ($ C_temporary_stack)) (cast word t1))
+                         '(save (cast word t1))
 			 `(call ($ C_rereclaim2) (words ,ldemand) 1)
-			 '(set t1 (C_restore))
+			 '(set t1 (restore))
                          '(endif)
 			 `(set a (C_alloc ,demand)))
 		    (unless (zero? llen)
@@ -763,8 +763,8 @@
                          `(tailcall ($ C_bad_min_argc_2) c ,n t0)
                          '(endif)))
 		  (when insert-timer-checks 
-                    (gen '(set ($ C_timer_interrupt_counter) (- ($ C_timer_interrupt_counter) 1))
-                         '(if (<= ($ C_timer_interrupt_counter) 0))
+                    (gen '(set ($ C_timer_interrupt_counter) (- (ref ($ C_timer_interrupt_counter)) 1))
+                         '(if (<= (ref ($ C_timer_interrupt_counter)) 0))
                          '(call ($ C_raise_interrupt) C_TIMER_INTERRUPT_NUMBER)
                          '(endif)))
 		  (gen `(if (unlikely (! (C_demand (C_calculate_demand (+ (* (- c ,n) C_SIZEOF_PAIR) ,demand) c ,max-av))))))
@@ -818,8 +818,8 @@
                   ;; The interrupt handler may fill the stack, so we only
                   ;; check for an interrupt when the procedure is restartable
                   (when insert-timer-checks
-                    (gen '(set ($ C_timer_interrupt_counter) (- ($ C_timer_interrupt_counter) 1))
-                         '(if (<= ($ C_timer_interrupt_counter) 0))
+                    (gen '(set ($ C_timer_interrupt_counter) (- (ref ($ C_timer_interrupt_counter)) 1))
+                         '(if (<= (ref ($ C_timer_interrupt_counter)) 0))
                          '(call ($ C_raise_interrupt) C_TIMER_INTERRUPT_NUMBER)
                          '(endif)))
                   (gen `(if (unlikely (! (C_demand (C_calculate_demand ,demand
@@ -995,8 +995,8 @@
                   (gen `(call ($ ,sname) ,@(make-argument-list n "t"))))))
        (cond (callback
                (gen '(set C_k (C_restore_callback_continuation2 C_level))
-                    '(tailcall ($ C_kontinue) C_k C_r)))
-             (cps (gen '(tailcall ($ C_kontinue) C_k C_r)))
+                    '(continue C_k C_r)))
+             (cps (gen '(continue C_k C_r)))
              (else (gen '(return C_r)) ) )
        (gen '(end))))
    stubs) )
@@ -1062,8 +1062,7 @@
 	 (for-each
 	  (lambda (v t)
 	    (gen `(set x ,((foreign-result-conversion t 'a) v))
-                 '(set ($ C_temporary_stack) (- ($ C_temporary_stack) 1))
-		 '(set (deref ($ C_temporary_stack)) (cast word x))))
+                 '(save (cast word x))))
 	  (reverse vlist)
 	  (reverse argtypes))
 	 (if (eq? 'void rtype)
