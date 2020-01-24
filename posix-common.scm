@@ -357,8 +357,10 @@ EOF
       (##sys#check-fixnum pos 'set-file-position!)
       (##sys#check-fixnum whence 'set-file-position!)
       (unless (cond ((port? port)
-		     (and (eq? (##sys#slot port 7) 'stream)
-			  (##core#inline "C_fseek" port pos whence) ) )
+		     (and-let* ((stream (eq? (##sys#slot port 7) 'stream))
+				(res (##core#inline "C_fseek" port pos whence)))
+			(##sys#setislot port 6 #f) ;; Reset EOF status
+			res))
 		    ((fixnum? port)
 		     (##core#inline "C_lseek" port pos whence))
 		    (else
@@ -448,11 +450,11 @@ EOF
 (let ()
   (define (mode inp m loc)
     (##sys#make-c-string
-     (cond [(pair? m)
+     (cond ((pair? m)
             (let ([m (car m)])
               (case m
-                [(###append) (if (not inp) "a" (##sys#error "invalid mode for input file" m))]
-                [else (##sys#error "invalid mode argument" m)] ) ) ]
+                ((#:append) (if (not inp) "a" (##sys#error "invalid mode for input file" m)))
+                (else (##sys#error "invalid mode argument" m)) ) ) )
            [inp "r"]
            [else "w"] )
      loc) )
@@ -707,7 +709,7 @@ EOF
 (set! chicken.process#pipe/buf _pipe_buf)
 
 (let ()
-  (define (mode arg) (if (pair? arg) (##sys#slot arg 0) '###text))
+  (define (mode arg) (if (pair? arg) (##sys#slot arg 0) #:text))
   (define (badmode m) (##sys#error "illegal input/output mode specifier" m))
   (define (check loc cmd inp r)
     (if (##sys#null-pointer? r)

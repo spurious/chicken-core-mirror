@@ -30,10 +30,12 @@
 (define default-dynamic-program-link-options '())
 (define default-static-extension-link-options '())
 (define default-dynamic-extension-link-options '())
-(define default-program-linkage '(dynamic))
 (define default-static-compilation-options '("-O2" "-d1"))
 (define default-dynamic-compilation-options '("-O2" "-d1"))
 (define default-import-library-compilation-options '("-O2" "-d0"))
+
+(define default-program-linkage
+  (if staticbuild '(static) '(dynamic)))
 
 (define default-extension-linkage
   (if staticbuild '(static) '(static dynamic)))
@@ -188,7 +190,7 @@
                       (sdeps '())
                       (src #f)
                       (cbuild #f)
-                      (link default-extension-linkage)
+                      (link (if (null? link) default-extension-linkage link))
                       (tfile #f)
                       (ptfile #f)
                       (ifile #f)
@@ -237,7 +239,7 @@
                       (sdeps '())
                       (src #f)
                       (cbuild #f)
-                      (link default-extension-linkage)
+                      (link (if (null? link) default-extension-linkage link))
                       (oname #f)
                       (mods #f)
                       (opts opts))
@@ -323,7 +325,7 @@
                       (sdeps '())
                       (cbuild #f)
                       (src #f)
-                      (link default-program-linkage)
+                      (link (if (null? link) default-program-linkage link))
                       (lobjs '())
                       (lopts lopts)
                       (oname #f)
@@ -406,7 +408,8 @@
       (case (car info)
         ((csc-options) (set! opts (append opts (cdr info))))
         ((link-options) (set! lopts (append lopts (cdr info))))
-        (else (error "invalid option specification" info))))
+        ((linkage) (set! link (append link (cdr info))))
+        (else (error "invalid component-options specification" info))))
     (define (compile-cond-expand info walk)
       (let loop ((clauses (cdr info)))
         (cond ((null? clauses)
@@ -615,7 +618,7 @@
            " " src " -o " out2)
     (when (pair? link-objects)
       (let ((lobjs (filelist srcdir
-                             (map (cut conc <> (object-extension platform))
+                             (map (cut conc <> ".static" (object-extension platform))
                                link-objects)
                              platform)))
         (print (qs* default-builder platform #t) " " out3 " : "
@@ -634,8 +637,8 @@
                                     custom types-file inline-file)
          srcdir platform)
   (let* ((cmd (qs* (or (custom-cmd custom srcdir platform)
-		       default-csc)
-		   platform))
+                       default-csc)
+                   platform))
          (sname (prefix srcdir name))
          (tfile (qs* (prefix srcdir (conc types-file ".types"))
                      platform))
@@ -672,7 +675,7 @@
            " : "
            src " "
            (qs* eggfile platform) " "
-           (if custom (qs* cmd platform) "") " "
+           (if custom cmd "") " "
            (filelist srcdir lobjs platform) " "
            (filelist srcdir source-dependencies platform)
            " : "
@@ -723,8 +726,9 @@
                                 source (options '())
                                 eggfile custom)
          srcdir platform)
-  (let* ((cmd (or (custom-cmd custom srcdir platform)
-                  default-csc))
+  (let* ((cmd (qs* (or (custom-cmd custom srcdir platform)
+                       default-csc)
+                   platform))
          (sname (prefix srcdir name))
          (ssname (and source (prefix srcdir source)))
          (opts (if (null? options)
@@ -745,7 +749,7 @@
            (filelist srcdir source-dependencies platform)
            src " "
            (qs* eggfile platform) " "
-           (if custom (qs* cmd platform) "")
+           (if custom cmd "")
            " : "
            cmd
            " -setup-mode -static -I " srcdir
@@ -762,17 +766,19 @@
                                  source-dependencies
                                  custom)
          srcdir platform)
-  (let* ((cmd (or (custom-cmd custom srcdir platform)
-                  default-csc))
+  (let* ((cmd (qs* (or (custom-cmd custom srcdir platform)
+                       default-csc)
+                   platform))
          (opts (if (null? options)
                    default-dynamic-compilation-options
                    options))
-         (sname (or source name))
+         (sname (prefix srcdir name))
+         (ssname (and source (prefix srcdir source)))
          (out (qs* (target-file (conc sname
                                       (object-extension platform))
                                 mode)
                    platform))
-         (src (qs* (conc sname ".c") platform)))
+         (src (qs* (or ssname (conc sname ".c")) platform)))
     (when custom
       (prepare-custom-command cmd platform))
     (print "\n" (slashify default-builder platform) " "
@@ -780,7 +786,7 @@
            " : "
            src " "
            (qs* eggfile platform) " "
-           (if custom (qs* cmd platform) "") " "
+           (if custom cmd "") " "
            (filelist srcdir source-dependencies platform)
            " : "
            cmd
@@ -821,7 +827,7 @@
            " : "
            src " "
            (qs* eggfile platform) " "
-           (if custom (qs* cmd platform) "") " "
+           (if custom cmd "") " "
            (filelist srcdir source-dependencies platform) " "
            (filelist srcdir lobjs platform)
            " : "
@@ -867,7 +873,7 @@
            " : "
            src " "
            (qs* eggfile platform) " "
-           (if custom (qs* cmd platform) "") " "
+           (if custom cmd "") " "
            (filelist srcdir lobjs platform) " "
            (filelist srcdir source-dependencies platform)
            " : "

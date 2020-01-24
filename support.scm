@@ -65,7 +65,7 @@
      clear-real-name-table! get-real-name set-real-name!
      real-name real-name2 display-real-name-table
      source-info->string source-info->line source-info->name
-     call-info constant-form-eval
+     call-info constant-form-eval maybe-constant-fold-call
      dump-nodes read-info-hook read/source-info big-fixnum? small-bignum?
      hide-variable export-variable variable-hidden? variable-visible?
      mark-variable variable-mark intrinsic? predicate? foldable?
@@ -1469,21 +1469,29 @@
     ;; op must have toplevel binding, result must be single-valued
     (let ((proc (##sys#slot op 0)))
       (if (procedure? proc)
-	  (let ((results (handle-exceptions ex
-			     (k #f form #f
-				(get-condition-property ex 'exn 'message))
-			   (receive (apply proc args)))))
-	    (cond ((node? results) ; TODO: This should not happen
-		   (k #f form #f #f))
+	  (let ((results (handle-exceptions ex ex (receive (apply proc args)))))
+	    (cond ((condition? results) (k #f #f))
 		  ((and (= 1 (length results))
 			(encodeable-literal? (car results)))
 		   (debugging 'o "folded constant expression" form)
-		   (k #t form (car results) #f))
+		   (k #t (car results)))
 		  ((= 1 (length results)) ; not encodeable; don't fold
-		   (k #f form #f #f))
+		   (k #f #f))
 		  (else
 		   (bomb "attempt to constant-fold call to procedure that has multiple results" form))))
 	  (bomb "attempt to constant-fold call to non-procedure" form)))))
+
+(define (maybe-constant-fold-call n subs k)
+  (define (constant-node? n2) (eq? 'quote (node-class n2)))
+  (if (eq? '##core#variable (node-class (car subs)))
+      (let ((var (first (node-parameters (car subs)))))
+	(if (and (intrinsic? var)
+		 (or (foldable? var)
+		     (predicate? var))
+		 (every constant-node? (cdr subs)) )
+	    (constant-form-eval var (cdr subs) (lambda (ok res) (k ok res #t)))
+	    (k #f #f #f)))
+      (k #f #f #f)))
 
 ;; Is the literal small enough to be encoded?  Otherwise, it should
 ;; not be constant-folded.
