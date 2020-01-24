@@ -1,6 +1,6 @@
 ;;; cgen.scm - C code-generator for the CHICKEN compiler
 ;
-; Copyright (c) 2018, The CHICKEN Team
+; Copyright (c) 2018-2020, The CHICKEN Team
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following

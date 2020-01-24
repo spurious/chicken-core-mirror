@@ -1,6 +1,6 @@
 ;;; c-backend.scm - C-generating backend for the CHICKEN compiler
 ;
-; Copyright (c) 2008-2018, The CHICKEN Team
+; Copyright (c) 2008-2020, The CHICKEN Team
 ; Copyright (c) 2000-2007, Felix L. Winkelmann
 ; All rights reserved.
 ;
@@ -869,29 +869,33 @@
 
 (define (emit-debug-table dbg-info-table)
   (gen `(define/array static C_DEBUG_INFO C_debug_info ()
-                 ,@(map (lambda (info)
-                          (list->vector
-                            (cons* (second info) 0
-                                   (map ->string (cddr info)))))
-                     (sort dbg-info-table (lambda (i1 i2)
-                                            (< (car i1) (car i2)))))
-                 (0 0 0 0))))
+          ,@(map (lambda (info)
+                   (list->vector
+                     (cons* (second info) 0
+                            (map (lambda (x)
+                                   (if x
+                                       (->string x)
+                                       "NULL"))
+                              (cddr info)))))
+              (sort dbg-info-table (lambda (i1 i2)
+                                     (< (car i1) (car i2)))))
+          (0 0 0 0))))
 
 
 ;;; Emit procedure table:
 
 (define (emit-procedure-table lambda-table* sf)
   (gen `(define/array static C_PTABLE_ENTRY ptable
-                 ,(add1 (length lambda-table*))
-                 ,@(map (lambda (p)
-                          (let ((id (car p))
-                                (ll (cdr p)))
-                            (vector `(string ,(conc id ":" (string->c-identifier sf)))
-                                    `($ ,(if (eq? 'toplevel id)
-                                             (conc "C_" (toplevel unit-name))
-                                             id)))))
-                     lambda-table*)
-                 #(0 0)))
+          ,(add1 (length lambda-table*))
+          ,@(map (lambda (p)
+                   (let ((id (car p))
+                         (ll (cdr p)))
+                     (vector `(string ,(conc id ":" (string->c-identifier sf)))
+                             `($ ,(if (eq? 'toplevel id)
+                                      (conc "C_" (toplevel unit-name))
+                                      id)))))
+              lambda-table*)
+          #(0 0)))
   (gen `(define static (ptr C_PTABLE_ENTRY) create_ptable)
        '(return ($ ptable))
        '(end)))
