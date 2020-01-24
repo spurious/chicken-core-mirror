@@ -82,6 +82,9 @@
 (define (tvar i)
   (string->symbol (conc "t" i)))
 
+(define (fvar i)
+  (string->symbol (conc "f" i)))
+
 (define (->symbol x)
   (if (symbol? x) 
       x
@@ -135,8 +138,9 @@
                       (loop (cdr bs) (add1 i) (sub1 count)) )
 		     (else (top-expr (car bs) i))) ) ) 
 
-	    ((##core#let_unboxed)
-	     (gen `(set ,(first params) ,(expr (first subs) i)))
+	    ((##core#let_float)
+	     (gen `(set ,(fvar (first params))
+                     ,(expr (first subs) i)))
 	     (top-expr (second subs) i))
 
 	    ((##core#call) 
@@ -277,9 +281,6 @@
                                                    t)
                                                    (expr (first subs) i)))))))
 
-	    ((##core#unboxed_set!)
-	     (gen `(set ,(first params) ,(expr (first subs) i))))
-
 	    ((##core#switch)
 	     (gen `(switch ,(expr (first subs) i)))
              (do ((j (first params) (sub1 j))
@@ -306,6 +307,14 @@
 	       ((fix) `(C_fix ,(second params)))
 	       ((eof) 'C_SCHEME_END_OF_FILE)
 	       (else (bomb "bad immediate")) ) )
+     
+            ((##core#float) (first params))
+     
+            ((##core#unbox_float)
+             `(C_flonum_magnitude ,(expr (first subs) i)))
+     
+            ((##core#box_float)
+             `(C_flonum (adr a) ,(expr (first subs) i)))
 
 	    ((##core#literal) 
 	     (let ((lit (first params)))
@@ -413,9 +422,6 @@
                                     (C_data_pointer ,(expr (first subs) i))))
                        ,((foreign-argument-conversion t) (expr (second subs) i)))
                   C_SCHEME_UNDEFINED)))
-
-	    ((##core#unboxed_ref)
-	     (first params))
 
 	    ((##core#cond)
 	     `(cond (!= C_SCHEME_FALSE ,(expr (first subs) i))
@@ -644,16 +650,6 @@
 	     (gen `(set ,to (C_decode_literal C_heaptop (string ,(encode-literal lit))))))
 	    (else (bad-literal lit))))
 
-    (define (utype t)
-      (case t
-	((fixnum) 'int)
-	((flonum) 'double)
-	((char) 'char)
-	((pointer) 'ptr)
-	((int) 'int)
-	((bool) 'int)
-	(else (bomb "invalid unboxed type" t))))
-
     (define (procedures)
       (for-each
        (lambda (p)
@@ -676,7 +672,7 @@
 		(direct (lambda-literal-direct ll))
 		(rest-mode (lambda-literal-rest-argument-mode ll))
 		(temps (lambda-literal-temporaries ll))
-		(ubtemps (lambda-literal-unboxed-temporaries ll))
+		(ftemps (lambda-literal-unboxed-temporaries ll))
 		(topname (toplevel unit-name)))
            (when empty-closure 
              (debugging 'o "dropping unused closure argument" id))
@@ -707,9 +703,9 @@
 		     ((zero? j))
 		   (gen `(let ,(tvar i))))
 		 (for-each
-		  (lambda (ubt)
-		    (gen `(let/unboxed ,(utype (cdr ubt)) ,(car ubt))))
-		  ubtemps)))
+		  (lambda (ft)
+		    (gen `(let/unboxed double ,(fvar ft))))
+		  ftemps)))
 
            (cond ((eq? 'toplevel id)
                   ;; toplevel procedure
