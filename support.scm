@@ -564,8 +564,8 @@
 			 (if ln
 			     (let ([rn (real-name name)])
 			       (list ln
-				     (or rn (##sys#symbol->qualified-string name))) )
-			     (##sys#symbol->qualified-string name) ) )
+				     (or rn (##sys#symbol->string name))) )
+			     (##sys#symbol->string name) ) )
 		   (map walk x) ) ) ) ) )
 	    (else (make-node '##core#call (list #f) (map walk x))) ) )
     (let ([exp2 (walk exp)])
@@ -901,7 +901,7 @@
 
 (set! ##sys#toplevel-definition-hook
   (lambda (sym renamed exported?)
-    (cond ((or (##sys#qualified-symbol? sym) (namespaced-symbol? sym))
+    (cond ((namespaced-symbol? sym)
 	   (unhide-variable sym))
 	  ((not exported?)
 	   (debugging 'o "hiding unexported module binding" renamed)
@@ -1410,10 +1410,10 @@
 	      n2) 
 	  n) ) )
   (let ((rn (resolve var)))
-    (cond ((not rn) (##sys#symbol->qualified-string var))
+    (cond ((not rn) (##sys#symbol->string var))
 	  ((pair? db)
 	   (let ((db (car db)))
-	     (let loop ((nesting (list (##sys#symbol->qualified-string rn)))
+	     (let loop ((nesting (list (##sys#symbol->string rn)))
 			(depth 0)
 			(container (db-get db var 'contained-in)) )
 	       (cond
@@ -1427,7 +1427,7 @@
 			     (fx+ depth 1)
 			     (db-get db container 'contained-in) ) ) ))
 		(else (string-intersperse (reverse nesting) " in "))) ) ) )
-	  (else (##sys#symbol->qualified-string rn)) ) ) )
+	  (else (##sys#symbol->string rn)) ) ) )
 
 (define (real-name2 var db)
   (and-let* ((rn (hash-table-ref real-name-table var)))
