@@ -4791,7 +4791,8 @@ C_regparm C_word C_fcall C_equalp(C_word x, C_word y)
   if((header = C_block_header(x)) != C_block_header(y)) return 0;
   else if((bits = header & C_HEADER_BITS_MASK) & C_BYTEBLOCK_BIT) {
     if(header == C_FLONUM_TAG && C_block_header(y) == C_FLONUM_TAG)
-      return C_flonum_magnitude(x) == C_flonum_magnitude(y);
+      return C_ub_i_flonum_eqvp(C_flonum_magnitude(x),
+                                C_flonum_magnitude(y));
     else return !C_memcmp(C_data_pointer(x), C_data_pointer(y), header & C_HEADER_SIZE_MASK);
   }
   else if(header == C_SYMBOL_TAG) return 0;
@@ -5490,7 +5491,7 @@ C_regparm C_word C_fcall C_i_zerop(C_word x)
   }
 }
 
-/* I */
+/* DEPRECATED */
 C_regparm C_word C_fcall C_u_i_zerop(C_word x)
 {
   return C_mk_bool(x == C_fix(0) ||
@@ -7049,7 +7050,6 @@ C_s_a_i_arithmetic_shift(C_word **ptr, C_word n, C_word x, C_word y)
 }
 
 
-/* I */
 C_regparm C_word C_fcall C_a_i_exp(C_word **a, int c, C_word n)
 {
   double f;
@@ -7059,7 +7059,6 @@ C_regparm C_word C_fcall C_a_i_exp(C_word **a, int c, C_word n)
 }
 
 
-/* I */
 C_regparm C_word C_fcall C_a_i_log(C_word **a, int c, C_word n)
 {
   double f;
@@ -7069,7 +7068,6 @@ C_regparm C_word C_fcall C_a_i_log(C_word **a, int c, C_word n)
 }
 
 
-/* I */
 C_regparm C_word C_fcall C_a_i_sin(C_word **a, int c, C_word n)
 {
   double f;
@@ -7079,7 +7077,6 @@ C_regparm C_word C_fcall C_a_i_sin(C_word **a, int c, C_word n)
 }
 
 
-/* I */
 C_regparm C_word C_fcall C_a_i_cos(C_word **a, int c, C_word n)
 {
   double f;
@@ -7089,7 +7086,6 @@ C_regparm C_word C_fcall C_a_i_cos(C_word **a, int c, C_word n)
 }
 
 
-/* I */
 C_regparm C_word C_fcall C_a_i_tan(C_word **a, int c, C_word n)
 {
   double f;
@@ -7099,7 +7095,6 @@ C_regparm C_word C_fcall C_a_i_tan(C_word **a, int c, C_word n)
 }
 
 
-/* I */
 C_regparm C_word C_fcall C_a_i_asin(C_word **a, int c, C_word n)
 {
   double f;
@@ -7109,7 +7104,6 @@ C_regparm C_word C_fcall C_a_i_asin(C_word **a, int c, C_word n)
 }
 
 
-/* I */
 C_regparm C_word C_fcall C_a_i_acos(C_word **a, int c, C_word n)
 {
   double f;
@@ -7119,7 +7113,6 @@ C_regparm C_word C_fcall C_a_i_acos(C_word **a, int c, C_word n)
 }
 
 
-/* I */
 C_regparm C_word C_fcall C_a_i_atan(C_word **a, int c, C_word n)
 {
   double f;
@@ -7129,7 +7122,6 @@ C_regparm C_word C_fcall C_a_i_atan(C_word **a, int c, C_word n)
 }
 
 
-/* I */
 C_regparm C_word C_fcall C_a_i_atan2(C_word **a, int c, C_word n1, C_word n2)
 {
   double f1, f2;
@@ -7140,7 +7132,6 @@ C_regparm C_word C_fcall C_a_i_atan2(C_word **a, int c, C_word n1, C_word n2)
 }
 
 
-/* I */
 C_regparm C_word C_fcall C_a_i_sqrt(C_word **a, int c, C_word n)
 {
   double f;
@@ -7291,6 +7282,7 @@ C_regparm C_word C_fcall C_i_check_fixnum_2(C_word x, C_word loc)
   return C_SCHEME_UNDEFINED;
 }
 
+/* DEPRECATED */
 C_regparm C_word C_fcall C_i_check_exact_2(C_word x, C_word loc)
 {
   if(C_u_i_exactp(x) == C_SCHEME_FALSE) {
@@ -7780,7 +7772,6 @@ void C_ccall call_cc_values_wrapper(C_word c, C_word *av)
 }
 
 
-/* I */
 void C_ccall C_continuation_graft(C_word c, C_word *av)
 {
   C_word
@@ -8072,7 +8063,7 @@ cplx_times(C_word **ptr, C_word rx, C_word ix, C_word ry, C_word iy)
   clear_buffer_object(ab, i1);
   clear_buffer_object(ab, i2);
 
-  if (C_truep(C_u_i_zerop(i))) return r;
+  if (C_truep(C_u_i_zerop2(i))) return r;
   else return C_cplxnum(ptr, r, i);
 }
 
@@ -8567,7 +8558,7 @@ C_s_a_i_plus(C_word **ptr, C_word n, C_word x, C_word y)
       C_word real_sum, imag_sum;
       real_sum = C_s_a_i_plus(ptr, 2, C_u_i_cplxnum_real(x), C_u_i_cplxnum_real(y));
       imag_sum = C_s_a_i_plus(ptr, 2, C_u_i_cplxnum_imag(x), C_u_i_cplxnum_imag(y));
-      if (C_truep(C_u_i_zerop(imag_sum))) return real_sum;
+      if (C_truep(C_u_i_zerop2(imag_sum))) return real_sum;
       else return C_cplxnum(ptr, real_sum, imag_sum);
     } else {
       C_word real_sum = C_s_a_i_plus(ptr, 2, C_u_i_cplxnum_real(x), y),
@@ -8778,7 +8769,7 @@ C_s_a_i_minus(C_word **ptr, C_word n, C_word x, C_word y)
       C_word real_diff, imag_diff;
       real_diff = C_s_a_i_minus(ptr,2,C_u_i_cplxnum_real(x),C_u_i_cplxnum_real(y));
       imag_diff = C_s_a_i_minus(ptr,2,C_u_i_cplxnum_imag(x),C_u_i_cplxnum_imag(y));
-      if (C_truep(C_u_i_zerop(imag_diff))) return real_diff;
+      if (C_truep(C_u_i_zerop2(imag_diff))) return real_diff;
       else return C_cplxnum(ptr, real_diff, imag_diff);
     } else {
       C_word real_diff = C_s_a_i_minus(ptr, 2, C_u_i_cplxnum_real(x), y),
@@ -11179,7 +11170,7 @@ void C_ccall C_flonum_to_string(C_word c, C_word *av)
   }
 
   if(f == 0.0 || (C_modf(f, &m) == 0.0 && log2(fa) < C_WORD_SIZE)) { /* Use fast int code */
-    if(f < 0) {
+    if(signbit(f)) {
       p = to_n_nary((C_uword)-f, radix, 1, 1);
     } else {
       p = to_n_nary((C_uword)f, radix, 0, 1);

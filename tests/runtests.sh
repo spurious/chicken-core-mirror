@@ -94,6 +94,8 @@ echo "======================================== compiler inlining tests  ..."
 $compile_r inline-me.scm -s -J -oi inline-me.inline
 $compile inlining-tests.scm -optimize-level 3
 ./a.out
+$compile inline-unroll.scm -optimize-level 3
+./a.out
 
 echo "======================================== compiler message tests ..."
 $compile -analyze-only messages-test.scm 2>messages.out
@@ -113,10 +115,10 @@ $compile scrutinizer-tests.scm -analyze-only
 $compile typematch-tests.scm -specialize -no-warnings
 ./a.out
 
-$compile test-scrutinizer-message-format.scm -A -specialize 2>scrutinizer-message-format.out || true
-$compile scrutiny-tests.scm -A 2>scrutiny.out
-$compile scrutiny-tests-2.scm -A 2>scrutiny-2.out
-$compile specialization-tests.scm -A -specialize 2>specialization.out
+$compile test-scrutinizer-message-format.scm -analyze-only -specialize 2>scrutinizer-message-format.out || true
+$compile scrutiny-tests.scm -analyze-only -specialize 2>scrutiny.out
+$compile scrutiny-tests-2.scm -analyze-only -specialize 2>scrutiny-2.out
+$compile specialization-tests.scm -analyze-only -specialize -specialize 2>specialization.out
 
 # Replace foo123 -> fooXX so gensyms don't trigger failures
 $compile redact-gensyms.scm -o redact-gensyms
@@ -192,6 +194,9 @@ $compile -specialize library-tests.scm
 ./a.out
 $interpret -s records-and-setters-test.scm
 $compile records-and-setters-test.scm
+./a.out
+$interpret -s record-printer-test.scm
+$compile record-printer-test.scm
 ./a.out
 
 echo "======================================== reader tests ..."

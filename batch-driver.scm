@@ -181,8 +181,10 @@
   (initialize-compiler)
   (set! explicit-use-flag (memq 'explicit-use options))
   (set! emit-debug-info (memq 'debug-info options))
-  (set! enable-module-registration
-    (not (memq 'no-module-registration options)))
+  (when (memq 'module-registration options)
+    (set! compile-module-registration 'yes))
+  (when (memq 'no-module-registration options)
+    (set! compile-module-registration 'no))
   (when (memq 'static options)
     (set! static-extensions #t)
     (register-feature! 'chicken-compile-static))
@@ -199,10 +201,11 @@
 			     '()
 			     `((uses ,@default-units)))
 			 (if (and static-extensions
-				  enable-module-registration
 				  (not dynamic)
 				  (not unit)
-				  (not explicit-use-flag))
+				  (not explicit-use-flag)
+				  (or (not compile-module-registration)
+				      (eq? compile-module-registration 'yes)))
 			     '((uses eval-modules))
 			     '())))
 		     ,@(if explicit-use-flag
@@ -392,6 +395,12 @@
 	  (or (string->number arg)
 	      (quit-compiling
 	       "invalid argument to `-inline-limit' option: `~A'" arg) ) ) ) )
+    (and-let* ((ulimit (memq 'unroll-limit options)))
+      (set! unroll-limit
+	(let ((arg (option-arg ulimit)))
+	  (or (string->number arg)
+	      (quit-compiling
+	       "invalid argument to `-unroll-limit' option: `~A'" arg) ) ) ) )
     (when (memq 'case-insensitive options) 
       (dribble "Identifiers and symbols are case insensitive")
       (register-feature! 'case-insensitive)
@@ -771,6 +780,7 @@
 				    (perform-high-level-optimizations
 				     node2 db block-compilation
 				     inline-locally inline-max-size
+                                     unroll-limit
 				     inline-substitutions-enabled))
 			      (end-time "optimization")
 			      (print-node "optimized-iteration" '|5| node2)

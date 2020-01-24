@@ -1382,7 +1382,7 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #endif
 
 #define C_i_check_closure(x)            C_i_check_closure_2(x, C_SCHEME_FALSE)
-#define C_i_check_exact(x)              C_i_check_exact_2(x, C_SCHEME_FALSE)
+#define C_i_check_exact(x)              C_i_check_exact_2(x, C_SCHEME_FALSE) /* DEPRECATED */
 #define C_i_check_fixnum(x)             C_i_check_fixnum_2(x, C_SCHEME_FALSE)
 #define C_i_check_inexact(x)            C_i_check_inexact_2(x, C_SCHEME_FALSE)
 #define C_i_check_number(x)             C_i_check_number_2(x, C_SCHEME_FALSE)
@@ -1421,7 +1421,7 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 
 /* these assume fixnum mode */
 #define C_u_i_u32vector_ref(x, i)       C_fix(((C_u32 *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ])
-#define C_u_i_s32vector_ref(x, i)       C_fix(((C_u32 *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ])
+#define C_u_i_s32vector_ref(x, i)       C_fix(((C_s32 *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ])
 
 #define C_a_u_i_u32vector_ref(ptr, c, x, i)  C_unsigned_int_to_num(ptr, ((C_u32 *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ])
 #define C_a_u_i_s32vector_ref(ptr, c, x, i)  C_int_to_num(ptr, ((C_s32 *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ])
@@ -1946,7 +1946,7 @@ C_fctexport C_word C_fcall C_i_nanp(C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_finitep(C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_infinitep(C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_zerop(C_word x) C_regparm;
-C_fctexport C_word C_fcall C_u_i_zerop(C_word x) C_regparm;
+C_fctexport C_word C_fcall C_u_i_zerop(C_word x) C_regparm;  /* DEPRECATED */
 C_fctexport C_word C_fcall C_i_positivep(C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_integer_positivep(C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_negativep(C_word x) C_regparm;
@@ -2003,7 +2003,7 @@ C_fctexport C_word C_fcall C_i_length(C_word lst) C_regparm;
 C_fctexport C_word C_fcall C_u_i_length(C_word lst) C_regparm;
 C_fctexport C_word C_fcall C_i_check_closure_2(C_word x, C_word loc) C_regparm;
 C_fctexport C_word C_fcall C_i_check_fixnum_2(C_word x, C_word loc) C_regparm;
-C_fctexport C_word C_fcall C_i_check_exact_2(C_word x, C_word loc) C_regparm;
+C_fctexport C_word C_fcall C_i_check_exact_2(C_word x, C_word loc) C_regparm; /* DEPRECATED */
 C_fctexport C_word C_fcall C_i_check_inexact_2(C_word x, C_word loc) C_regparm;
 C_fctexport C_word C_fcall C_i_check_number_2(C_word x, C_word loc) C_regparm;
 C_fctexport C_word C_fcall C_i_check_string_2(C_word x, C_word loc) C_regparm;
@@ -2214,6 +2214,15 @@ inline static C_word C_flonum(C_word **ptr, double n)
   *((double *)p) = n;
   *ptr = p + sizeof(double) / sizeof(C_word);
   return (C_word)p0;
+}
+
+
+inline static C_word C_fcall C_u_i_zerop2(C_word x)
+{
+  return C_mk_bool(x == C_fix(0) ||
+                   (!C_immediatep(x) &&
+                    C_block_header(x) == C_FLONUM_TAG &&
+                    C_flonum_magnitude(x) == 0.0));
 }
 
 
@@ -2622,15 +2631,22 @@ inline static int C_memcasecmp(const char *x, const char *y, unsigned int len)
   return 0;
 }
 
+inline static C_word C_ub_i_flonum_eqvp(double x, double y)
+{
+  /* This can distinguish between -0.0 and +0.0 */
+  return x == y && signbit(x) == signbit(y);
+}
+
 inline static C_word basic_eqvp(C_word x, C_word y)
 {
   return (x == y ||
 
           (!C_immediatep(x) && !C_immediatep(y) &&
            C_block_header(x) == C_block_header(y) &&
-           
+
            ((C_block_header(x) == C_FLONUM_TAG &&
-             C_flonum_magnitude(x) == C_flonum_magnitude(y)) ||
+             C_ub_i_flonum_eqvp(C_flonum_magnitude(x),
+                                C_flonum_magnitude(y))) ||
 
             (C_block_header(x) == C_BIGNUM_TAG &&
              C_block_header(y) == C_BIGNUM_TAG &&

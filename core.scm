@@ -54,6 +54,7 @@
 ; (foreign-declare {<string>})
 ; (hide {<name>})
 ; (inline-limit <limit>)
+; (unroll-limit <limit>)
 ; (keep-shadowed-macros)
 ; (no-argc-checks)
 ; (no-bound-checks)
@@ -149,6 +150,7 @@
 ; (##core#the <type> <strict?> <exp>)
 ; (##core#typecase <info> <exp> (<type> <body>) ... [(else <body>)])
 ; (##core#debug-event {<event> <loc>})
+; (##core#with-forbidden-refs (<var> ...) <loc> <expr>)
 ; (<exp> {<exp>})
 
 ; - Core language:
@@ -290,7 +292,7 @@
      all-import-libraries preserve-unchanged-import-libraries
      bootstrap-mode compiler-syntax-enabled
      emit-closure-info emit-profile enable-inline-files explicit-use-flag
-     first-analysis no-bound-checks enable-module-registration
+     first-analysis no-bound-checks compile-module-registration
      optimize-leaf-routines standalone-executable undefine-shadowed-macros
      verbose-mode local-definitions enable-specialization block-compilation
      inline-locally inline-substitutions-enabled strict-variable-types
@@ -304,6 +306,7 @@
 
      ;; Other, non-boolean, flags set by (batch) driver
      profiled-procedures import-libraries inline-max-size
+     unroll-limit
      extended-bindings standard-bindings
 
      ;; non-booleans set by the (batch) driver, and read by the (c) backend
@@ -369,6 +372,7 @@
 (define-constant constant-table-size 301)
 (define-constant file-requirements-size 301)
 (define-constant default-inline-max-size 20)
+(define-constant default-unroll-limit 1)
 
 
 ;;; Global variables containing compilation parameters:
@@ -396,13 +400,14 @@
 (define disable-stack-overflow-checking #f)
 (define external-protos-first #f)
 (define inline-max-size default-inline-max-size)
+(define unroll-limit default-unroll-limit)
 (define emit-closure-info #t)
 (define undefine-shadowed-macros #t)
 (define profiled-procedures #f)
 (define import-libraries '())
 (define all-import-libraries #f)
 (define preserve-unchanged-import-libraries #t)
-(define enable-module-registration #t)
+(define compile-module-registration #f) ; 'no | 'yes
 (define standalone-executable #t)
 (define local-definitions #f)
 (define inline-locally #f)
@@ -513,10 +518,7 @@
 
 (define (canonicalize-expression exp)
   (let ((compiler-syntax '())
-	;; Not sure this is correct, given that subsequent expressions
-	;; to be canonicalized will mutate the current environment.
-	;; Used to reset the environment for ##core#module forms.
-	(initial-environment (##sys#current-environment)))
+        (forbidden-refs '()))
 
   (define (find-id id se)		; ignores macro bindings
     (cond ((null? se) #f)
@@ -563,11 +565,9 @@
 	x) )
 
   (define (resolve-variable x0 e dest ldest h)
-
     (when (memq x0 unlikely-variables)
       (warning
        (sprintf "reference to variable `~s' possibly unintended" x0) ))
-
     (let ((x (lookup x0)))
       (d `(RESOLVE-VARIABLE: ,x0 ,x ,(map (lambda (x) (car x)) (##sys#current-environment))))
       (cond ((not (symbol? x)) x0)	; syntax?
@@ -596,6 +596,13 @@
 		      t)
 		     e dest ldest h #f #f))))
 	    ((not (memq x e)) (##sys#alias-global-hook x #f h)) ; only if global
+            ((assq x forbidden-refs) =>
+             (lambda (a)
+               (let ((ln (cdr a)))
+                 (quit-compiling
+                   "~acyclical reference in LETREC binding for variable `~a'"
+                   (if ln (sprintf "(~a) - " ln) "")
+                   (get-real-name x)))))
 	    (else x))))
 
   (define (emit-import-lib name il)
@@ -770,12 +777,26 @@
 				      (list (car b) '(##core#undefined)))
 				    bindings)
 			      (##core#let
-			       ,(map (lambda (t b) (list t (cadr b))) tmps bindings)
+			       ,(map (lambda (t b)
+                                       (list t `(##core#with-forbidden-refs
+                                                  ,vars ,ln ,(cadr b))))
+                                     tmps bindings)
 			       ,@(map (lambda (v t)
 					`(##core#set! ,v ,t))
 				      vars tmps)
 			       (##core#let () ,@body) ) )
 			    e dest ldest h ln #f)))
+          
+                        ((##core#with-forbidden-refs)
+                         (let* ((loc (caddr x))
+                                (vars (map (lambda (v)
+                                             (cons (resolve-variable v e dest
+                                                                     ldest h) 
+                                                   loc))
+                                        (cadr x))))
+                           (fluid-let ((forbidden-refs 
+                                         (append vars forbidden-refs)))
+                             (walk (cadddr x) e dest ldest h ln #f))))
 
 			((##core#lambda)
 			 (let ((llist (cadr x))
@@ -794,13 +815,15 @@
 				     (body (parameterize ((##sys#current-environment se2))
 					     (let ((body0 (canonicalize-body/ln
 							   ln obody compiler-syntax-enabled)))
-					       (walk
-						(if emit-debug-info
-						    `(##core#begin
-						      (##core#debug-event C_DEBUG_ENTRY (##core#quote ,dest))
-						      ,body0)
-						    body0)
-						(append aliases e) #f #f dest ln #f))))
+                                               (fluid-let ((forbidden-refs '()))
+                                                 (walk
+                                                   (if emit-debug-info
+                                                       `(##core#begin
+                                                          (##core#debug-event C_DEBUG_ENTRY (##core#quote ,dest))
+                                                         ,body0)
+                                                       body0)
+                                                   (append aliases e)
+                                                   #f #f dest ln #f)))))
 				     (llist2
 				      (build-lambda-list
 				       aliases argc
@@ -1019,22 +1042,33 @@
 						       ;; avoid backtrace
 						       (print-error-message ex (current-error-port))
 						       (exit 1))
-						   (##sys#finalize-module (##sys#current-module)))
-						 (cond ((or (assq name import-libraries) all-import-libraries)
-							=> (lambda (il)
-							     (emit-import-lib name il)
-							     ;; Remove from list to avoid error
-							     (when (pair? il)
-							       (set! import-libraries
-								 (delete il import-libraries equal?)))
-							     (values (reverse xs) '())))
-						       ((not enable-module-registration)
-							(values (reverse xs) '()))
-						       (else
-							(values
-							 (reverse xs)
-							 (##sys#compiled-module-registration
-							  (##sys#current-module))))))
+						   (##sys#finalize-module
+                                                     (##sys#current-module)
+                                                     (lambda (id)
+						       (cond
+							((assq id foreign-variables)
+							 "a foreign variable")
+							((hash-table-ref inline-table id)
+							 "an inlined function")
+							((hash-table-ref constant-table id)
+							 "a constant")
+							((##sys#get id '##compiler#type-abbreviation)
+							 "a type abbreviation")
+							(else #f)))))
+						 (let ((il (or (assq name import-libraries) all-import-libraries)))
+						   (when il
+						     (emit-import-lib name il)
+						     ;; Remove from list to avoid error
+						     (when (pair? il)
+						       (set! import-libraries
+							 (delete il import-libraries equal?))))
+						   (values
+						    (reverse xs)
+						    (if (or (eq? compile-module-registration 'yes)
+							    (and (not il) ; default behaviour
+								 (not compile-module-registration)))
+							(##sys#compiled-module-registration (##sys#current-module))
+							'()))))
 						(else
 						 (loop
 						  (cdr body)
@@ -1677,6 +1711,14 @@
 	      (warning
 	       "invalid argument to `inline-limit' declaration"
 	       spec) ) ) )
+       ((unroll-limit)
+	(check-decl spec 1 1)
+	(let ((n (cadr spec)))
+	  (if (number? n)
+	      (set! unroll-limit n)
+	      (warning
+	       "invalid argument to `unroll-limit' declaration"
+	       spec) ) ) )
        ((pure)
 	(let ((syms (cdr spec)))
 	  (if (every symbol? syms)
@@ -2317,11 +2359,9 @@
 			     (quick-put! plist 'inlinable #t)
 			     (quick-put! plist 'local-value n))))))))
 
-	 ;; Make 'collapsable, if it has a known constant value which is either collapsable or is only
-	 ;;  referenced once and if no assignments are made:
-	 (when (and value
-		    ;; (not (assq 'assigned plist)) - If it has a known value, it's assigned just once!
-		    (eq? 'quote (node-class value)) )
+	 ;; Make 'collapsable, if it has a known constant value which
+	 ;; is either collapsable or is only referenced once:
+	 (when (and value (eq? 'quote (node-class value)) )
 	   (let ((val (first (node-parameters value))))
 	     (when (or (collapsable-literal? val)
 		       (= 1 nreferences) )
@@ -2371,25 +2411,24 @@
 			undefined) )
 	   (quick-put! plist 'removable #t) )
 
-	 ;; Make 'replacable, if it has a variable as known value and if either that variable has
-	 ;;  a known value itself, or if it is not captured and referenced only once, the target and
-	 ;;  the source are never assigned and the source is non-global or we are in block-mode:
-	 ;;  - The target-variable is not allowed to be global.
+	 ;; Make 'replacable, if
+	 ;; - it has a variable as known value and
+	 ;; - it is not a global
+	 ;; - it is never assigned to and
+	 ;; - if either the substitute has a known value itself or
+	 ;;   * the substitute is never assigned to and
+	 ;;   * we are in block-mode or the substitute is non-global
+	 ;;
 	 ;;  - The variable that can be substituted for the current one is marked as 'replacing.
 	 ;;    This is done to prohibit beta-contraction of the replacing variable (It wouldn't be there, if
 	 ;;    it was contracted).
 	 (when (and value (not global))
 	   (when (eq? '##core#variable (node-class value))
-	     (let* ((name (first (node-parameters value)))
-		    (nrefs (db-get db name 'references)) )
-	       (when (and (not captured)
+	     (let ((name (first (node-parameters value))) )
+	       (when (and (not assigned)
 			  (or (and (not (db-get db name 'unknown))
 				   (db-get db name 'value))
-			      (and (not (db-get db name 'captured))
-				   nrefs
-				   (= 1 (length nrefs))
-				   (not assigned)
-				   (not (db-get db name 'assigned))
+			      (and (not (db-get db name 'assigned))
 				   (or (not (variable-visible?
 					     name block-compilation))
 				       (not (db-get db name 'global))) ) ))
@@ -2508,15 +2547,13 @@
 						     (= (length refs) (length sites))
 						     (test varname 'value)
 						     (list? llist) ) ] )
-					  (when (and name
-						     (not (llist-match? llist (cdr subs))))
-					    (quit-compiling
-					     "~a: procedure `~a' called with wrong number of arguments"
-					     (source-info->string name)
-					     (if (pair? name) (cadr name) name)))
-					  (register-direct-call! id)
-					  (when custom (register-customizable! varname id))
-					  (list id custom) )
+					  (cond ((and name
+                                                      (not (llist-match? llist (cdr subs))))
+                                                   '())
+                                                (else
+   					          (register-direct-call! id)
+					          (when custom (register-customizable! varname id))
+					          (list id custom) ) ) )
 					'() ) )
 				  '() ) )
 			'() ) ) )

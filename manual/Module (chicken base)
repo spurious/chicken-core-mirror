@@ -1095,12 +1095,6 @@ interpreted.
 
 === Conditional forms
 
-==== select
-
-<macro>(select EXP ((KEY ...) EXP1 ...) ... [(else EXPn ...)])</macro>
-
-This is similar to {{case}}, but the keys are evaluated.
-
 ==== unless
 
 <macro>(unless TEST EXP1 EXP2 ...)</macro>
@@ -1187,11 +1181,17 @@ doesn't have to).
 This special form is also compatible with the definition from the R7RS
 {{(scheme base)}} library.
 
+==== record-printer
 
-==== define-record-printer
+<procedure>(record-printer NAME)</procedure><br>
 
-<macro>(define-record-printer (NAME RECORDVAR PORTVAR) BODY ...)</macro><br>
-<macro>(define-record-printer NAME PROCEDURE)</macro>
+Returns the procedure used to print records of the type {{NAME}} if
+one has been set with {{set-record-printer!}}, {{#f}} otherwise.
+
+==== set-record-printer!
+
+<procedure>(set-record-printer! NAME PROCEDURE)</procedure><br>
+<procedure>(set! (record-printer NAME) PROCEDURE)</procedure>
 
 Defines a printing method for record of the type {{NAME}} by
 associating a procedure with the record type. When a record of this
@@ -1205,9 +1205,10 @@ and an output-port.
   (y foo-y)
   (z foo-z))
 (define f (make-foo 1 2 3))
-(define-record-printer (foo x out)
-  (fprintf out "#,(foo ~S ~S ~S)"
-           (foo-x x) (foo-y x) (foo-z x)) )
+(set-record-printer! foo
+  (lambda (x out)
+    (fprintf out "#,(foo ~S ~S ~S)"
+             (foo-x x) (foo-y x) (foo-z x))))
 (define-reader-ctor 'foo make-foo)
 (define s (with-output-to-string
               (lambda () (write f))))
