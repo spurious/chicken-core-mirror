@@ -43,6 +43,7 @@
 	chicken.foreign
 	chicken.format
 	chicken.internal
+        chicken.keyword
 	chicken.platform
 	chicken.sort
 	chicken.string
@@ -638,10 +639,12 @@
 	    ((char? lit)
 	     (gen `(set ,to (C_make_character ,(char->integer lit)))))
 	    ((symbol? lit)		; handled slightly specially (see C_h_intern_in)
-	     (let* ([str (##sys#slot lit 1)]
-		    [len (##sys#size str)] )
-	       (gen `(set ,to (call ($ C_h_intern) 
-                             (adr ,to) ,len (string ,str))))))
+	     (let* ((str (##sys#slot lit 1))
+		    (len (##sys#size str)) )
+	       (gen `(set ,to (call ($ `(if (keyword? lit)
+                                            'C_h_intern_kw
+                                            'C_h_intern))
+                                (adr ,to) ,len (string ,str))))))
 	    ((null? lit) 
 	     (gen `(set ,to C_SCHEME_END_OF_LIST)))
 	    ((and (not (##sys#immediate? lit)) ; nop
@@ -1401,8 +1404,9 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	 ((symbol? lit)
 	  (let ((str (##sys#slot lit 1)))
 	    (string-append 
-	     "\x01" 
+	     "\x01"
 	     (encode-size (string-length str))
+             (if (keyword? lit) "\x02" "\x01")
 	     str) ) )
 	 ((##sys#immediate? lit)
 	  (bomb "invalid literal - cannot encode" lit))
