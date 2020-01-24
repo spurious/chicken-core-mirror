@@ -219,7 +219,7 @@
 			                (if safe
 				           `(C_fast_retrieve_proc ,carg)
 				           `(C_retrieve2_symbol_proc ,carg 
-                                              (string ,(##sys#symbol->qualified-string (fourth gparams))))))
+                                              (string ,(##sys#symbol->string (fourth gparams))))))
                                       (safe
                                        (set! carg `(slot (elt ($ lf) ,index) 0)) 
                                        `(C_fast_retrieve_proc ,carg))
@@ -371,7 +371,7 @@
 		      (if safe
 			  `(elt ($ lf) ,index)
 			  `(C_retrieve2 (elt ($ lf) ,index) 
-                              (string ,(##sys#symbol->qualified-string
+                              (string ,(##sys#symbol->string
                                  (fourth params))))))
 		     (safe `(slot (elt ($ lf) ,index) 0))
 		     (else `(C_fast_retrieve (elt ($ lf) ,index))))))
