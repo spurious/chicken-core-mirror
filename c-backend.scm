@@ -604,6 +604,7 @@
 	    ((bignum? lit) 2)		; internal vector statically allocated
 	    ((flonum? lit) words-per-flonum)
 	    ((symbol? lit) 7)           ; size of symbol, and possibly a bucket
+	    ((keyword? lit) 7)          ; size of keyword (symbol), and possibly a bucket
 	    ((pair? lit) (+ 3 (literal-size (car lit)) (literal-size (cdr lit))))
 	    ((vector? lit)
 	     (+ 1 (vector-length lit)
@@ -638,7 +639,7 @@
 	     (gen `(set ,to ,(if lit 'C_SCHEME_TRUE 'C_SCHEME_FALSE))))
 	    ((char? lit)
 	     (gen `(set ,to (C_make_character ,(char->integer lit)))))
-	    ((symbol? lit)		; handled slightly specially (see C_h_intern_in)
+	    ((or (keyword? lit) (symbol? lit))		; handled slightly specially (see C_h_intern_in)
 	     (let* ((str (##sys#slot lit 1))
 		    (len (##sys#size str)) )
 	       (gen `(set ,to (call ($ `(if (keyword? lit)
@@ -1401,7 +1402,7 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	    (string-append "\xc2" (encode-size (string-length str)) str)))
 	 ((flonum? lit)
 	  (string-append "\x55" (number->string lit) "\x00") )
-	 ((symbol? lit)
+	 ((or (keyword? lit) (symbol? lit))
 	  (let ((str (##sys#slot lit 1)))
 	    (string-append 
 	     "\x01"
