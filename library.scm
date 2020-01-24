@@ -3677,9 +3677,11 @@ EOF
   (##sys#read-error port "invalid `#...' read syntax" n) )
 
 (set! chicken.base#case-sensitive (make-parameter #t))
-(set! chicken.base#keyword-style (make-parameter #:suffix))
 (set! chicken.base#parentheses-synonyms (make-parameter #t))
 (set! chicken.base#symbol-escape (make-parameter #t))
+
+(set! chicken.base#keyword-style
+  (make-parameter #:suffix (lambda (x) (when x (##sys#check-keyword x 'keyword-style)) x)))
 
 (define ##sys#current-read-table (make-parameter (##sys#make-structure 'read-table #f #f #f)))
 
@@ -4505,7 +4507,7 @@ EOF
 				      (eq? c #\.)
 				      (eq? c #\-) )
 				  (not (##sys#string->number str)) )
-				 ((eq? c #\:) (not (eq? ksp #:prefix)))
+				 ((eq? c #\:) #f)
 				 ((and (eq? c #\#)
 				       ;; Not a qualified symbol?
 				       (not (and (fx> len 2)
@@ -4518,8 +4520,7 @@ EOF
 			   (and (or csp (not (char-upper-case? c)))
 				(not (specialchar? c))
 				(or (not (eq? c #\:))
-				    (fx< i (fx- len 1))
-				    (not (eq? ksp #:suffix)))
+				    (fx< i (fx- len 1)))
 				(loop (fx- i 1)) ) ) ) ) ) ) ) )
 
 	(let out ([x x])
@@ -6417,7 +6418,10 @@ static C_word C_fcall C_setenv(C_word x, C_word y) {
 (define-foreign-variable installation-home c-string "C_INSTALL_SHARE_HOME")
 (define-foreign-variable install-egg-home c-string "C_INSTALL_EGG_HOME")
 
-(define (chicken-home) installation-home)
+(define (chicken-home)
+  (or (and-let* ((prefix (get-environment-variable "CHICKEN_INSTALL_PREFIX")))
+        (string-append prefix "/share"))
+      installation-home))
 
 (define path-list-separator
   (if ##sys#windows-platform #\; #\:))
