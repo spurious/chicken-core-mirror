@@ -310,7 +310,15 @@
         (loop (cdr xs))))))
 
 (define (expr x)
-  (cond ((atom? x) (emit x))
+  (cond ((and (number? x) (inexact? x))
+         (emit "(double)"
+               (cond ((nan? n) "NAN")
+                     ((infinite? n)
+                      (if (negative? n)
+                          "-INFINITY"
+                          "INFINITY"))
+                     (else n))))
+        ((atom? x) (emit x))
         (else
           (case (car x)
             (($) (emit (cadr x)))
