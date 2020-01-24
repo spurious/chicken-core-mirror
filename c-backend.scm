@@ -158,14 +158,14 @@
 		    (empty-closure (and customizable (zero? (lambda-literal-closure-size (find-lambda call-id)))))
 		    (fn (car subs)) )
 	       (when name
-		 (cond (emit-debug-info
-			(when dbi
-			  (gen `(call C_debugger (adr (elt ($ C_debug_info) ,dbi)) 
-                                   c 
-                                   ,(if non-av-proc '0 'av)))))
-		       (emit-trace-info
-			(gen `(call ($ C_trace) (string ,name-str))))))
-	       (cond ((eq? '##core#proc (node-class fn))
+                 (if emit-trace-info
+                     (gen `(call ($ C_trace) (name-str)))
+                     (gen `(comment name-str)))
+                 (when (and emit-debug-info dbi)
+                   (gen `(call C_debugger (adr (elt ($ C_debug_info) ,dbi)) 
+                               c 
+                               ,(if non-av-proc '0 'av)))))
+               (cond ((eq? '##core#proc (node-class fn))
 		      (let* ((av2 (push-args args i 0))
                              (fpars (node-parameters fn)))
 			(gen `(tailcall ($ ,(first fpars)) ,nf ,av2))))
