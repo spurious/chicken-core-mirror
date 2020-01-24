@@ -420,10 +420,9 @@
 		      '*)))
 		 ((assoc (first params) +ffi-type-check-map+) =>
 		  (lambda (a)
-		    (let ((arg (first subs))
-			  (r1 (walk (first subs) te ae)))
+		    (let* ((arg (first subs))
+                           (r1 (walk arg te ae)))
 		      (when (member r1 (cdr a))
-                        (sub-boxed (first subs))
                         (node-class-set! n (node-class arg))
                         (node-parameters-set! n (node-parameters arg))
 	       	        (node-subexpressions-set! n (node-subexpressions arg)))
@@ -564,7 +563,10 @@
 		      (set! count (add1 count))
 		      (let ((n (make-node '##core#inline
 					  (list ub)
-					  (map walk/unbox subs))))
+					  (map (if (eq? type 'acc)
+						   walk
+						   walk/unbox)
+					       subs))))
 			(case type
 			  ((pred) n)
 			  (else (make-node '##core#box_float '()
