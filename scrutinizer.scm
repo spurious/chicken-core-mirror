@@ -1213,13 +1213,6 @@
   (let ((typeenv '())			; ((VAR1 . NEWVAR1) ...)
 	(constraints '())		; ((VAR1 TYPE1) ...)
 	(used '()))
-    (define (subst x)
-      (cond ((symbol? x)
-	     (cond ((assq x typeenv) => cdr)
-		   (else x)))
-	    ((pair? x)
-	     (cons (subst (car x)) (subst (cdr x))))
-	    (else x)))
     (define (simplify t)
       ;;(dd "simplify/rec: ~s" t)
       (call/cc 
@@ -1231,9 +1224,7 @@
 		     (set! typeenv
 		       (append (map (lambda (v)
 				      (let ((v (if (symbol? v) v (first v))))
-					(let ((v* (gensym v)))
-					  (mark-variable v* '##core#real-name v)
-					  (cons v v*))))
+					(cons v (gensym v))))
 				    typevars)
 			       typeenv))
 		     (set! constraints 
@@ -1351,7 +1342,7 @@
 				       (list v (simplify (cadr c)))))
 				    (else v)))))
 		     typeenv)
-		   ,(subst t2))))
+		   ,t2)))
       (dd "simplify: ~a -> ~a" t t2)
       t2)))
 

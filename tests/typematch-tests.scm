@@ -399,6 +399,12 @@
   (length a) ; refine (or pair null) with list (= (list-of *))
   (infer list a))
 
+(compiler-typecase (the (list (struct foo) symbol) (the 'a 1))
+  ;; The tv "foo" and "foo" in struct should have no relation
+  ((forall (foo) (list (struct foo) foo)) 'ok))
+
+;; Issue #1563
+(compiler-typecase (the (forall (a) a) 1) ((forall (a) (list a)) 'ok))
 
 (assert
  (compiler-typecase 1
