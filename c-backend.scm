@@ -331,7 +331,27 @@
 	    ((##core#ref) 
              `(slot ,(expr (car subs) i) ,(first params)))
 
-	    ((##core#unbox) 
+
+            ((##core#rest-car)
+	     (let* ((n (lambda-literal-argument-count ll))
+		    (depth (second params))
+		    (have-av? (not (or (lambda-literal-customizable ll)
+				       (lambda-literal-direct ll)))))
+	       (if have-av?
+		   `(C_get_rest_arg c ,(+ depth n) av n t0)
+                   `(C_u_i_list_ref ,(tvar (sub1 n)) depth))))
+
+	    ((##core#rest-null?)
+	     (let* ((n (lambda-literal-argument-count ll))
+		    (depth (second params))
+		    (have-av? (not (or (lambda-literal-customizable ll)
+				       (lambda-literal-direct ll)))))
+	       (if have-av?
+		   `(C_rest_nullp c ,(+ depth n))
+                   `(C_mk_bool (>= (C_unfix (C_i_length ,(tvar (sub1 n))))
+                                   depth)))))
+     
+            ((##core#unbox) 
 	     `(slot ,(expr (car subs) i) 0))
 
 	    ((##core#update_i)
@@ -536,8 +556,6 @@
 		(customizable (lambda-literal-customizable ll))
 		(empty-closure (and customizable (zero? (lambda-literal-closure-size ll))))
 		(varlist (make-variable-list (if empty-closure (sub1 n) n) "t"))
-		(rest (lambda-literal-rest-argument ll))
-		(rest-mode (lambda-literal-rest-argument-mode ll))
 		(direct (lambda-literal-direct ll))
 		(allocated (lambda-literal-allocated ll)) )
             (define (args)
@@ -575,14 +593,12 @@
 	   (let* ([id (car p)]
 		  [ll (cdr p)]
 		  [argc (lambda-literal-argument-count ll)]
-		  [rest (lambda-literal-rest-argument ll)]
-		  [rest-mode (lambda-literal-rest-argument-mode ll)]
 		  [customizable (lambda-literal-customizable ll)]
 		  [empty-closure (and customizable (zero? (lambda-literal-closure-size ll)))] )
 	     (when empty-closure (set! argc (sub1 argc)))
 	     (when (and (not (lambda-literal-direct ll)) customizable)
 	       (gen `(define static void ,(name "tr" id)
-                             (word c) ((ptr word) av)))
+                       (word c) ((ptr word) av)))
 	       (restore argc)
 	       (gen `(tailcall ($ ,id) ,@(make-argument-list argc 't))
                     '(end)))))
@@ -836,7 +852,7 @@
                                       ($ ,(name "tr" id)) ,nec
                                       ,@arglist))
                       (gen `(tailcall ($ C_save_and_reclaim) ($ ,id)
-                                      ,n av)))
+                                      c av)))
                   (gen '(endif))
                   (when (> demand 0)
                     (gen `(set a (C_alloc ,demand))))
