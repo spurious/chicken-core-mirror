@@ -156,7 +156,7 @@
 ; - Core language:
 ;
 ; [##core#variable {<variable>}]
-; [##core#float-variable {<index>}]
+; [##core#float_variable {<index>}]
 ; [if {} <exp> <exp> <exp>)]
 ; [quote {<const>}]
 ; [##core#float {<const>}]
@@ -198,7 +198,7 @@
 ; [quote {<exp>}]
 ; [##core#float {<const>}]
 ; [##core#bind {<count>} <exp-v>... <exp>]
-; [##core#float-variable {<index>}]
+; [##core#float_variable {<index>}]
 ; [##core#undefined {}]
 ; [##core#let_float {<index>} <exp> <exp>]
 ; [##core#box_float {} <exp>]
@@ -2634,7 +2634,7 @@
 	(case class
 
 	  ((quote ##core#undefined ##core#provide ##core#proc ##core#float
-           ##core#float-variable)
+           ##core#float_variable)
             n)
 
 	  ((##core#variable)

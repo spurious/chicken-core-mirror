@@ -310,6 +310,9 @@
 	       (else (bomb "bad immediate")) ) )
      
             ((##core#float) (first params))
+    
+            ((##core#float_variable)
+             (fvar (first params)))
      
             ((##core#unbox_float)
              `(C_flonum_magnitude ,(expr (first subs) i)))

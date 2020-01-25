@@ -527,7 +527,7 @@
 	  ((##core#variable)
 	   (let ((i (posq (first params) floatvars)))
 	     (if i
-		 (make-node '##core#float-variable (cons i params) '())
+		 (make-node '##core#float_variable (cons i params) '())
 		 (make-node '##core#unbox_float '() (list n)))))
 	  ((##core#inline ##core#inline_allocate)
 	   (cond ((assoc (first params) +unboxed-map+) =>
@@ -556,7 +556,7 @@
 	   (let ((i (posq (first params) floatvars)))
 	     (if i
 		 (make-node '##core#box_float '()
-			    (list (make-node '##core#float-variable
+			    (list (make-node '##core#float_variable
 					     (cons i params) '())))
 		 n)))
 	  ((let)
