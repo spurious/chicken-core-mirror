@@ -15,6 +15,8 @@
     `define-record-printer` which isn't a "real" definition (see #1294).
   - On Windows, `decompose-directory` no longer crashes when a drive
     letter is present in the supplied path string.
+  - irregex-replace[/all] have been fixed for empty matches, so they
+    will no longer drop characters and ignore the replacement (#1661).
 
 - Runtime system
   - Quoted empty keywords like ||: and :|| are now read like prescribed
@@ -30,6 +32,9 @@
     an error instead of hanging forever (fixes #1586).
   - define-record-type will now give an error if the constructor
     definition refers to field that's not listed elsewhere (see #1633)
+  - Added new -:hu option to set the memory usage low watermark
+    percentage at which the heap should be shrunk, and changed the
+    calculation to actually reflect this (see #1379).
 
 - Compiler
   - Fixed a bug in lfa2 pass which caused "if" or "cond" nodes to be
@@ -39,6 +44,9 @@
     (fixes #1440, thanks to "megane").
   - In some cases, rest argument lists do not need to be reified, which
     should make using optional arguments and case-lambda faster (#1623).
+  - Values from foreign types which have an argument or return value
+    converter are no longer inferred to have the Scheme type which
+    corresponds to the raw foreign type, which was incorrect (#1649).
 
 - Module system
   - Trying to export a foreign variable, define-inlined procedure or

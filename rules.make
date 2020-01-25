@@ -967,6 +967,7 @@ testclean:
 	  $(SRCDIR)tests$(SEP)*.obj \
 	  $(SRCDIR)tests$(SEP)*.out \
 	  $(SRCDIR)tests$(SEP)*.profile \
+	  $(SRCDIR)tests$(SEP)*.redacted \
 	  $(SRCDIR)tests$(SEP)*.so \
 	  $(SRCDIR)tests$(SEP)tmp \
 	  $(SRCDIR)tests$(SEP)tmp.c \
@@ -974,7 +975,8 @@ testclean:
 	  $(SRCDIR)tests$(SEP)null \
 	  $(SRCDIR)tests$(SEP)null.c \
 	  $(SRCDIR)tests$(SEP)null.exe \
-	  $(SRCDIR)tests$(SEP)test-repository
+	  $(SRCDIR)tests$(SEP)test-repository \
+	  $(SRCDIR)tests$(SEP)redact-gensyms
 
 # run tests
 

@@ -263,6 +263,7 @@
 ;   rest-parameter -> #f | 'list             If true: variable holds rest-argument list
 ;   rest-cdr -> (rvar . n)                   Variable references the cdr of rest list rvar after n cdrs (0 = rest list itself)
 ;   rest-null? -> (rvar . n)                 Variable checks if the cdr of rest list rvar after n cdrs is empty (0 = rest list itself)
+;   derived-rest-vars -> (v1 v2 ...)         Other variables aliasing or referencing cdrs of a rest variable
 ;   constant -> <boolean>                    If true: variable has fixed value
 ;   hidden-refs -> <boolean>                 If true: procedure that refers to hidden global variables
 ;   inline-transient -> <boolean>            If true: was introduced during inlining
@@ -2211,15 +2212,23 @@
     (define (walkeach xs env lenv fenv here)
       (for-each (lambda (x) (walk x env lenv fenv here)) xs) )
 
+    (define (mark-rest-cdr var rvar depth)
+      (db-put! db var 'rest-cdr (cons rvar depth))
+      (collect! db rvar 'derived-rest-vars var))
+
+    (define (mark-rest-null? var rvar depth)
+      (db-put! db var 'rest-null? (cons rvar depth))
+      (collect! db rvar 'derived-rest-vars var))
+
     (define (assign var val env here)
       ;; Propagate rest-cdr and rest-null? onto aliased variables
       (and-let* (((eq? '##core#variable (node-class val)))
 		 (v (db-get db (first (node-parameters val)) 'rest-cdr)))
-	(db-put! db var 'rest-cdr v) )
+	(mark-rest-cdr var (car v) (cdr v)) )
 
       (and-let* (((eq? '##core#variable (node-class val)))
 		 (v (db-get db (first (node-parameters val)) 'rest-null?)))
-	(db-put! db var 'rest-null? v) )
+	(mark-rest-null? var (car v) (cdr v)) )
 
       (cond ((eq? '##core#undefined (node-class val))
 	     (db-put! db var 'undefined #t) )
@@ -2230,12 +2239,12 @@
 	    ((eq? '##core#rest-cdr (node-class val))
 	     (let ((restvar (car (node-parameters val)))
 		   (depth (cadr (node-parameters val))))
-	       (db-put! db var 'rest-cdr (cons restvar (add1 depth))) ) )
+	       (mark-rest-cdr var restvar (add1 depth)) ) )
 
 	    ((eq? '##core#rest-null? (node-class val))
 	     (let ((restvar (car (node-parameters val)))
 		   (depth (cadr (node-parameters val))))
-	       (db-put! db var 'rest-null? (cons restvar depth)) ) )
+	       (mark-rest-null? var restvar depth) ) )
 
 	    ;; (##core#cond (null? r) '() (cdr r)) => result is tagged as a rest-cdr var
 	    ((and-let* ((env (match-node val '(##core#cond ()
@@ -2248,7 +2257,7 @@
 	     => (lambda (env)
 		  (let ((rvar (alist-ref 'rvar env))
 			(depth (alist-ref 'depth env)))
-		    (db-put! db var 'rest-cdr (cons rvar (add1 depth))) )) )
+		    (mark-rest-cdr var rvar (add1 depth)) ) ) )
 
 	    ((or (memq var env)
 		 (variable-mark var '##compiler#constant)
@@ -2636,9 +2645,10 @@
 		 val) ) )
 
 	  ((##core#rest-cdr ##core#rest-car ##core#rest-null? ##core#rest-length)
-	   (let* ((rest-var (first params))
-		  (val (ref-var n here closure)))
-	     (unless (eq? val n)
+	   (let* ((val (ref-var n here closure))
+		  (rest-var (if (eq? val n) (varnode (first params)) val)))
+	     (unless (or (eq? val n)
+			 (match-node val `(##core#ref (i) (##core#variable (,here))) '(i)))
 	       ;; If it's captured, replacement in optimizer was incorrect
 	       (bomb "Saw rest op for captured variable.  This should not happen!" class) )
 	     ;; If rest-cdrs have not all been eliminated, restore
@@ -2647,30 +2657,37 @@
 	     ;; many more cdr calls than necessary.
 	     (cond ((eq? class '##core#rest-cdr)
 		    (let lp ((cdr-calls (add1 (second params)))
-			     (var (varnode rest-var)))
+			     (var rest-var))
 		      (if (zero? cdr-calls)
 			  (transform var here closure)
 			  (lp (sub1 cdr-calls)
 			      (make-node '##core#inline (list "C_i_cdr") (list var))))))
+
 		   ;; If customizable, the list is consed up at the
 		   ;; call site and there is no argvector.  So convert
 		   ;; back to list-ref/list-tail calls.
-		   ((and (eq? class '##core#rest-car)
-			 (test here 'customizable))
-		    (transform (make-node '##core#inline
-					  (list "C_i_list_ref")
-					  (list (varnode rest-var) (second params))) here closure))
-		   ((and (eq? class '##core#rest-null)
-			 (test here 'customizable))
-		    (transform (make-node '##core#inline
-					  (list "C_i_greater_or_equal_p")
-					  (list (qnode (second params))
-						(make-node '##core#inline (list "C_i_length") (list (varnode rest-var))))) here closure))
-		   ((and (eq? class '##core#rest-length)
-			 (test here 'customizable))
-		    (transform (make-node '##core#inline
-					  (list "C_i_length")
-					  (list (varnode rest-var) (second params))) here closure))
+		   ;;
+		   ;; Alternatively, if n isn't val, this node was
+		   ;; processed and the variable got replaced by a
+		   ;; closure access.
+		   ((or (test here 'customizable)
+			(not (eq? val n)))
+		    (case class
+		      ((##core#rest-car)
+		       (transform (make-node '##core#inline
+					     (list "C_i_list_ref")
+					     (list rest-var (qnode (second params)))) here closure))
+		      ((##core#rest-null)
+		       (transform (make-node '##core#inline
+					     (list "C_i_greater_or_equal_p")
+					     (list (qnode (second params))
+						   (make-node '##core#inline (list "C_i_length") (list rest-var)))) here closure))
+		      ((##core#rest-length)
+		       (transform (make-node '##core#inline
+					     (list "C_i_length")
+					     (list rest-var (qnode (second params)))) here closure))
+		      (else (bomb "Unknown rest op node class in while converting to closure. This shouldn't happen!" class))))
+
 		   (else val)) ) )
 
 	  ((if ##core#call ##core#inline ##core#inline_allocate ##core#callunit
@@ -2798,6 +2815,8 @@
 		  (if emit-closure-info
 		      (list (qnode (##sys#make-lambda-info (car params))))
 		      '() ) ) ) )
+
+	  ((##core#ref) n)
 
 	  (else (bomb "bad node (closure2)")) ) ) )
 

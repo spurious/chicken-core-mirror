@@ -629,6 +629,17 @@
 			body) )
 	      (rarg-aliases (map (lambda (r) (gensym 'rarg)) rargs)) )
 	 (replace-rest-ops-in-known-call! db body rest (last rlist) rarg-aliases)
+
+	 ;; Make sure rest ops aren't replaced after inlining (#1658)
+	 ;; argvector does not belong to the same procedure anymore.
+	 (when rest
+	   (for-each (lambda (v)
+		       (db-put! db v 'rest-cdr #f)
+		       (db-put! db v 'rest-null? #f) )
+		     (db-get-list db rest 'derived-rest-vars) )
+	   (db-put! db rest 'rest-cdr #f)
+	   (db-put! db rest 'derived-rest-vars '()) )
+
 	 (let loop ((vars (take rlist argc))
 		    (vals largs))
 	   (if (null? vars)
@@ -726,7 +737,7 @@
 		   (copy-node! (varnode (list-ref rest-args depth)) n)
 		   (copy-node! (make-node '##core#inline
 					  (list "C_rest_arg_out_of_bounds_error")
-					  (list (qnode len) (qnode depth) (qnode 0) (qnode #f)))
+					  (list (qnode len) (qnode depth) (qnode 0)))
 			       n)))
 	     n))
 	((##core#rest-cdr)
@@ -1148,17 +1159,25 @@
 
 ;;; Compute foreign-type conversions:
 
+(define (foreign-type-result-converter t)
+  (and-let* (((symbol? t))
+	     (ft (lookup-foreign-type t))
+	     (retconv (vector-ref ft 2)) )
+    retconv))
+
+(define (foreign-type-argument-converter t)
+  (and-let* (((symbol? t))
+	     (ft (lookup-foreign-type t))
+	     (argconv (vector-ref ft 1)) )
+    argconv))
+
 (define (foreign-type-convert-result r t) ; Used only in compiler.scm
-  (or (and-let* (((symbol? t))
-		 (ft (lookup-foreign-type t)) 
-		 (retconv (vector-ref ft 2)) )
+  (or (and-let* ((retconv (foreign-type-result-converter t)))
 	(list retconv r) )
       r) )
 
 (define (foreign-type-convert-argument a t) ; Used only in compiler.scm
-  (or (and-let* (((symbol? t))
-		 (ft (lookup-foreign-type t))
-		 (argconv (vector-ref ft 1)) )
+  (or (and-let* ((argconv (foreign-type-argument-converter t)) )
 	(list argconv a) )
       a) )
 
@@ -1277,63 +1296,70 @@
 
 ;; Used in chicken-ffi-syntax.scm and scrutinizer.scm
 (define (foreign-type->scrutiny-type t mode) ; MODE = 'arg | 'result
-  (let ((ft (final-foreign-type t)))
-    (case ft
-      ((void) 'undefined)
-      ((char unsigned-char) 'char)
-      ((int unsigned-int short unsigned-short byte unsigned-byte int32 unsigned-int32)
-       'fixnum)
-      ((float double)
-       (case mode
-	 ((arg) 'number)
-	 (else 'float)))
-      ((scheme-pointer nonnull-scheme-pointer) '*)
-      ((blob) 
-       (case mode
-	 ((arg) '(or boolean blob))
-	 (else 'blob)))
-      ((nonnull-blob) 'blob)
-      ((pointer-vector) 
-       (case mode
-	 ((arg) '(or boolean pointer-vector))
-	 (else 'pointer-vector)))
-      ((nonnull-pointer-vector) 'pointer-vector)
-      ((u8vector u16vector s8vector s16vector u32vector s32vector u64vector s64vector f32vector f64vector)
-       (case mode
-	 ((arg) `(or boolean (struct ,ft)))
-	 (else `(struct ,ft))))
-      ((nonnull-u8vector) '(struct u8vector))
-      ((nonnull-s8vector) '(struct s8vector))
-      ((nonnull-u16vector) '(struct u16vector))
-      ((nonnull-s16vector) '(struct s16vector))
-      ((nonnull-u32vector) '(struct u32vector))
-      ((nonnull-s32vector) '(struct s32vector))
-      ((nonnull-u64vector) '(struct u64vector))
-      ((nonnull-s64vector) '(struct s64vector))
-      ((nonnull-f32vector) '(struct f32vector))
-      ((nonnull-f64vector) '(struct f64vector))
-      ((integer long size_t ssize_t integer32 unsigned-integer32 integer64 unsigned-integer64
-		unsigned-long) 
-       'integer)
-      ((c-pointer)
-       '(or boolean pointer locative))
-      ((nonnull-c-pointer) 'pointer)
-      ((c-string c-string* unsigned-c-string unsigned-c-string*)
-       '(or boolean string))
-      ((c-string-list c-string-list*)
-       '(list-of string))
-      ((nonnull-c-string nonnull-c-string* nonnull-unsigned-c-string*) 'string)
-      ((symbol) 'symbol)
-      (else
-       (cond ((pair? t)
-	      (case (car t)
-		((ref pointer function c-pointer)
-		 '(or boolean pointer locative))
-		((const) (foreign-type->scrutiny-type (cadr t) mode))
-		((enum) 'integer)
-		((nonnull-pointer nonnull-c-pointer) 'pointer)
-		(else '*)))
-	     (else '*))))))
+  ;; If the foreign type has a converter, it can return a different
+  ;; type from the native type matching the foreign type (see #1649)
+  (if (or (and (eq? mode 'arg) (foreign-type-argument-converter t))
+	  (and (eq? mode 'result) (foreign-type-result-converter t)))
+      ;; Here we just punt on the type, but it would be better to
+      ;; find out the result type of the converter procedure.
+      '*
+      (let ((ft (final-foreign-type t)))
+	(case ft
+	  ((void) 'undefined)
+	  ((char unsigned-char) 'char)
+	  ((int unsigned-int short unsigned-short byte unsigned-byte int32 unsigned-int32)
+	   'fixnum)
+	  ((float double)
+	   (case mode
+	     ((arg) 'number)
+	     (else 'float)))
+	  ((scheme-pointer nonnull-scheme-pointer) '*)
+	  ((blob)
+	   (case mode
+	     ((arg) '(or boolean blob))
+	     (else 'blob)))
+	  ((nonnull-blob) 'blob)
+	  ((pointer-vector)
+	   (case mode
+	     ((arg) '(or boolean pointer-vector))
+	     (else 'pointer-vector)))
+	  ((nonnull-pointer-vector) 'pointer-vector)
+	  ((u8vector u16vector s8vector s16vector u32vector s32vector u64vector s64vector f32vector f64vector)
+	   (case mode
+	     ((arg) `(or boolean (struct ,ft)))
+	     (else `(struct ,ft))))
+	  ((nonnull-u8vector) '(struct u8vector))
+	  ((nonnull-s8vector) '(struct s8vector))
+	  ((nonnull-u16vector) '(struct u16vector))
+	  ((nonnull-s16vector) '(struct s16vector))
+	  ((nonnull-u32vector) '(struct u32vector))
+	  ((nonnull-s32vector) '(struct s32vector))
+	  ((nonnull-u64vector) '(struct u64vector))
+	  ((nonnull-s64vector) '(struct s64vector))
+	  ((nonnull-f32vector) '(struct f32vector))
+	  ((nonnull-f64vector) '(struct f64vector))
+	  ((integer long size_t ssize_t integer32 unsigned-integer32 integer64 unsigned-integer64
+		    unsigned-long)
+	   'integer)
+	  ((c-pointer)
+	   '(or boolean pointer locative))
+	  ((nonnull-c-pointer) 'pointer)
+	  ((c-string c-string* unsigned-c-string unsigned-c-string*)
+	   '(or boolean string))
+	  ((c-string-list c-string-list*)
+	   '(list-of string))
+	  ((nonnull-c-string nonnull-c-string* nonnull-unsigned-c-string*) 'string)
+	  ((symbol) 'symbol)
+	  (else
+	   (cond ((pair? t)
+		  (case (car t)
+		    ((ref pointer function c-pointer)
+		     '(or boolean pointer locative))
+		    ((const) (foreign-type->scrutiny-type (cadr t) mode))
+		    ((enum) 'integer)
+		    ((nonnull-pointer nonnull-c-pointer) 'pointer)
+		    (else '*)))
+		 (else '*)))))))
 
 
 ;;; Scan expression-node for variable usage:

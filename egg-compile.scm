@@ -753,7 +753,7 @@
     (print "\n" (slashify default-builder platform) " "
            out
            " : "
-           (filelist srcdir source-dependencies platform)
+           (filelist srcdir source-dependencies platform) " "
            src " "
            (qs* eggfile platform) " "
            (if custom cmd "")
@@ -799,7 +799,7 @@
            cmd
            (if (eq? mode 'host) " -host" "")
            " -setup-mode -I " srcdir
-           " -c -C -I" srcdir
+           " -s -c -C -I" srcdir
            (arglist opts platform)
            " " src
            " -o " out)
