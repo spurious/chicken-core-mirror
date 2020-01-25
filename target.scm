@@ -312,12 +312,12 @@
 (define (expr x)
   (cond ((and (number? x) (inexact? x))
          (emit "(double)"
-               (cond ((nan? n) "NAN")
-                     ((infinite? n)
-                      (if (negative? n)
+               (cond ((nan? x) "NAN")
+                     ((infinite? x)
+                      (if (negative? x)
                           "-INFINITY"
                           "INFINITY"))
-                     (else n))))
+                     (else x))))
         ((atom? x) (emit x))
         (else
           (case (car x)
