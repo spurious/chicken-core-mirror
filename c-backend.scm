@@ -160,8 +160,8 @@
 		    (fn (car subs)) )
 	       (when name
                  (if emit-trace-info
-                     (gen `(call ($ C_trace) (name-str)))
-                     (gen `(comment name-str)))
+                     (gen `(call ($ C_trace) (string ,name-str)))
+                     (gen `(comment ,name-str)))
                  (when (and emit-debug-info dbi)
                    (gen `(call C_debugger (adr (elt ($ C_debug_info) ,dbi)) 
                                c 
@@ -338,7 +338,7 @@
 		    (have-av? (not (or (lambda-literal-customizable ll)
 				       (lambda-literal-direct ll)))))
 	       (if have-av?
-		   `(C_get_rest_arg c ,(+ depth n) av n t0)
+		   `(C_get_rest_arg c ,(+ depth n) av ,n t0)
                    `(C_u_i_list_ref ,(tvar (sub1 n)) depth))))
 
 	    ((##core#rest-null?)
@@ -667,7 +667,7 @@
 	    ((or (keyword? lit) (symbol? lit))		; handled slightly specially (see C_h_intern_in)
 	     (let* ((str (##sys#slot lit 1))
 		    (len (##sys#size str)) )
-	       (gen `(set ,to (call ($ `(if (keyword? lit)
+	       (gen `(set ,to (call ($ ,(if (keyword? lit)
                                             'C_h_intern_kw
                                             'C_h_intern))
                                 (adr ,to) ,len (string ,str))))))
@@ -701,7 +701,7 @@
 		(direct (lambda-literal-direct ll))
 		(rest-mode (lambda-literal-rest-argument-mode ll))
 		(temps (lambda-literal-temporaries ll))
-		(ftemps (lambda-literal-unboxed-temporaries ll))
+		(ftemps (lambda-literal-float-temporaries ll))
 		(topname (toplevel unit-name)))
            (when empty-closure 
              (debugging 'o "dropping unused closure argument" id))
