@@ -208,8 +208,8 @@ lib$(PROGRAM_PREFIX)chicken$(PROGRAM_SUFFIX)$(A): $(LIBCHICKEN_STATIC_OBJECTS)
 
 # import libraries and extensions
 
-%.so: %.o
-	$(LINKER) $(LINKER_OPTIONS) $(LINKER_LINK_SHARED_DLOADABLE_OPTIONS) $^ $(LINKER_OUTPUT_OPTION) $@ \
+%.so: %.o $(LIBCHICKEN_SO_FILE)
+	$(LINKER) $(LINKER_OPTIONS) $(LINKER_LINK_SHARED_DLOADABLE_OPTIONS) $< $(LINKER_OUTPUT_OPTION) $@ \
 	  $(LINKER_LIBRARY_PREFIX)$(PROGRAM_PREFIX)chicken$(PROGRAM_SUFFIX)$(LINKER_LIBRARY_SUFFIX) \
 	  $(LIBRARIES)
 
@@ -252,7 +252,7 @@ $(eval $(call declare-program-from-object,$(CSI_STATIC_EXECUTABLE),csi))
 
 # "chicken-do"
 
-$(CHICKEN_DO_PROGRAM)$(EXE): $(SRCDIR)chicken-do.c
+$(CHICKEN_DO_PROGRAM)$(EXE): $(SRCDIR)chicken-do.c chicken.h $(CHICKEN_CONFIG_H)
 	$(C_COMPILER) $(C_COMPILER_OPTIONS) $(C_COMPILER_OPTIMIZATION_OPTIONS) $< -o $@
 
 # scripts
@@ -573,6 +573,8 @@ core.c: core.scm mini-srfi-1.scm \
 		chicken.compiler.scrutinizer.import.scm \
 		chicken.compiler.support.import.scm \
 		chicken.eval.import.scm \
+		chicken.file.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.format.import.scm \
 		chicken.io.import.scm \
 		chicken.keyword.import.scm \
@@ -581,14 +583,17 @@ core.c: core.scm mini-srfi-1.scm \
 		chicken.string.import.scm
 optimizer.c: optimizer.scm mini-srfi-1.scm \
 		chicken.compiler.support.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.internal.import.scm \
 		chicken.sort.import.scm \
 		chicken.string.import.scm
 scheduler.c: scheduler.scm \
+		chicken.fixnum.import.scm \
 		chicken.format.import.scm \
 		chicken.condition.import.scm
 scrutinizer.c: scrutinizer.scm mini-srfi-1.scm \
 		chicken.compiler.support.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.format.import.scm \
 		chicken.internal.import.scm \
 		chicken.io.import.scm \
@@ -603,6 +608,7 @@ lfa2.c: lfa2.scm mini-srfi-1.scm \
 compiler-syntax.c: compiler-syntax.scm mini-srfi-1.scm \
 		chicken.compiler.support.import.scm \
 		chicken.compiler.core.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.format.import.scm
 chicken-ffi-syntax.c: chicken-ffi-syntax.scm \
 		chicken.format.import.scm \
@@ -613,6 +619,7 @@ support.c: support.scm mini-srfi-1.scm \
 		chicken.blob.import.scm \
 		chicken.condition.import.scm \
 		chicken.file.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm \
 		chicken.format.import.scm \
 		chicken.internal.import.scm \
@@ -645,6 +652,7 @@ csc.c: csc.scm \
 		chicken.string.import.scm
 csi.c: csi.scm \
 		chicken.condition.import.scm \
+		chicken.file.import.scm \
 		chicken.foreign.import.scm \
 		chicken.format.import.scm \
 		chicken.gc.import.scm \
@@ -655,19 +663,23 @@ csi.c: csi.scm \
 		chicken.platform.import.scm \
 		chicken.port.import.scm \
 		chicken.pretty-print.import.scm \
+		chicken.process.import.scm \
 		chicken.process-context.import.scm \
 		chicken.repl.import.scm \
 		chicken.sort.import.scm \
 		chicken.string.import.scm
 chicken-profile.c: chicken-profile.scm \
 		chicken.internal.import.scm \
+		chicken.file.import.scm \
 		chicken.file.posix.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.process-context.import.scm \
 		chicken.sort.import.scm \
 		chicken.string.import.scm
 chicken-status.c: chicken-status.scm \
 		chicken.file.import.scm \
 		chicken.file.posix.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm \
 		chicken.format.import.scm \
 		chicken.irregex.import.scm \
@@ -681,8 +693,10 @@ chicken-install.c: chicken-install.scm \
 		chicken.condition.import.scm \
 		chicken.file.import.scm \
 		chicken.file.posix.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm \
 		chicken.format.import.scm \
+		chicken.internal.import.scm \
 		chicken.io.import.scm \
 		chicken.irregex.import.scm \
 		chicken.pathname.import.scm \
@@ -695,6 +709,7 @@ chicken-install.c: chicken-install.scm \
 		chicken.tcp.import.scm
 chicken-uninstall.c: chicken-uninstall.scm \
 		chicken.file.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm \
 		chicken.format.import.scm \
 		chicken.irregex.import.scm \
@@ -704,10 +719,12 @@ chicken-uninstall.c: chicken-uninstall.scm \
 		chicken.process-context.import.scm \
 		chicken.string.import.scm
 chicken-syntax.c: chicken-syntax.scm \
+		chicken.fixnum.import.scm \
 		chicken.platform.import.scm \
 		chicken.internal.import.scm
 srfi-4.c: srfi-4.scm \
 		chicken.bitwise.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm \
 		chicken.gc.import.scm \
 		chicken.platform.import.scm
@@ -734,19 +751,23 @@ posixwin.c: posixwin.scm \
 		chicken.time.import.scm
 data-structures.c: data-structures.scm \
 		chicken.condition.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm
 expand.c: expand.scm \
 		chicken.blob.import.scm \
 		chicken.condition.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.keyword.import.scm \
 		chicken.platform.import.scm \
 		chicken.internal.import.scm
 extras.c: extras.scm \
+		chicken.fixnum.import.scm \
 		chicken.string.import.scm \
 		chicken.time.import.scm
 eval.c: eval.scm \
 		chicken.blob.import.scm \
 		chicken.condition.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm \
 		chicken.internal.import.scm \
 		chicken.keyword.import.scm \
@@ -755,29 +776,45 @@ repl.c: repl.scm \
 		chicken.eval.import.scm
 file.c: file.scm \
 		chicken.condition.import.scm \
+		chicken.fixnum.import.scm \
 		chicken.io.import.scm \
 		chicken.irregex.import.scm \
 		chicken.foreign.import.scm \
 		chicken.pathname.import.scm \
 		chicken.process-context.import.scm
 lolevel.c: lolevel.scm \
+		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm
 pathname.c: pathname.scm \
+		chicken.fixnum.import.scm \
 		chicken.irregex.import.scm \
 		chicken.platform.import.scm \
 		chicken.string.import.scm
 port.c: port.scm \
+		chicken.fixnum.import.scm \
 		chicken.io.import.scm
 read-syntax.c: read-syntax.scm \
 		chicken.internal.import.scm \
 		chicken.platform.import.scm
 tcp.c: tcp.scm \
+		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm \
 		chicken.port.import.scm \
 		chicken.time.import.scm
 eval-modules.c: eval-modules.scm $(DYNAMIC_IMPORT_LIBRARIES:=.import.scm) \
 	$(foreach lib,$(DYNAMIC_CHICKEN_IMPORT_LIBRARIES),chicken.$(lib).import.scm) \
 	$(foreach lib,$(DYNAMIC_CHICKEN_UNIT_IMPORT_LIBRARIES),$(lib).c)
+continuation.c: continuation.scm \
+		chicken.fixnum.import.scm
+internal.c: internal.scm \
+		chicken.fixnum.import.scm
+irregex.c: irregex.scm \
+		chicken.fixnum.import.scm \
+		chicken.syntax.import.scm
+profiler.c: profiler.scm \
+		chicken.fixnum.import.scm
+stub.c: stub.scm \
+		chicken.platform.import.scm
 
 
 define profile-flags

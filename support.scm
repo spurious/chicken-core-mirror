@@ -736,7 +736,7 @@
 	       (if (> len depth)
 		   (copy-node! (varnode (list-ref rest-args depth)) n)
 		   (copy-node! (make-node '##core#inline
-					  (list "C_rest_arg_out_of_bounds_error")
+					  (list "C_rest_arg_out_of_bounds_error_value")
 					  (list (qnode len) (qnode depth) (qnode 0)))
 			       n)))
 	     n))
