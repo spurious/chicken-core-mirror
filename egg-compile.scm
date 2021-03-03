@@ -526,9 +526,14 @@
                                (if (memq 'static link)
                                    (list (apply compile-static-object data))
                                    '())))))
-                  (else
-                    (let ((data (assq id genfiles)))
-                      (list (apply compile-generated-file data))))))
+                  ((assq id genfiles) =>
+                   (lambda (data)
+                     (list (apply compile-generated-file data))))
+                  ((or (assq id data)
+                       (assq id cinc)
+                       (assq id scminc))
+                   '()) ;; nothing to build for data components
+                  (else (error "Error in chicken-install, don't know how to build component" id))))
           order)
         ;; installation commands
         (append
