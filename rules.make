@@ -1,6 +1,6 @@
 # rules.make - basic build rules -*- Makefile -*-
 #
-# Copyright (c) 2008-2020, The CHICKEN Team
+# Copyright (c) 2008-2021, The CHICKEN Team
 # Copyright (c) 2000-2007, Felix L. Winkelmann
 # All rights reserved.
 #
@@ -363,7 +363,7 @@ ifndef STATICBUILD
 endif
 endif
 ifeq ($(CROSS_CHICKEN)$(DESTDIR),0)
-	-$(IBINDIR)$(SEP)$(CHICKEN_INSTALL_PROGRAM) -update-db
+	-$(IBINDIR)$(SEP)$(CHICKEN_INSTALL_PROGRAM) -defaults $(SRCDIR)setup.defaults -update-db
 else
 	@echo
 	@echo "Warning: cannot run \`$(CHICKEN_INSTALL_PROGRAM) -update-db' when cross-compiling or DESTDIR is set"
@@ -999,6 +999,7 @@ testclean:
 	-$(REMOVE_COMMAND) $(REMOVE_COMMAND_RECURSIVE_OPTIONS) \
 	  $(SRCDIR)tests$(SEP)*.dll \
 	  $(SRCDIR)tests$(SEP)*.import.scm \
+	  $(SRCDIR)tests$(SEP)*.inline \
 	  $(SRCDIR)tests$(SEP)*.link \
 	  $(SRCDIR)tests$(SEP)*.o \
 	  $(SRCDIR)tests$(SEP)*.obj \

@@ -1,6 +1,6 @@
 ;;;; expand.scm - The HI/LO expander
 ;
-; Copyright (c) 2008-2020, The CHICKEN Team
+; Copyright (c) 2008-2021, The CHICKEN Team
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following
@@ -163,7 +163,6 @@
 
 (define ##sys#scheme-macro-environment '()) ; reassigned below
 ;; These are all re-assigned by chicken-syntax.scm:
-(define ##sys#chicken-macro-environment '()) ; used later in chicken.import.scm [OBSOLETE]
 (define ##sys#chicken-ffi-macro-environment '()) ; used later in foreign.import.scm
 (define ##sys#chicken.condition-macro-environment '()) ; used later in chicken.condition.import.scm
 (define ##sys#chicken.time-macro-environment '()) ; used later in chicken.time.import.scm
@@ -987,7 +986,7 @@
 			##sys#current-environment ##sys#macro-environment #f #f 'import))
 		   (if (not lib)
 		       '(##core#undefined)
-		       `(##core#require ,lib ,(module-requirement name)))))
+		       `(##core#require ,lib ,name))))
 	       (cdr x)))))))
 
 (##sys#extend-macro-environment

@@ -1,6 +1,6 @@
 ;;;; c-platform.scm - Platform specific parameters and definitions
 ;
-; Copyright (c) 2008-2020, The CHICKEN Team
+; Copyright (c) 2008-2021, The CHICKEN Team
 ; Copyright (c) 2000-2007, Felix L. Winkelmann
 ; All rights reserved.
 ;
@@ -72,8 +72,10 @@
 (define default-profiling-declarations
   '((##core#declare
      (uses profiler)
-     (bound-to-procedure
-       ##sys#profile-entry ##sys#profile-exit) ) ) )
+     (bound-to-procedure ##sys#profile-entry
+			 ##sys#profile-exit
+			 ##sys#register-profile-info
+			 ##sys#set-profile-info-vector!))))
 
 (define default-units '(library eval))
 
@@ -107,7 +109,7 @@
     module-registration no-module-registration))
 
 (define valid-compiler-options-with-argument
-  '(debug emit-link-file
+  '(debug link emit-link-file
     output-file include-path heap-size stack-size unit uses module
     keyword-style require-extension inline-limit profile-name
     prelude postlude prologue epilogue nursery extend feature no-feature

@@ -1,6 +1,6 @@
 ;;; c-backend.scm - C-generating backend for the CHICKEN compiler
 ;
-; Copyright (c) 2008-2020, The CHICKEN Team
+; Copyright (c) 2008-2021, The CHICKEN Team
 ; Copyright (c) 2000-2007, Felix L. Winkelmann
 ; All rights reserved.
 ;
@@ -488,6 +488,16 @@
       (define (expr-args args i)
         (map (cut expr <> i) args))
 
+      (define (contains-restop? args)
+	(let loop ((args args))
+	  (if (null? args)
+	      #f
+	      (let ((node (car args)))
+		;; Only rest-car accesses av
+		(or (eq? (node-class node) '##core#rest-car)
+		    (contains-restop? (node-subexpressions node))
+		    (loop (cdr args)))))))
+
       (define (push-args args i selfarg)
 	(let* ((n (length args))
                (av2 (av-var))
@@ -503,8 +513,14 @@
 	  (cond
 	   ((or (not caller-has-av?)	     ; Argvec missing or
 		(and (< caller-argcount avl) ; known to be too small?
+<<<<<<< HEAD
 		     (eq? caller-rest-mode 'none)))
 	    (gen `(let/array ,av2 ,avl)))
+=======
+		     (eq? caller-rest-mode 'none))
+		(contains-restop? args))     ; Restops work on original av
+	    (gen #t "C_word av2[" avl "];"))
+>>>>>>> master
 	   ((>= caller-argcount avl)   ; Argvec known to be re-usable?
 	    (gen `(let/ptr ,av2 av))) ; Re-use our own argvector
 	   (else      ; Need to determine dynamically. This is slower.

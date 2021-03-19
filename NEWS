@@ -1,4 +1,58 @@
-5.1.1
+5.2.1
+
+- Core libraries
+  - Fixed an inadvertant error during error reporting in the `numerator`
+    and `denominator` procedures when passed non-finite flonums (#1730).
+  - Fixed a bug where optimisations for `irregex-match?` would cause
+    runtime errors due to the inlined specialisations not being
+    fully-expanded (see #1690).
+  - Irregex has been updated to upstream 0.9.8, which fixes behaviour
+    of irregex-replace/all with positive lookbehind so all matches are
+    replaced instead of only the first (reported by Kay Rhodes).
+  - current-milliseconds has been deprecated in favor of the name
+    current-process-milliseconds, to avoid confusion due to naming
+    of current-milliseconds versus current-seconds, which do something
+    quite different.  Also, its definition has been tweaked to
+    guarantee that it returns the time since process startup.  On
+    Windows, it will now return sane values after 24 days of uptime.
+    On UNIX, the values returned will be precise to the millisecond
+    instead of rounded down to the nearest second at startup (which
+    would result in erratic startup times).
+  - The default mode for files created by `file-open' has been changed
+    to 0666 (plus whatever change the effective umask applies), rather
+    than 0744 (see #1698).
+  - Fixed type database entry for "log" with second arg (fixes #1725).
+
+- Runtime system
+  - Sleeping primordial thread doesn't forget mutations made to
+    parameters in interrupt handlers anymore. (See #1638. Fix
+    contributed by Sebastien Marie)
+  - A feature corresponding to the word size is available
+    regardless of the word size (#1693)
+  - Deprecated C_(a_i_current_)milliseconds in favor of
+    C_(a_i_)current_process_milliseconds to match the Scheme-level
+    deprecation of current-milliseconds.
+  - Officially deprecated C_pair() in favor of C_a_pair(); it has
+    been deprecated for years.
+  - At program cleanup, finalizers are only forced when the live
+    finalizer count is non-zero
+  - The symbol `srfi-87` has been added to the list of built-in
+    feature identifiers.
+  - Garbage collection algorithm has been changed to reduce thrashing
+    when heap is almost full, by growing the heap sooner.  A new -:hf
+    option was added to tweak when heap growth should occur.
+
+- Compiler
+  - Avoid re-using argvector when inline rest operations are being
+    used in CPS calls (#1703, thanks to Jakob L. Keuze).
+
+- Build system
+  - Auto-configure at build time on most platforms. Cross-compilation
+    still requires PLATFORM to be set, and it can still be provided
+    manually, but it is no longer required in the common case.
+
+
+5.2.0
 
 - Core libraries
   - Fix `memory-statistics` by returning semi-space bytes and used

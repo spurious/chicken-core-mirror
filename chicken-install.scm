@@ -1,6 +1,6 @@
 ;;;; chicken-install.scm
 ;
-; Copyright (c) 2008-2020, The CHICKEN Team
+; Copyright (c) 2008-2021, The CHICKEN Team
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following
@@ -183,6 +183,7 @@
     (custom-build #f #f #f)
     (linkage #f #f #f)
     (objects #f #f #f)
+    (destination #f #f #f ,list?)
     (install-name #f #f #f ,nameprop?)
     (target #f #t #f)
     (host #f #t #f)
@@ -428,7 +429,7 @@
     (cond ((or (not (probe-dir cached))
                (not (file-exists? eggfile)))
            (d "~a not cached~%" name)
-           (when cached-only (error "extension not cached"))
+           (when cached-only (error "extension not cached" name))
            (fetch #f))
           ((and (file-exists? status)
                 (not (equal? current-status 
@@ -470,6 +471,7 @@
         (else name)))
 
 (define (fetch-egg-sources name version dest lax)
+  (print "fetching " name)
   (let loop ((locs default-locations))
     (cond ((null? locs)
            (let ((tmpdir (create-temporary-directory)))
@@ -843,7 +845,7 @@
                       (run-script dir bscript platform)
                       (unless (if (member name requested-eggs) no-install no-install-dependencies)
                         (check-installed-files name info)
-                        (print "  installing " name)
+                        (print "installing " name)
                         (run-script dir iscript platform sudo: sudo-install))
                       (when (and (member name requested-eggs)
                                  run-tests
@@ -873,7 +875,7 @@
                       (print "building " name " (target)")
                       (run-script dir bscript platform)
                       (unless (if (member name requested-eggs) no-install no-install-dependencies)
-                        (print "  installing " name " (target)")
+                        (print "installing " name " (target)")
                         (run-script dir iscript platform)))))))))
     (order-installed-eggs)))
 
@@ -1009,9 +1011,7 @@
         (purge-mode (purge-cache eggs))
         (print-repository (print (install-path)))
         ((null? eggs)
-         (cond (cached-only
-                 (error "`-cached' needs explicit egg list"))
-               (list-versions-only
+         (cond (list-versions-only
                  (print "no eggs specified"))
                (else
                  (let ((files (glob "*.egg" "chicken/*.egg")))

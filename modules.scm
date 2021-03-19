@@ -1,6 +1,6 @@
 ;;;; modules.scm - module-system support
 ;
-; Copyright (c) 2011-2020, The CHICKEN Team
+; Copyright (c) 2011-2021, The CHICKEN Team
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following
@@ -33,9 +33,9 @@
   (disable-interrupts)
   (fixnum)
   (not inline ##sys#alias-global-hook)
-  (hide check-for-redef find-export find-module/import-library
-	match-functor-argument merge-se module-indirect-exports
-	module-rename register-undefined))
+  (hide check-for-redef compiled-module-dependencies find-export
+	find-module/import-library match-functor-argument merge-se
+	module-indirect-exports module-rename register-undefined))
 
 (import scheme
 	chicken.base
@@ -311,7 +311,14 @@
 			  (else (hash-table-set! seen (caar se) #t)
 				(lp (cdr se) (cons (car se) se2))))))))))
 
-(define (##sys#compiled-module-registration mod)
+(define (compiled-module-dependencies mod)
+  (let ((libs (filter-map ; extract library names
+	       (lambda (x) (nth-value 1 (##sys#decompose-import x o eq? 'module)))
+	       (module-import-forms mod))))
+    (map (lambda (lib) `(##core#require ,lib))
+	 (delete-duplicates libs eq?))))
+
+(define (##sys#compiled-module-registration mod compile-mode)
   (let ((dlist (module-defined-list mod))
 	(mname (module-name mod))
 	(ifs (module-import-forms mod))
@@ -319,6 +326,9 @@
 	(mifs (module-meta-import-forms mod)))
     `((##sys#with-environment
         (lambda ()
+	  ,@(if (and (eq? compile-mode 'static) (pair? ifs) (pair? sexports))
+		(compiled-module-dependencies mod)
+		'())
           ,@(if (and (pair? ifs) (pair? sexports))
    	        `((scheme#eval '(import-syntax ,@(strip-syntax ifs))))
   	        '())
@@ -638,7 +648,7 @@
 			     (cond ((null? ids)
 				    (for-each
 				     (lambda (id)
-				       (warn "imported identifier doesn't exist" spec id))
+				       (warn "imported identifier doesn't exist" name id))
 				     missing)
 				    (values name lib `(,head ,spec ,@imports) v s impi))
 				   ((assq (car ids) impv) =>
@@ -1071,7 +1081,7 @@
  'srfi-6 'library
  '((get-output-string . chicken.base#get-output-string)
    (open-input-string . chicken.base#open-input-string)
-   (open-output-string . chicken.base#open-input-string)))
+   (open-output-string . chicken.base#open-output-string)))
 
 (##sys#register-primitive-module
  'srfi-8 '() (se-subset '(receive) ##sys#chicken.base-macro-environment))

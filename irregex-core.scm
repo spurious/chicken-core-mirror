@@ -1,6 +1,6 @@
 ;;;; irregex.scm -- IrRegular Expressions
 ;;
-;; Copyright (c) 2005-2019 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2005-2020 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -30,6 +30,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; History
+;; 0.9.8: 2020/07/13 - fix irregex-replace/all with look-behind patterns
 ;; 0.9.7: 2019/12/31 - more intuitive handling of empty matches in -fold,
 ;;                     -replace and -split
 ;; 0.9.6: 2016/12/05 - fixed exponential memory use of + in compilation
@@ -148,13 +149,14 @@
        (##sys#slot (##sys#slot m 1) (+ 3 (* n 4))))
      (define (%irregex-match-fail m) (##sys#slot m 4))
      (define (%irregex-match-fail-set! m x) (##sys#setslot m 4 x))
-     (define-record-printer (regexp-match m out)
-       (let ((n (irregex-match-num-submatches m)))
-	 (display "#<regexp-match (" out)
-	 (display n out)
-	 (display " submatch" out)
-	 (when (or (eq? n 0) (fx> n 1)) (display "es" out))
-	 (display ")>" out)))
+     (set-record-printer! 'regexp-match
+       (lambda (m out)
+	 (let ((n (irregex-match-num-submatches m)))
+	   (display "#<regexp-match (" out)
+	   (display n out)
+	   (display " submatch" out)
+	   (when (or (eq? n 0) (fx> n 1)) (display "es" out))
+	   (display ")>" out))))
      (define-inline (irregex-match-valid-numeric-index? m n)
        (let ((v (##sys#slot m 1)))
 	 (and (>= n 0) (< (* n 4) (- (##sys#size v) 4)))))
@@ -393,7 +395,16 @@
    (lambda (x) (and (not (eq? x src)) ((chunker-get-next cnk) x)))
    (chunker-get-str cnk)
    (chunker-get-start cnk)
-   (lambda (x) (if (eq? x src) i ((chunker-get-end cnk) x)))
+   (lambda (x)
+     ;; TODO: this is a hack workaround for the fact that we don't
+     ;; have either a notion of chunk equivalence or chunk truncation,
+     ;; until which time (neg-)look-behind in a fold won't work on
+     ;; non-basic chunks.
+     (if (or (eq? x src)
+             (and (not ((chunker-get-next cnk) x))
+                  (not ((chunker-get-next cnk) src))))
+         i
+         ((chunker-get-end cnk) x)))
    (chunker-get-substring cnk)
    (chunker-get-subchunk cnk)))
 

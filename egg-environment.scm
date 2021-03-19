@@ -1,6 +1,6 @@
 ;;; environment settings for egg compilation
 ;
-; Copyright (c) 2017-2020, The CHICKEN Team
+; Copyright (c) 2017-2021, The CHICKEN Team
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following
@@ -79,6 +79,7 @@ EOF
 (define target-librarian (foreign-value "C_TARGET_LIBRARIAN" c-string))
 (define target-librarian-options (foreign-value "C_TARGET_LIBRARIAN_FLAGS" c-string))
 
+(define host-prefix (foreign-value "C_INSTALL_PREFIX" c-string))
 (define host-repo (foreign-value "C_INSTALL_EGG_HOME" c-string))
 (define host-libdir (foreign-value "C_INSTALL_LIB_HOME" c-string))
 (define host-bindir (foreign-value "C_INSTALL_BIN_HOME" c-string))

@@ -1,6 +1,6 @@
 ;;;; csi.scm - Interpreter stub for CHICKEN
 ;
-; Copyright (c) 2008-2020, The CHICKEN Team
+; Copyright (c) 2008-2021, The CHICKEN Team
 ; Copyright (c) 2000-2007, Felix L. Winkelmann
 ; All rights reserved.
 ;
@@ -483,7 +483,7 @@ EOF
 			  (display (make-string pad #\space))))))
 	       fs))
 	    (printf "~%~%~
-                   Machine type:    \t~A ~A~%~
+                   Machine type:    \t~A (~A-bit)~%~
                    Software type:   \t~A~%~
                    Software version:\t~A~%~
                    Build platform:  \t~A~%~
@@ -499,7 +499,7 @@ EOF
                      nursery size is ~S bytes, stack grows ~A~%~
                    Command line:    \t~S~%"
 		    (machine-type)
-		    (if (feature? #:64bit) "(64-bit)" "")
+		    (foreign-value "C_WORD_SIZE" int)
 		    (software-type)
 		    (software-version)
 		    (build-platform)
@@ -926,7 +926,7 @@ EOF
 		 (else (find (cdr ks))) ) ) ) ) )
 
 (define-constant short-options 
-  '(#\k #\s #\v #\h #\D #\e #\i #\R #\b #\n #\q #\w #\- #\I #\p #\P) )
+  '(#\k #\s #\h #\D #\e #\i #\R #\b #\n #\q #\w #\- #\I #\p #\P) )
 
 (define-constant long-options
   '("-ss" "-sx" "-script" "-version" "-help" "--help" "-feature" "-no-feature" "-eval"
@@ -941,6 +941,11 @@ EOF
 	'()
 	(let ((x (car args)))
 	  (cond ((member x '("-s" "-ss" "-script" "-sx" "--")) args)
+                ((and (fx= (##sys#size x) 2)
+                      (char=? #\- (##core#inline "C_subchar" x 0)))
+                 (if (memq (##core#inline "C_subchar" x 1) short-options)
+                     (cons x (loop (cdr args)))
+                     (##sys#error "invalid option" x)))
                 ((and (fx> (##sys#size x) 2)
                        (char=? #\- (##core#inline "C_subchar" x 0))
                        (not (member x long-options)) )

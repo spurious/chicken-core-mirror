@@ -1,6 +1,6 @@
 ;;;; profiler.scm - Support code for profiling applications
 ;
-; Copyright (c) 2008-2020, The CHICKEN Team
+; Copyright (c) 2008-2021, The CHICKEN Team
 ; Copyright (c) 2000-2007, Felix L. Winkelmann
 ; All rights reserved.
 ;
@@ -81,8 +81,7 @@
 
 ;;; Entry and exit into/out of profiled lambda:
 
-;; XXX TODO: Should be changed to unsigned-integer64 after bootstrapping
-(define cpu-ms (foreign-lambda unsigned-integer "C_cpu_milliseconds"))
+(define cpu-ms (foreign-lambda unsigned-integer64 "C_cpu_milliseconds"))
 
 (define ##sys#profile-entry 
   (let ((maxfix most-positive-fixnum))

@@ -444,7 +444,7 @@
              (emit ")"))
             ((restore) (emit "C_restore"))
             ((switch tailcall case declare declare/array define
-                     end define/array define/vaiable goto if else 
+                     end define/array define/variable goto if else 
                      endif label let let/var let/proc let/ptr
                      let/cell
                      let/array let/unboxed main_entry_point return
@@ -497,7 +497,10 @@
          (emit "(*)(")
          (emit-list (cdddr x) type)
          (emit ")"))
-        (else (bomb "bad type" x))))))
+        (else 
+          (if (string? x)
+              (emit x)
+              (bomb "bad type" x)))))))
 
 (define (emit-string-literal str)
   (define (gen-string-constant str)
@@ -523,3 +526,5 @@
   (emit ")"))
 
 )
+sh: /bin/cat-n: not found
+child process exited abnormally

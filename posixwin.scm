@@ -1,6 +1,6 @@
 ;;;; posixwin.scm - Miscellaneous file- and process-handling routines, available on Windows
 ;
-; Copyright (c) 2008-2020, The CHICKEN Team
+; Copyright (c) 2008-2021, The CHICKEN Team
 ; Copyright (c) 2000-2007, Felix L. Winkelmann
 ; All rights reserved.
 ;
@@ -517,7 +517,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 (set! chicken.file.posix#open/noinherit _o_noinherit)
 
 (set! chicken.file.posix#file-open
-  (let ((defmode (bitwise-ior _s_irwxu (fxior _s_irgrp _s_iroth))))
+  (let ((defmode (bitwise-ior _s_irusr _s_iwusr _s_irgrp _s_iwgrp _s_iroth _s_iwoth)))
     (lambda (filename flags . mode)
       (let ([mode (if (pair? mode) (car mode) defmode)])
 	(##sys#check-string filename 'file-open)
