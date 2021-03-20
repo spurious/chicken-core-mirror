@@ -239,9 +239,7 @@
 	    ((##core#recurse) 
 	     (let* ([n (length subs)]
 		    [nf (add1 n)]
-		    [tailcall (first params)]
-		    [call-id (second params)] 
-		    [empty-closure (zero? (lambda-literal-closure-size ll))] )
+		    [tailcall (first params)])
 	       (cond (tailcall
 		      (let* ((temps (lambda-literal-temporaries ll))
 			     (ts (list-tabulate n (cut + temps nf <>))))
@@ -254,10 +252,7 @@
                            (gen `(set ,(tvar to) ,(tvar from))))
 			 ts (list-tabulate n add1))
 			(gen '(goto loop))))
-		     (else
-		      (gen `(tailcall ($ ,call-id)
-                                   ,(if empty-closure '() '(t0))
-                                   ,@(expr-args subs i)))))))
+		     (else (bomb "unexpected direct tailcall (recurse)")))))
 
 	    ((##core#callunit)
 	     ;; The code generated here does not use the extra temporary needed for standard calls, so we have

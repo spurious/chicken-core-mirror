@@ -108,6 +108,12 @@ Description of Backend Intermediate Language
     (deref EXP)
         Pointer-dereferencing.
 
+    (call EXP EXP ...)
+        Perform procedure call with arguments.
+
+    (tailcall FEXP EXP ...)
+        Perform procedure call with arguments.
+
     (elt EXP IEXP)
         Extract element IEXP from array EXP.
 

@@ -355,7 +355,7 @@
              (type (cadr x))
              (emit ")")
              (expr (caddr x)))
-            ((call)
+            ((call tailcall)
              (cond ((and (pair? (cadr x)) (eq? '$ (caadr x)))
                     (emit (cadadr x)))
                    (else
@@ -445,7 +445,7 @@
                      (expr (caddr x))))
              (emit ")"))
             ((restore) (emit "C_restore"))
-            ((switch tailcall case declare declare/array define
+            ((switch case declare declare/array define
                      end define/array define/variable goto if else 
                      endif label let let/var let/proc let/ptr
                      let/cell
