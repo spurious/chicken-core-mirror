@@ -291,7 +291,8 @@
                   (top-expr (car ps) i)
                   (gen `(endswitch)))
                  (gen `(case ,(expr (car ps) i)))
-                 (top-expr (cadr ps) i)))
+                 (top-expr (cadr ps) i)
+                 (gen '(endcase))))
 
             (else (bomb "bad toplevel expr" (node-class n))))))
 
