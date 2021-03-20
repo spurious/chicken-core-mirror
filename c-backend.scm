@@ -513,14 +513,9 @@
 	  (cond
 	   ((or (not caller-has-av?)	     ; Argvec missing or
 		(and (< caller-argcount avl) ; known to be too small?
-<<<<<<< HEAD
-		     (eq? caller-rest-mode 'none)))
-	    (gen `(let/array ,av2 ,avl)))
-=======
 		     (eq? caller-rest-mode 'none))
 		(contains-restop? args))     ; Restops work on original av
-	    (gen #t "C_word av2[" avl "];"))
->>>>>>> master
+	    (gen `(let/array ,av2 ,avl)))
 	   ((>= caller-argcount avl)   ; Argvec known to be re-usable?
 	    (gen `(let/ptr ,av2 av))) ; Re-use our own argvector
 	   (else      ; Need to determine dynamically. This is slower.
