@@ -461,6 +461,16 @@
                     ,(expr (second subs) i)
                     ,(expr (third subs) i)))
 
+	    ((##core#recurse) 
+	     (let* ([tailcall (first params)]
+		    [call-id (second params)] 
+		    [empty-closure (zero? (lambda-literal-closure-size ll))] )
+	       (cond (tailcall (bomb "expected tailcall (recurse)"))
+		     (else
+		      `(tailcall ($ ,call-id)
+                                 ,@(if empty-closure '() '(t0))
+                                 ,@(expr-args subs i))))))
+
      	    ((##core#direct_call) 
 	     (let* ((args (cdr subs))
 		    (n (length args))
