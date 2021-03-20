@@ -342,7 +342,7 @@
 				       (lambda-literal-direct ll)))))
 	       (if have-av?
 		   `(C_get_rest_arg c ,(+ depth n) av ,n t0)
-                   `(C_u_i_list_ref ,(tvar (sub1 n)) depth))))
+                   `(C_u_i_list_ref ,(tvar (sub1 n)) ,depth))))
 
 	    ((##core#rest-null?)
 	     (let* ((n (lambda-literal-argument-count ll))
@@ -352,7 +352,7 @@
 	       (if have-av?
 		   `(C_rest_nullp c ,(+ depth n))
                    `(C_mk_bool (>= (C_unfix (C_i_length ,(tvar (sub1 n))))
-                                   depth)))))
+                                   ,depth)))))
 
 	    ((##core#rest-length)
 	     (let* ((n (lambda-literal-argument-count ll))
