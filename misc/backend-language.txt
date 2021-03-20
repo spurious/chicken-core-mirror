@@ -1,5 +1,23 @@
 Description of Backend Intermediate Language
 
+This document gives a rough description of the intermediate language
+used by the compiler back-end. The language is called XXX and
+resembles an ill-conceived, ad-hoc representation of C in a paranthesized
+syntax, converted by "target.scm" into C.
+
+A file consists of toplevel expressions ("TOP" on the list below), containing
+further nested non-toplevel expressions ("EXP"). The expression structure does
+not directly mirror the structure of the syntactic forms: delimiter expressions
+(like "endcase", "else" and "endif") mark the end of syntactically nested bodies
+of code. Preprocessor instructions are not directly supported. Embedded
+C code in Scheme code using the foreign-function interface are inserted in
+the output verbatim. 
+
+It should be possible to implement code-generators for other targets than C,
+but embedded native code must then be suitable for the target language.
+
+This document is terribly incomplete.
+
 
 * TOP: Toplevel statements
 
@@ -71,6 +89,9 @@ Description of Backend Intermediate Language
     (stack_overflow_check)
 
     (switch EXP)
+    (case EXP)
+    ...
+    (endcase)
     ...
     (default)
     ...
