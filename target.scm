@@ -1,6 +1,6 @@
-;;; cgen.scm - C code-generator for the CHICKEN compiler
+;;; target.scm - C code-generator for the CHICKEN compiler
 ;
-; Copyright (c) 2018-2020, The CHICKEN Team
+; Copyright (c) 2018-2021, The CHICKEN Team
 ; All rights reserved.
 ;
 ; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following
@@ -294,13 +294,14 @@
      (expr (cadr x))
      (emit "){"))
     ((default)
-     (emit #t "default:;"))
+     (emit #t "default:{"))
     ((endswitch)
-     (emit "}"))
+     (emit "}}"))
     ((trampoline)
      (set! trampoline #t)
-     (emit #t "#define return(x) C_cblock " (cadr x) "=(x); goto "
-           (caddr x) "; C_cblockend"))
+     (emit #t "#define return(x) C_cblock " (cadr x) "=(")
+     (expr (caddr x))
+     (emit "); goto " (cadddr x) "; C_cblockend"))
     (else (bomb "target - bad top-expr" x))))
 
 (define (expr-list xs)
@@ -528,5 +529,3 @@
   (emit ")"))
 
 )
-sh: /bin/cat-n: not found
-child process exited abnormally
