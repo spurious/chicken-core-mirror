@@ -998,6 +998,8 @@
 	    [callback (foreign-stub-callback stub)] )
        (when rname
 	 (gen `(comment ,(conc "from " rname))))
+       (when body
+         (gen `(trampoline C_r ,(rconv 'x) C_ret)))
        (cond (cps
 	      (gen `(define static void ,id (word C_c) ((ptr word) C_av))
                    '(let C_k (elt C_av 1))
@@ -1021,16 +1023,7 @@
        (when callback
          (gen '(let C_level (C_save_callback_continuation (adr C_a) C_k))))
        (cond (body
-               (gen `(let/unboxed ,(foreign-type-declaration 
-                                     (if (eq? 'void rtype)
-                                         'scheme-object
-                                         rtype)
-                                     #f #t)
-                       C_r1)
-                    `(trampoline C_r1 C_ret)
-                    `(inline ,body)
-                    '(label C_ret)
-                    `(set C_r ,(rconv 'C_r1))))
+              (gen `(inline ,body) '(label C_ret)))
 	     (else
 	      (if (not (eq? rtype 'void))
                   (gen `(set C_r ,(rconv (cons sname
