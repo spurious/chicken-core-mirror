@@ -1,4 +1,4 @@
-;;; target.scm - C code-generator for the CHICKEN compiler
+};;; target.scm - C code-generator for the CHICKEN compiler
 ;
 ; Copyright (c) 2018-2021, The CHICKEN Team
 ; All rights reserved.
@@ -183,6 +183,9 @@
      (when trampoline
        (set! trampoline #f)
        (emit #t "#undef return")))
+    ((ifdef) (emit #t "#ifdef " (cadr x) #t))
+    ((elseifdef) (emit #t "#else" #t))
+    ((endifdef) (emit #t "#endif" #t))
     ((define/array)
      (let ((class "")
            (aligned ""))

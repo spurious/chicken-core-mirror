@@ -930,6 +930,7 @@
 ;;; Emit procedure table:
 
 (define (emit-procedure-table lambda-table* sf)
+  (gen '(ifdef C_ENABLE_PTABLES))
   (gen `(define/array static C_PTABLE_ENTRY ptable
           ,(add1 (length lambda-table*))
           ,@(map (lambda (p)
@@ -941,8 +942,13 @@
                                       id)))))
               lambda-table*)
           #(0 0)))
+  (gen '(endifdef))
   (gen `(define static (ptr C_PTABLE_ENTRY) create_ptable)
+       '(ifdef C_ENABLE_PTABLES)
        '(return ($ ptable))
+       '(elseifdef)
+       '(return 0)
+       '(endifdef)
        '(end)))
 
 
