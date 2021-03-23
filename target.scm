@@ -1,4 +1,4 @@
-};;; target.scm - C code-generator for the CHICKEN compiler
+;;; target.scm - C code-generator for the CHICKEN compiler
 ;
 ; Copyright (c) 2018-2021, The CHICKEN Team
 ; All rights reserved.
