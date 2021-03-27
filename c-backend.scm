@@ -209,24 +209,25 @@
 			     (carg #f)
                              (tp (tempvar)))
 			(gen `(let/proc ,tp
-                                ,(cond (no-global-procedure-checks
-                                        (set! carg
-                                          (if block
-                                              `(elt ($ lf) ,index)
-                                              `(slot (elt ($ lf) ,index) 0)))
-                                        `(slot ,carg 1))
-                                      (block
-                                        (set! carg `(elt ($ lf) ,index))
-			                (if safe
-				           `(C_fast_retrieve_proc ,carg)
-				           `(C_retrieve2_symbol_proc ,carg 
-                                              (string ,(##sys#symbol->string (fourth gparams))))))
-                                      (safe
-                                       (set! carg `(slot (elt ($ lf) ,index) 0)) 
-                                       `(C_fast_retrieve_proc ,carg))
-                                      (else
-                                        (set! carg `(slot (elt ($ lf) ,index) 0)) 
-                                        `(C_fast_retrieve_symbol_proc (elt ($ lf) ,index))))))
+                                (cast proc
+                                  ,(cond (no-global-procedure-checks
+                                          (set! carg
+                                            (if block
+                                                `(elt ($ lf) ,index)
+                                                `(slot (elt ($ lf) ,index) 0)))
+                                          `(cast ptr (slot ,carg 0)))
+                                        (block
+                                          (set! carg `(elt ($ lf) ,index))
+  			                  (if safe
+			   	             `(C_fast_retrieve_proc ,carg)
+				             `(C_retrieve2_symbol_proc ,carg 
+                                                (string ,(##sys#symbol->string (fourth gparams))))))
+                                        (safe
+                                         (set! carg `(slot (elt ($ lf) ,index) 0)) 
+                                         `(C_fast_retrieve_proc ,carg))
+                                        (else
+                                          (set! carg `(slot (elt ($ lf) ,index) 0)) 
+                                        `  (C_fast_retrieve_symbol_proc (elt ($ lf) ,index)))))))
 			(let ((av2 (push-args args i carg)))
   			  (gen `(tailcall ,tp ,nf ,av2)))))
 		     (else
