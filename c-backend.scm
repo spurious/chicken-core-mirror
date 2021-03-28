@@ -1239,7 +1239,7 @@
         (wrap (lambda (x) (lambda (y) (list x y)))))
     (case type
       ((scheme-object) identity)
-      ((char unsigned-char) (wrap 'char))
+      ((char unsigned-char) (wrap 'C_character_code))
       ((byte int int32 unsigned-int unsigned-int32 unsigned-byte)
        (wrap 'C_unfix))
       ((short) (wrap 'C_unfix))
