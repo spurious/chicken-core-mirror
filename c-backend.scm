@@ -1027,11 +1027,11 @@
             '(let/cell C_a (cast (ptr word) C_buf)))
        (for-each
 	(lambda (type index vname)
-	  (gen `(let/unboxed ,(foreign-type-declaration type)
-                        ,(or vname (tvar index))
-	             (cast ,(foreign-type-declaration type)
-                           ,((foreign-argument-conversion type)
-                             (name "C_a" index))))))
+          (let ((fname (or vname (tvar index))))
+  	    (gen `(let/unboxed ,(foreign-type-declaration type fname) ,fname
+	               (cast ,(foreign-type-declaration type)
+                             ,((foreign-argument-conversion type)
+                               (name "C_a" index)))))))
          types (iota n) names)
        (when callback
          (gen '(let C_level (C_save_callback_continuation (adr C_a) C_k))))
