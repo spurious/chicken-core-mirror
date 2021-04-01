@@ -412,7 +412,9 @@
 
   (define (read-chunks in)
     (let get-chunks ([data '()])
-      (let ((size (string->number (read-line in) 16)))
+      (let* ((line (read-line in))
+             (size (and (not (eof-object? line))
+                   (string->number line 16))))
 	(cond ((not size)
 	       (error "invalid response from server - please try again"))
 	      ((zero? size)

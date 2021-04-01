@@ -4,6 +4,10 @@
   - Modules implementing an interface can now correctly export extra
     identifiers (bug reported by Martin Schneeweis, fix by "megane").
 
+- Tools
+  - Fixed a bug in chicken-install (#1744) that would cause
+    `Error: (string->number) bad argument type: #!eof` in some cases.
+
 4.13.0
 
 - Security fixes
