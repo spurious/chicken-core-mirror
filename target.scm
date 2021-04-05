@@ -177,7 +177,7 @@
                           (type (car arg))
                           (emit " " (cadr arg))))
              ;; tmp var for box/closure allocation
-             (emit ") " noreturn "{" #t "C_word tmp;"))))))
+             (emit ") " noreturn "{" #t "C_word C_tmp;"))))))
     ((end) 
      (emit "}")
      (when trampoline
@@ -351,11 +351,11 @@
                (expr aexp)
                (emit "[1]=")
                (expr (caddr x))
-               (emit ",tmp=(C_word)")
+               (emit ",C_tmp=(C_word)")
                (expr aexp)
                (emit ",")
                (expr aexp)
-               (emit "+=2,tmp)")))
+               (emit "+=2,C_tmp)")))
             ((cast)
              (emit "(")
              (type (cadr x))
