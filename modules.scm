@@ -42,7 +42,9 @@
 	chicken.internal
 	chicken.keyword
 	chicken.platform
-	chicken.syntax)
+	chicken.syntax
+	(only chicken.string string-split)
+	(only chicken.format fprintf format))
 
 (include "common-declarations.scm")
 (include "mini-srfi-1.scm")
@@ -460,6 +462,63 @@
       ;; invalid-export: Returns a string if given identifier names a
       ;; non-exportable object. The string names the type (e.g. "an
       ;; inline function"). Returns #f otherwise.
+
+      ;; Given a list of (<identifier> . <source-location>), builds a nicely
+      ;; formatted error message with suggestions where possible.
+      (define (report-unresolved-identifiers unknowns)
+	(let ((out (open-output-string)))
+	  (fprintf out "Module `~a' has unresolved identifiers" (module-name mod))
+
+	  ;; Print filename from a line number entry
+	  (let lp ((locs (apply append (map cdr unknowns))))
+	    (unless (null? locs)
+	      (or (and-let* ((loc (car locs))
+			     (ln (and (pair? loc) (cdr loc)))
+			     (ss (string-split ln ":"))
+			     ((= 2 (length ss))))
+		    (fprintf out "\n  In file `~a':" (car ss))
+		    #t)
+		  (lp (cdr locs)))))
+
+	  (for-each
+	   (lambda (id.locs)
+	     (fprintf out "\n\n  Unknown identifier `~a'" (car id.locs))
+
+	     ;; Print all source locations where this ID occurs
+	     (for-each
+	      (lambda (loc)
+		(define (ln->num ln) (let ((ss (string-split ln ":")))
+				       (if (and (pair? ss) (= 2 (length ss)))
+					   (cadr ss)
+					   ln)))
+		(and-let* ((loc-s
+			    (cond
+			      ((and (pair? loc) (car loc) (cdr loc)) =>
+			       (lambda (ln)
+				 (format "In procedure `~a' on line ~a" (car loc) (ln->num ln))))
+			      ((and (pair? loc) (cdr loc))
+			       (format "On line ~a" (ln->num (cdr loc))))
+			      (else (format "In procedure `~a'" loc)))))
+		  (fprintf out "\n    ~a" loc-s)))
+	      (reverse (cdr id.locs)))
+
+	     ;; Print suggestions from identifier db
+	     (and-let* ((id (car id.locs))
+			(a (getp id '##core#db)))
+	       (fprintf out "\n  Suggestion: try importing ")
+	       (cond
+		 ((= 1 (length a))
+		  (fprintf out "module `~a'" (cadar a)))
+		 (else
+		  (fprintf out "one of these modules:")
+		  (for-each
+		   (lambda (a)
+		     (fprintf out "\n    ~a" (cadr a)))
+		   a)))))
+	   unknowns)
+
+	  (##sys#error (get-output-string out))))
+
       (let* ((explist (module-export-list mod))
 	     (name (module-name mod))
 	     (dlist (module-defined-list mod))
@@ -511,38 +570,16 @@
 							" has not been defined.")))
                                                 (else (bomb "fail")))))))
                               (loop (cdr xl))))))))))
-        (for-each
-	 (lambda (u)
-	   (let* ((where (cdr u))
-		  (u (car u)))
-	     (unless (memq u elist)
-	       (let ((out (open-output-string)))
-		 (set! missing #t)
-		 (display "reference to possibly unbound identifier `" out)
-		 (display u out)
-		 (write-char #\' out)
-		 (when (pair? where)
-		   (display " in:" out)
-		   (for-each
-		    (lambda (sym)
-		      (display "\nWarning:    " out)
-		      (display sym out))
-		    where))
-		 (and-let* ((a (getp u '##core#db)))
-		   (cond ((= 1 (length a))
-			  (display "\nWarning:    suggesting: `(import " out)
-			  (display (cadar a) out)
-			  (display ")'" out))
-			 (else
-			  (display "\nWarning:    suggesting one of:" out)
-			  (for-each
-			   (lambda (a)
-			     (display "\nWarning:    (import " out)
-			     (display (cadr a) out)
-			     (write-char #\) out))
-			   a))))
-		 (##sys#warn (get-output-string out))))))
-	 (reverse (module-undefined-list mod)))
+
+	;; Check all identifiers were resolved
+	(let ((unknowns '()))
+	  (for-each (lambda (u)
+		      (unless (memq (car u) elist)
+			(set! unknowns (cons u unknowns))))
+		    (module-undefined-list mod))
+	  (unless (null? unknowns)
+	    (report-unresolved-identifiers unknowns)))
+
 	(when missing
 	  (##sys#error "module unresolved" name))
 	(let* ((iexports 

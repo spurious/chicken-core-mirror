@@ -567,7 +567,7 @@
 	(cadr x)
 	x) )
 
-  (define (resolve-variable x0 e dest ldest h)
+  (define (resolve-variable x0 e dest ldest h outer-ln)
     (when (memq x0 unlikely-variables)
       (warning
        (sprintf "reference to variable `~s' possibly unintended" x0) ))
@@ -598,7 +598,7 @@
 		      (finish-foreign-result ft body)
 		      t)
 		     e dest ldest h #f #f))))
-	    ((not (memq x e)) (##sys#alias-global-hook x #f h)) ; only if global
+	    ((not (memq x e)) (##sys#alias-global-hook x #f (cons h outer-ln))) ; only if global
             ((assq x forbidden-refs) =>
              (lambda (a)
                (let ((ln (cdr a)))
@@ -633,7 +633,7 @@
 
   (define (walk x e dest ldest h outer-ln tl?)
     (cond ((keyword? x) `(quote ,x))
-	  ((symbol? x) (resolve-variable x e dest ldest h))
+	  ((symbol? x) (resolve-variable x e dest ldest h outer-ln))
 	  ((not (pair? x))
 	   (if (constant? x)
 	       `(quote ,x)
@@ -684,9 +684,9 @@
 			   ,(walk (cadddr x) e dest ldest h ln tl?)))
 
 			((##core#local-specialization)
-			 (let* ((name (resolve-variable (cadr x) e dest ldest h))
+			 (let* ((name (resolve-variable (cadr x) e dest ldest h outer-ln))
 				(raw-alias (caddr x))
-				(resolved-alias (resolve-variable raw-alias e dest ldest h))
+				(resolved-alias (resolve-variable raw-alias e dest ldest h outer-ln))
 				(specs (##sys#get name '##compiler#local-specializations '())))
 			   (letrec ((resolve-alias (lambda (form)
 						     (cond ((pair? form) (cons (resolve-alias (car form)) (resolve-alias (cdr form))))
@@ -800,8 +800,7 @@
                         ((##core#with-forbidden-refs)
                          (let* ((loc (caddr x))
                                 (vars (map (lambda (v)
-                                             (cons (resolve-variable v e dest
-                                                                     ldest h) 
+                                             (cons (resolve-variable v e dest ldest h outer-ln)
                                                    loc))
                                         (cadr x))))
                            (fluid-let ((forbidden-refs 
