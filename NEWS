@@ -47,6 +47,9 @@
 - Compiler
   - Avoid re-using argvector when inline rest operations are being
     used in CPS calls (#1703, thanks to Jakob L. Keuze).
+  - An `emit-types-file` declaration has been added, which corresponds
+    to the compiler flag of the same name (#1644, thanks to Marco Maggi
+    for the suggestion).
 
 - Build system
   - Auto-configure at build time on most platforms. Cross-compilation

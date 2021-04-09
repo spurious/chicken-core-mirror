@@ -114,6 +114,16 @@ Note that the import library is only generated if it cannot be found in the curr
 directory, or if it exists but is not equal to the one that would be generated.
 
 
+=== emit-types-file
+
+ [declaration specifier] (emit-types-file [FILENAME])
+
+Enables generation of a types file for the current compilation unit, which will
+be written to the specified {{FILENAME}} or to {{<source-filename>.types}} in the
+current directory. This filename can be overridden with the {{-emit-types-file}}
+command line flag, which takes precedence over this declaration.
+
+
 === inline
 
  [declaration specifier] (inline)

@@ -232,7 +232,6 @@
 	(time-breakdown #f)
 	(forms '())
 	(inline-output-file #f)
-	(type-output-file #f)
 	(profile (or (memq 'profile options)
 		     (memq 'accumulate-profile options) 
 		     (memq 'profile-name options)))
@@ -392,7 +391,7 @@
       (set! local-definitions #t)
       (set! inline-output-file (option-arg ifile)))
     (and-let* ((tfile (memq 'emit-types-file options)))
-      (set! type-output-file (option-arg tfile)))
+      (set! types-output-file (option-arg tfile)))
     (and-let* ([inlimit (memq 'inline-limit options)])
       (set! inline-max-size 
 	(let ([arg (option-arg inlimit)])
@@ -759,9 +758,12 @@
 		       (when (memq 'v debugging-chicken)
 			 (dump-global-refs db))
 		       ;; do this here, because we must make sure we have a db
-		       (when type-output-file
-			 (dribble "generating type file `~a' ..." type-output-file)
-			 (emit-types-file filename type-output-file db block-compilation)))
+		       (and-let* ((tfile (or (and (eq? types-output-file #t)
+						  (pathname-replace-extension filename "types"))
+					     (and (string? types-output-file)
+						  types-output-file))))
+			 (dribble "generating type file `~a' ..." tfile)
+			 (emit-types-file filename tfile db block-compilation)))
 		     (set! first-analysis #f)
 		     (end-time "analysis")
 		     (print-db "analysis" '|4| db i)

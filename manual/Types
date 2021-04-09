@@ -257,7 +257,7 @@ definitions in an internal format to {{FILENAME}}.
 
 {{-consult-types-file FILENAME}} loads and registers the type-information
 in {{FILENAME}} which should be a file generated though a previous use
-of {{-emit-types-file}}.
+of {{-emit-types-file}} compiler option or {{emit-types-file}} declaration.
 
 If library code is used with {{import}}
 and a {{.types}} file of the same name exists in the

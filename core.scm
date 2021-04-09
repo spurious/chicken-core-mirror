@@ -49,6 +49,7 @@
 ; (compile-syntax)
 ; (disable-interrupts)
 ; (emit-import-library {<module> | (<module> <filename>)})
+; (emit-types-file [<filename>])
 ; (export {<name>})
 ; (fixnum-arithmetic)
 ; (foreign-declare {<string>})
@@ -300,7 +301,7 @@
      optimize-leaf-routines standalone-executable undefine-shadowed-macros
      verbose-mode local-definitions enable-specialization block-compilation
      inline-locally inline-substitutions-enabled strict-variable-types
-     static-extensions emit-link-file
+     static-extensions emit-link-file types-output-file
 
      ;; These are set by the (batch) driver, and read by the (c) backend
      disable-stack-overflow-checking emit-trace-info external-protos-first
@@ -423,6 +424,7 @@
 (define enable-specialization #f)
 (define static-extensions #f)
 (define emit-link-file #f)
+(define types-output-file #f) ; #t | <filename>
 
 ;;; Other global variables:
 
@@ -1721,6 +1723,12 @@
 			 (warning
 			  "invalid import-library specification" il))))
 		(strip-syntax (cdr spec))))))
+	((emit-types-file)
+	 (unless types-output-file
+	   (set! types-output-file
+	     (or (null? (cdr spec))
+		 (and (string? (cadr spec)) (null? (cddr spec)) (cadr spec))
+		 (quit-compiling "invalid `emit-types-file' declaration: ~S" spec)))))
        ((profile)
 	(set! emit-profile #t)
 	(cond ((null? (cdr spec))
