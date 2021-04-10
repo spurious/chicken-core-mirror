@@ -184,6 +184,8 @@ tests/scrutiny-2.expected
 tests/redact-gensyms.scm
 tests/test-scrutinizer-message-format.scm
 tests/scrutinizer-message-format.expected
+tests/test-line-numbers.scm
+tests/test-line-numbers.expected
 tests/syntax-rule-stress-test.scm
 tests/syntax-tests.scm
 tests/syntax-tests-2.scm

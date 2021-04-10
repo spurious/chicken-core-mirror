@@ -51,6 +51,7 @@
 	chicken.platform)
 
 (include "common-declarations.scm")
+(include "mini-srfi-1.scm")
 
 (define-syntax d (syntax-rules () ((_ . _) (void))))
 
@@ -833,10 +834,19 @@
    'transformer
    (lambda (form se dse)
      (let ((renv '()))	  ; keep rename-environment for this expansion
+       (define (inherit-pair-line-numbers old new)
+	 (and-let* ((name (car new))
+		    ((symbol? name))
+		    (ln (get-line-number old))
+		    (cur (or (hash-table-ref ##sys#line-number-database name) '())) )
+	   (unless (assq new cur)
+	     (hash-table-set! ##sys#line-number-database name
+			      (alist-cons new ln cur))))
+	 new)
        (assert (list? se) "not a list" se) ;XXX remove later
        (define (rename sym)
 	 (cond ((pair? sym)
-		(cons (rename (car sym)) (rename (cdr sym))))
+		(inherit-pair-line-numbers sym (cons (rename (car sym)) (rename (cdr sym)))))
 	       ((vector? sym)
 		(list->vector (rename (vector->list sym))))
 	       ((or (not (symbol? sym)) (keyword? sym)) sym)
@@ -898,7 +908,8 @@
 	  (else (assq-reverse s (cdr l)))))
        (define (mirror-rename sym)
 	 (cond ((pair? sym)
-		(cons (mirror-rename (car sym)) (mirror-rename (cdr sym))))
+		(inherit-pair-line-numbers
+		 sym (cons (mirror-rename (car sym)) (mirror-rename (cdr sym)))))
 	       ((vector? sym)
 		(list->vector (mirror-rename (vector->list sym))))
 	       ((or (not (symbol? sym)) (keyword? sym)) sym)
