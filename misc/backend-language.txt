@@ -1,4 +1,5 @@
 Description of Backend Intermediate Language
+============================================
 
 This document gives a rough description of the intermediate language
 used by the compiler back-end. The language is called XXX and
@@ -472,9 +473,4 @@ This document is terribly incomplete.
 
 
 NOTES: 
-- no stack overflow checks
-- ptables are enabled by default
-- no "return" macro for foreign stubs
-- C_check_for_interrupt is hand-expanded (no paranoia mode)
 - dropped logging of optimizations in target-file
-- dropped PARANOIA
