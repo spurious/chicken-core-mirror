@@ -98,6 +98,7 @@
 ; <variable>
 ; <constant>
 ; (##core#declare {<spec>})
+; (##core#local-specialization <variable> <alias> {<spec>})
 ; (##core#immutable <exp>)
 ; (##core#quote <exp>)
 ; (##core#syntax <exp>)
@@ -680,6 +681,18 @@
 			   ,(strip-syntax (cadr x))
 			   ,(caddr x)
 			   ,(walk (cadddr x) e dest ldest h ln tl?)))
+
+			((##core#local-specialization)
+			 (let* ((name (resolve-variable (cadr x) e dest ldest h))
+				(raw-alias (caddr x))
+				(resolved-alias (resolve-variable raw-alias e dest ldest h))
+				(specs (##sys#get name '##compiler#local-specializations '())))
+			   (letrec ((resolve-alias (lambda (form)
+						     (cond ((pair? form) (cons (resolve-alias (car form)) (resolve-alias (cdr form))))
+							   ((eq? form raw-alias) resolved-alias)
+							   (else form)))))
+			     (##sys#put! name '##compiler#local-specializations (##sys#append specs (resolve-alias (cdddr x))))
+			     '(##core#undefined))))
 
 			((##core#typecase)
 			 `(##core#typecase
