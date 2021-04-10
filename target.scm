@@ -1,5 +1,7 @@
 ;;; target.scm - C code-generator for the CHICKEN compiler
 ;
+; Converts ERRATIC output from backend into C.
+;
 ; Copyright (c) 2018-2021, The CHICKEN Team
 ; All rights reserved.
 ;
@@ -137,7 +139,7 @@
        (let loop ((x (cdr x)))
          (case (car x)
            ((extern) 
-            (set! class 'extern)
+            (set! class 'C_extern)
             (loop (cdr x)))
            ((static) 
             (set! class 'static)
