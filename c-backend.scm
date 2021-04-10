@@ -1,5 +1,9 @@
 ;;; c-backend.scm - C-generating backend for the CHICKEN compiler
 ;
+; This pass takes internal nodes and generates "ERRATIC" (Expressions Representing 
+; Regrettable Attempts To Impersonate C) s-expressions, which are then transformed 
+; into the target language by the "target" module.
+;
 ; Copyright (c) 2008-2021, The CHICKEN Team
 ; Copyright (c) 2000-2007, Felix L. Winkelmann
 ; All rights reserved.
