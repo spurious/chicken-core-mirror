@@ -1128,16 +1128,16 @@ EOF
     ((windows)
      (printf #<<EOF
 @echo off~%
-set PATH=~a;%PATH%
-set CHICKEN_CC=~a
-set CHICKEN_CXX=~a
-set CHICKEN_CSC=~a
-set CHICKEN_CSI=~a
+set "PATH=~a;%PATH%"
+set "CHICKEN_CC=~a"
+set "CHICKEN_CXX=~a"
+set "CHICKEN_CSC=~a"
+set "CHICKEN_CSI=~a"
 
 EOF
-             (qs* default-bindir platform) (qs* default-cc platform)
-	     (qs* default-cxx platform) (qs* default-csc platform)
-	     (qs* default-csi platform)))))
+             default-bindir default-cc
+	     default-cxx default-csc
+	     default-csi))))
 
 (define ((build-suffix mode name info) platform)
   (case platform

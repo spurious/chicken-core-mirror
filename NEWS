@@ -80,6 +80,9 @@
     cache directory matching its program name (#1713, thanks to Alice Maz)
   - Fixed bug in chicken-install regarding variable quotation on UNIX-like
     systems which prevented installation into paths with spaces (#1685).
+  - Fixed a similar bug in chicken-install for paths with spaces on mingw
+    and mingw-msys (#1727, thanks to Josh Helzer for reporting and Vasilij
+    Schneidermann for the patch).
 
 - Module system
   - Fixed a memory leak when calling (import) multiple times in a row
