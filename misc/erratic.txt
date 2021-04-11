@@ -57,6 +57,10 @@ This document is terribly incomplete.
     (else)
     (endif)
 
+    (ifdef MACRO)
+    (elseifdef)
+    (endifdef)
+
     (inline CODE)
     (label LABEL)
 
