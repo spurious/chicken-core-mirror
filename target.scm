@@ -1,6 +1,6 @@
 ;;; target.scm - C code-generator for the CHICKEN compiler
 ;
-; Converts ERRATIC output from backend into C.
+; Converts "ERRATIC" output from backend into C.
 ;
 ; Copyright (c) 2018-2021, The CHICKEN Team
 ; All rights reserved.
