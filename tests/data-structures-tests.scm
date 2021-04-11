@@ -79,5 +79,19 @@
 
 (assert (equal? '() (topological-sort '() eq?)))
 (assert (equal? '(a b c d) (topological-sort '((a b) (b c) (c d)) eq?)))
-(assert (equal? '(c d a b) (topological-sort '((a b) (c d)) eq?)))
+(assert (equal? '(a b c d) (topological-sort '((a b) (c d)) eq?)))
 (assert-error (topological-sort '((a b) (b a)) eq?))
+(assert 
+  (equal? 
+    (topological-sort
+     '((i am)
+       (not trying)
+       (confuse the)
+       (am trying)
+       (trying to)
+       (am not)
+       (trying the)
+       (to confuse)
+       (the issue))
+      eq?)
+    '(i am not trying to confuse the issue)))
