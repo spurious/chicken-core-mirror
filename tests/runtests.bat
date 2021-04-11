@@ -144,6 +144,14 @@ if errorlevel 1 exit /b 1
 a.out
 if errorlevel 1 exit /b 1
 
+echo ======================================== line number database ...
+%compile% -O3 test-line-numbers.scm 2>test-line-numbers.out
+if errorlevel 1 exit /b 1
+fc /lb%FCBUFSIZE% /w test-line-numbers.expected test-line-numbers.out
+if errorlevel 1 exit /b 1
+a.out
+if errorlevel 1 exit /b 1
+
 echo ======================================== specialization tests ...
 del /f /q foo.types foo.import.*
 %compile% specialization-test-1.scm -emit-types-file foo.types -specialize -debug ox -emit-import-library foo

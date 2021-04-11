@@ -51,6 +51,9 @@
     still requires PLATFORM to be set, and it can still be provided
     manually, but it is no longer required in the common case.
 
+- Tools
+  - Fixed a bug in chicken-install (#1744) that would cause
+    `Error: (string->number) bad argument type: #!eof` in some cases.
 
 5.2.0
 
