@@ -664,6 +664,12 @@ void *alloca ();
 # define C_MACHINE_TYPE "ia64"
 #elif defined(__x86_64__)
 # define C_MACHINE_TYPE "x86-64"
+#elif defined(__riscv)
+# if defined(__LP64__) || defined(_LP64)
+#  define C_MACHINE_TYPE "riscv64"
+# else
+#  define C_MACHINE_TYPE "riscv"
+# endif
 #elif defined(__arm64__) || defined(__aarch64__)
 # define C_MACHINE_TYPE "arm64"
 #elif defined(__arm__)
