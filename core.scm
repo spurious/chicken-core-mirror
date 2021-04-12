@@ -528,8 +528,7 @@
 	  (else (find-id id (cdr se)))))
 
   (define (lookup id)
-    (cond ((keyword? id) id)		; DEPRECATED
-	  ((find-id id (##sys#current-environment)))
+    (cond ((find-id id (##sys#current-environment)))
 	  ((##sys#get id '##core#macro-alias) symbol? => values)
 	  (else id)))
 
