@@ -725,4 +725,4 @@ if errorlevel 1 exit /b 1
 rem echo ======================================== reinstall tests
 rem currently disabled for windows
 
-echo ======================================== done.
+echo ======================================== done. All tests passed.
