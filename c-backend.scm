@@ -449,6 +449,14 @@
                  `(deref (cast (ptr ,(foreign-type-declaration t))
                                (C_data_pointer ,(expr (first subs) i)))))))
      
+	    ((##core#inline_update)
+	     (let ((t (second params)))
+	       `(begin
+                  (set ,(first params) (cast ,(foreign-type-declaration t) 
+                                             ,((foreign-argument-conversion t)
+                                               (expr (first subs) i))))
+                  C_SCHEME_UNDEFINED)))
+
 	    ((##core#inline_loc_update)
 	     (let ((t (first params)))
 	       `(begin 
