@@ -531,4 +531,4 @@ $interpret -s multiple-values.scm
 $compile multiple-values.scm
 ./a.out
 
-echo "======================================== done."
+echo "======================================== done. All tests passed."

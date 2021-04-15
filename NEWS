@@ -22,6 +22,8 @@
     to 0666 (plus whatever change the effective umask applies), rather
     than 0744 (see #1698).
   - Fixed type database entry for "log" with second arg (fixes #1725).
+  - Made topological-sort behave better when dependency target is listed
+    multiple times by concatenating dependencies (fixes #1185).
 
 - Runtime system
   - Sleeping primordial thread doesn't forget mutations made to
