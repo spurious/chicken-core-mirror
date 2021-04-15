@@ -56,6 +56,8 @@
 - Tools
   - Fixed a bug in chicken-install (#1744) that would cause
     `Error: (string->number) bad argument type: #!eof` in some cases.
+  - If chicken-install has a program prefix/suffix, it now writes to a
+    cache directory matching its program name (#1713, thanks to Alice Maz)
 
 5.2.0
 
