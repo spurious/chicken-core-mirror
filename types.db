@@ -2618,7 +2618,7 @@
 		     (((struct hash-table)) (##sys#slot #(1) '6)))
 
 (hash-table-merge (#(procedure #:clean #:enforce) hash-table-merge ((struct hash-table) (struct hash-table)) (struct hash-table)))
-(hash-table-merge! (#(procedure #:clean #:enforce) hash-table-merge! ((struct hash-table) (struct hash-table)) undefined))
+(hash-table-merge! (#(procedure #:clean #:enforce) hash-table-merge! ((struct hash-table) (struct hash-table)) (struct hash-table)))
 
 (hash-table-min-load (#(procedure #:clean #:enforce) hash-table-min-load ((struct hash-table)) fixnum)
 		     (((struct hash-table)) (##sys#slot #(1) '5)))
