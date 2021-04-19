@@ -3523,7 +3523,7 @@ inline static int C_stat(const char *path, struct stat *buf)
     goto dircheck;
 
   if(slash && errno == ENOENT) {
-    C_strlcpy((str = C_alloca(len + 1)), path, len + 1);
+    C_strlcpy((str = (char *)C_alloca(len + 1)), path, len + 1);
     while(len > 1 && C_strchr("\\/", path[--len]))
       str[len] = '\0';
     if(stat(str, buf) == 0)
