@@ -142,7 +142,8 @@
       ((generated-source-file) (list (list 'generated-source-file mode (cadr info))))
       ((c-include) (list (list 'c-include mode (cadr info))))
       ((scheme-include) (list (list 'scheme-include mode (cadr info))))
-      ((program) (list (list 'program mode (cadr info))))))
+      ((program) (list (list 'program mode (cadr info))))
+      ((c-object) (list (list 'c-object mode (cadr info))))))
 
   (define (list-installed-components eggs)
     (let ((w (quotient (- (get-terminal-width) 2) 2)))
