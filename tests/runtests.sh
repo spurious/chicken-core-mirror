@@ -141,6 +141,11 @@ $compile scrutiny-tests-3.scm -specialize -block
 $compile scrutiny-tests-strict.scm -strict-types -specialize
 ./a.out
 
+echo "======================================== line number database ..."
+$compile -O3 test-line-numbers.scm 2> test-line-numbers.out
+diff $DIFF_OPTS test-line-numbers.expected test-line-numbers.out
+./a.out
+
 echo "======================================== specialization tests ..."
 rm -f foo.types foo.import.*
 $compile specialization-test-1.scm -emit-types-file foo.types -specialize \
@@ -526,4 +531,4 @@ $interpret -s multiple-values.scm
 $compile multiple-values.scm
 ./a.out
 
-echo "======================================== done."
+echo "======================================== done. All tests passed."

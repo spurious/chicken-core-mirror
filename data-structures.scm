@@ -543,7 +543,16 @@
                             #f
                             (cons edge path)
                             state))))))))
-  (let loop ((dag dag)
+  (define normalized-dag
+    (foldl (lambda (result node)
+             (alist-update! (car node)
+                            (append (cdr node)
+                                    (or (alist-ref (car node) dag pred) '()))
+                            result
+                            pred))
+           '()
+           dag))
+  (let loop ((dag normalized-dag)
              (state (cons (list) (list))))
     (if (null? dag)
         (cdr state)

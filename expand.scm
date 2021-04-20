@@ -51,6 +51,7 @@
 	chicken.platform)
 
 (include "common-declarations.scm")
+(include "mini-srfi-1.scm")
 
 (define-syntax d (syntax-rules () ((_ . _) (void))))
 
@@ -140,21 +141,6 @@
        (putp alias '##core#real-name (or original-real-name sym))))
    aliases vars)
   (append (map (lambda (x y) (cons x y)) vars aliases) se)) ; inline cons
-
-
-;;; resolve symbol to global name
-
-(define (##sys#globalize sym se)
-  (let loop1 ((sym sym))
-    (cond ((not (symbol? sym)) sym)
-	  ((getp sym '##core#macro-alias) =>
-	   (lambda (a) (if (symbol? a) (loop1 a) sym)))
-	  (else
-	   (let loop ((se se))		; ignores syntax bindings
-	     (cond ((null? se)
-		    (##sys#alias-global-hook sym #t #f)) ;XXX could hint at decl (3rd arg)
-		   ((and (eq? sym (caar se)) (symbol? (cdar se))) (cdar se))
-		   (else (loop (cdr se)))))))))
 
 
 ;;; Macro handling
@@ -762,10 +748,10 @@
       (or (##sys#extended-lambda-list? x)
 	  (let loop ((x x))
 	    (cond ((null? x))
-		  ((symbol? x) (not (keyword? x)))
+		  ((symbol? x))
 		  ((pair? x)
 		   (let ((s (car x)))
-		     (and (symbol? s) (not (keyword? s))
+		     (and (symbol? s)
 			  (loop (cdr x)) ) ) )
 		  (else #f) ) ) ) )
 
@@ -833,13 +819,22 @@
    'transformer
    (lambda (form se dse)
      (let ((renv '()))	  ; keep rename-environment for this expansion
+       (define (inherit-pair-line-numbers old new)
+	 (and-let* ((name (car new))
+		    ((symbol? name))
+		    (ln (get-line-number old))
+		    (cur (or (hash-table-ref ##sys#line-number-database name) '())) )
+	   (unless (assq new cur)
+	     (hash-table-set! ##sys#line-number-database name
+			      (alist-cons new ln cur))))
+	 new)
        (assert (list? se) "not a list" se) ;XXX remove later
        (define (rename sym)
 	 (cond ((pair? sym)
-		(cons (rename (car sym)) (rename (cdr sym))))
+		(inherit-pair-line-numbers sym (cons (rename (car sym)) (rename (cdr sym)))))
 	       ((vector? sym)
 		(list->vector (rename (vector->list sym))))
-	       ((or (not (symbol? sym)) (keyword? sym)) sym)
+	       ((not (symbol? sym)) sym)
 	       ((assq sym renv) => 
 		(lambda (a) 
 		  (dd `(RENAME/RENV: ,sym --> ,(cdr a)))
@@ -862,8 +857,8 @@
 				   (do ((i 0 (fx+ i 1))
 					(f #t (compare (vector-ref s1 i) (vector-ref s2 i))))
 				       ((or (fx>= i len) (not f)) f))))))
-		      ((and (symbol? s1) (not (keyword? s1))
-			    (symbol? s2) (not (keyword? s2)))
+		      ((and (symbol? s1)
+			    (symbol? s2))
 		       (let ((ss1 (or (getp s1 '##core#macro-alias)
 				      (lookup2 1 s1 dse)
 				      s1) )
@@ -898,10 +893,11 @@
 	  (else (assq-reverse s (cdr l)))))
        (define (mirror-rename sym)
 	 (cond ((pair? sym)
-		(cons (mirror-rename (car sym)) (mirror-rename (cdr sym))))
+		(inherit-pair-line-numbers
+		 sym (cons (mirror-rename (car sym)) (mirror-rename (cdr sym)))))
 	       ((vector? sym)
 		(list->vector (mirror-rename (vector->list sym))))
-	       ((or (not (symbol? sym)) (keyword? sym)) sym)
+	       ((not (symbol? sym)) sym)
 	       (else		 ; Code stolen from strip-syntax
 		(let ((renamed (lookup sym se) ) )
 		  (cond ((assq-reverse sym renv) =>

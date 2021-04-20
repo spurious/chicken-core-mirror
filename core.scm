@@ -98,6 +98,7 @@
 ; <variable>
 ; <constant>
 ; (##core#declare {<spec>})
+; (##core#local-specialization <variable> <alias> {<spec>})
 ; (##core#immutable <exp>)
 ; (##core#quote <exp>)
 ; (##core#syntax <exp>)
@@ -527,8 +528,7 @@
 	  (else (find-id id (cdr se)))))
 
   (define (lookup id)
-    (cond ((keyword? id) id)		; DEPRECATED
-	  ((find-id id (##sys#current-environment)))
+    (cond ((find-id id (##sys#current-environment)))
 	  ((##sys#get id '##core#macro-alias) symbol? => values)
 	  (else id)))
 
@@ -680,6 +680,18 @@
 			   ,(strip-syntax (cadr x))
 			   ,(caddr x)
 			   ,(walk (cadddr x) e dest ldest h ln tl?)))
+
+			((##core#local-specialization)
+			 (let* ((name (resolve-variable (cadr x) e dest ldest h))
+				(raw-alias (caddr x))
+				(resolved-alias (resolve-variable raw-alias e dest ldest h))
+				(specs (##sys#get name '##compiler#local-specializations '())))
+			   (letrec ((resolve-alias (lambda (form)
+						     (cond ((pair? form) (cons (resolve-alias (car form)) (resolve-alias (cdr form))))
+							   ((eq? form raw-alias) resolved-alias)
+							   (else form)))))
+			     (##sys#put! name '##compiler#local-specializations (##sys#append specs (resolve-alias (cdddr x))))
+			     '(##core#undefined))))
 
 			((##core#typecase)
 			 `(##core#typecase
@@ -1367,17 +1379,12 @@
 				   name)))))
 
 			((##core#declare)
-			 (let ((old-se (##sys#current-environment)))
-			  (parameterize ((##sys#current-environment '())) ;; ??
-			    (walk
-			     `(##core#begin
-			       ,@(map (lambda (d)
-					(process-declaration
-					 d old-se
-					 (lambda (id)
-					   (memq (lookup id) e))))
-				      (cdr x) ) )
-			     e #f #f h ln #f))) )
+			 (walk
+			  `(##core#begin
+			    ,@(map (lambda (d)
+				     (process-declaration d lookup (lambda (id) (memq (lookup id) e))))
+				   (cdr x) ) )
+			  e #f #f h ln #f) )
 
 			((##core#foreign-callback-wrapper)
 			 (let-values ([(args lam) (split-at (cdr x) 4)])
@@ -1528,21 +1535,18 @@
    '() #f #f #f #f #t) ) )
 
 
-(define (process-declaration spec se local?)
+(define (process-declaration spec lookup local?)
   (define (check-decl spec minlen . maxlen)
     (let ([n (length (cdr spec))])
       (if (or (< n minlen) (> n (optional maxlen 99999)))
 	  (syntax-error "invalid declaration" spec) ) ) )
-  (define (stripa x)			; global aliasing
-    (##sys#globalize x se))
-  (define (globalize-all syms)
-    (filter-map
-     (lambda (var)
-       (cond ((local? var)
-	      (note-local var)
-	      #f)
-	     (else (##sys#globalize var se))))
-     syms))
+  (define (globalize var)
+    (cond ((local? var)
+	   (note-local var)
+	   #f)
+	  (else (##sys#alias-global-hook (lookup var) #t #f))))
+  (define (globalize-all vars)
+    (filter-map globalize vars))
   (define (note-local var)
     (##sys#notice
      (sprintf "ignoring declaration for locally bound variable `~a'" var)))
@@ -1565,17 +1569,17 @@
        ((standard-bindings)
 	(if (null? (cdr spec))
 	    (set! standard-bindings default-standard-bindings)
-	    (set! standard-bindings (append (stripa (cdr spec)) standard-bindings)) ) )
+	    (set! standard-bindings (append (globalize-all (cdr spec)) standard-bindings)) ) )
        ((extended-bindings)
 	(if (null? (cdr spec))
 	    (set! extended-bindings default-extended-bindings)
-	    (set! extended-bindings (append (stripa (cdr spec)) extended-bindings)) ) )
+	    (set! extended-bindings (append (globalize-all (cdr spec)) extended-bindings)) ) )
        ((usual-integrations)
 	(cond [(null? (cdr spec))
 	       (set! standard-bindings default-standard-bindings)
 	       (set! extended-bindings default-extended-bindings) ]
 	      [else
-	       (let ([syms (stripa (cdr spec))])
+	       (let ([syms (globalize-all (cdr spec))])
 		 (set! standard-bindings (lset-intersection/eq? syms default-standard-bindings))
 		 (set! extended-bindings (lset-intersection/eq? syms default-extended-bindings)))]))
        ((number-type)
@@ -1590,7 +1594,7 @@
        ((no-procedure-checks) (set! no-procedure-checks #t))
        ((disable-interrupts) (set! insert-timer-checks #f))
        ((always-bound)
-	(for-each (cut mark-variable <> '##compiler#always-bound) (stripa (cdr spec))))
+	(for-each (cut mark-variable <> '##compiler#always-bound) (cdr spec)))
        ((safe-globals) (set! safe-globals-flag #t))
        ((no-procedure-checks-for-usual-bindings)
 	(for-each
@@ -1627,13 +1631,13 @@
 	       (set! standard-bindings '())
 	       (set! standard-bindings
 		 (lset-difference/eq? default-standard-bindings
-				      (stripa (cddr spec)))))]
+				      (globalize-all (cddr spec)))))]
 	  [(extended-bindings)
 	   (if (null? (cddr spec))
 	       (set! extended-bindings '())
 	       (set! extended-bindings
 		 (lset-difference/eq? default-extended-bindings
-				      (stripa (cddr spec)))))]
+				      (globalize-all (cddr spec)))))]
 	  [(inline)
 	   (if (null? (cddr spec))
 	       (set! inline-locally #f)
@@ -1645,7 +1649,7 @@
 		  (set! standard-bindings '())
 		  (set! extended-bindings '()) ]
 		 [else
-		  (let ([syms (stripa (cddr spec))])
+		  (let ([syms (globalize-all (cddr spec))])
 		    (set! standard-bindings (lset-difference/eq? default-standard-bindings syms))
 		    (set! extended-bindings (lset-difference/eq? default-extended-bindings syms)))])]
 	  ((inline-global)
@@ -1696,7 +1700,7 @@
 	       "invalid argument to `unroll-limit' declaration"
 	       spec) ) ) )
        ((pure)
-	(let ((syms (cdr spec)))
+	(let ((syms (globalize-all (cdr spec))))
 	  (if (every symbol? syms)
 	      (for-each
 	       (cut mark-variable <> '##compiler#pure #t)
@@ -1732,7 +1736,7 @@
 	      (else
 	       (for-each
 		(cut mark-variable <> '##compiler#local)
-		(stripa (cdr spec))))))
+		(globalize-all (cdr spec))))))
        ((inline-global)
 	(set! enable-inline-files #t)
 	(set! inline-locally #t)
@@ -1747,7 +1751,7 @@
 			 (>= (length spec) 2)
 			 (symbol? (car spec))))
 	       (warning "illegal type declaration" (strip-syntax spec))
-	       (let ((name (##sys#globalize (car spec) se))
+	       (let ((name (globalize (car spec)))
 		     (type (strip-syntax (cadr spec))))
 		 (if (local? (car spec))
 		     (note-local (car spec))
@@ -1755,7 +1759,6 @@
 		       (cond (type
 			      ;; HACK: since `:' doesn't have access to the SE, we
 			      ;; fixup the procedure name if type is a named procedure type
-			      ;; (We only have access to the SE for ##sys#globalize in here).
 			      ;; Quite terrible.
 			      (when (and (pair? type)
 					 (eq? 'procedure (car type))
@@ -1780,7 +1783,7 @@
 	(for-each
 	 (lambda (spec)
 	   (cond ((and (list? spec) (symbol? (car spec)) (= 2 (length spec)))
-		  (let ((name (##sys#globalize (car spec) se))
+		  (let ((name (globalize (car spec)))
 			(type (strip-syntax (cadr spec))))
 		    (if (local? (car spec))
 			(note-local (car spec))

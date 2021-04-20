@@ -164,10 +164,8 @@
 	   (##sys#check-syntax 'define-specialization x '(_ (variable . #(_ 0)) _ . #(_ 0 1)))
 	   (let* ((head (cadr x))
 		  (name (car head))
-		  (gname (##sys#globalize name '())) ;XXX correct?
 		  (args (cdr head))
 		  (alias (gensym name))
-		  (galias (##sys#globalize alias '())) ;XXX and this?
 		  (rtypes (and (pair? (cdddr x)) (strip-syntax (caddr x))))
 		  (%define (r 'define))
 		  (body (if rtypes (cadddr x) (caddr x))))
@@ -176,26 +174,24 @@
 		      (let ((anames (reverse anames))
 			    (atypes (reverse atypes))
 			    (spec
-			     `(,galias ,@(let loop2 ((anames anames) (i 1))
-					   (if (null? anames)
-					       '()
-					       (cons (vector i)
-						     (loop2 (cdr anames) (fx+ i 1))))))))
-			(##sys#put!
-			 gname '##compiler#local-specializations
-			 (##sys#append
-			  (##sys#get gname '##compiler#local-specializations '())
-			  (list
-			   (cons atypes
-				 (if (and rtypes (pair? rtypes))
-				     (list
-				      (map (cut chicken.compiler.scrutinizer#check-and-validate-type
-						<>
-						'define-specialization)
-					   rtypes)
-				      spec)
-				     (list spec))))))
+			     `(,alias ,@(let loop2 ((anames anames) (i 1))
+					  (if (null? anames)
+					      '()
+					      (cons (vector i)
+						    (loop2 (cdr anames) (fx+ i 1))))))))
 			`(##core#begin
+			  (##core#local-specialization
+			   ,name
+			   ,alias
+			   ,(cons atypes
+				  (if (and rtypes (pair? rtypes))
+				      (list
+				       (map (cut chicken.compiler.scrutinizer#check-and-validate-type
+					      <>
+					      'define-specialization)
+					    rtypes)
+				       spec)
+				      (list spec))))
 			  (##core#declare (inline ,alias) (hide ,alias))
 			  (,%define (,alias ,@anames)
 				    (##core#let ,(map (lambda (an at)

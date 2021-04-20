@@ -34,5 +34,6 @@ case "`uname -m`" in
 	    *) echo "ppc.sysv";;
 	esac;;
     amd64|x86_64) echo "x86-64";;
+    riscv*) echo "riscv";;
     *) ;;
 esac

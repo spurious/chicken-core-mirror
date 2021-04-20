@@ -606,7 +606,7 @@
 			 [(##core#compiletimetoo)
 			  (compile (cadr x) e #f tf cntr tl?) ]
 
-			 [(##core#compiletimeonly ##core#callunit) 
+			 [(##core#compiletimeonly ##core#callunit ##core#local-specialization)
 			  (compile '(##core#undefined) e #f tf cntr tl?) ]
 
 			 [(##core#declare)

@@ -22,6 +22,8 @@
     to 0666 (plus whatever change the effective umask applies), rather
     than 0744 (see #1698).
   - Fixed type database entry for "log" with second arg (fixes #1725).
+  - Made topological-sort behave better when dependency target is listed
+    multiple times by concatenating dependencies (fixes #1185).
 
 - Runtime system
   - Sleeping primordial thread doesn't forget mutations made to
@@ -51,6 +53,11 @@
     still requires PLATFORM to be set, and it can still be provided
     manually, but it is no longer required in the common case.
 
+- Tools
+  - Fixed a bug in chicken-install (#1744) that would cause
+    `Error: (string->number) bad argument type: #!eof` in some cases.
+  - If chicken-install has a program prefix/suffix, it now writes to a
+    cache directory matching its program name (#1713, thanks to Alice Maz)
 
 5.2.0
 

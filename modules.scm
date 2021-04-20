@@ -802,8 +802,7 @@
 	       (register-undefined sym mod where))
 	     (module-rename sym (module-name mod))))
 	  (else sym)))
-  (cond ((keyword? sym) sym)
-	((namespaced-symbol? sym) sym)
+  (cond ((namespaced-symbol? sym) sym)
 	((assq sym (##sys#current-environment)) =>
 	 (lambda (a)
 	   (let ((sym2 (cdr a)))

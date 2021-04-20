@@ -43,6 +43,7 @@ EOF
 (define cross-chicken (feature? #:cross-chicken))
 (define binary-version (foreign-value "C_BINARY_VERSION" int))
 (define major-version (foreign-value "C_MAJOR_VERSION" int))
+(define chicken-install-program (foreign-value "C_CHICKEN_INSTALL_PROGRAM" c-string))
 
 (define default-cc (foreign-value "C_TARGET_CC" c-string))
 (define default-cxx (foreign-value "C_TARGET_CXX" c-string))
@@ -121,4 +122,4 @@ EOF
   (or (get-environment-variable "CHICKEN_EGG_CACHE")
       (make-pathname (or (system-cache-directory)
                          (current-directory))
-                     "chicken-install")))
+                     chicken-install-program)))
