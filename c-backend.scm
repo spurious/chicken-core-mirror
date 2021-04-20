@@ -887,7 +887,7 @@
                   (when (and looping (not customizable))
                     ;; Loop will update t_n copy of av[n]; refresh av.
                     (let loop ((i 0))
-                      (if (>= i n)
+                      (unless (>= i n)
                           (gen `(set (elt av ,i) ,(tvar i)))
                           (loop (add1 i)))))
                   (if (and customizable (> nec 0))
