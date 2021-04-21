@@ -1716,7 +1716,7 @@
 		  (cond ((symbol? il)
 			 (cons il (string-append (symbol->string il) ".import.scm")) )
 			((and (list? il) (= 2 (length il))
-			      (symbol? (car il)) (string (cadr il)))
+			      (symbol? (car il)) (string? (cadr il)))
 			 (cons (car il) (cadr il)))
 			(else
 			 (warning
