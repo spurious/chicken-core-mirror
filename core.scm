@@ -1719,8 +1719,7 @@
 			      (symbol? (car il)) (string? (cadr il)))
 			 (cons (car il) (cadr il)))
 			(else
-			 (warning
-			  "invalid import-library specification" il))))
+			 (quit-compiling "invalid `import-library' specification: ~S" il))))
 		(strip-syntax (cdr spec))))))
 	((emit-types-file)
 	 (unless types-output-file
