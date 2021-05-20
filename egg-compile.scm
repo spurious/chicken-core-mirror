@@ -1239,7 +1239,7 @@ EOF
 
 (define (shell-variable var platform)
   (case platform
-    ((unix) (string-append "${" var "}"))
+    ((unix) (string-append "\"${" var "}\""))
     ((windows) (string-append "%" var "%"))))
 
 ;; NOTE `cmd' must already be quoted for shell

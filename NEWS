@@ -65,6 +65,8 @@
     `Error: (string->number) bad argument type: #!eof` in some cases.
   - If chicken-install has a program prefix/suffix, it now writes to a
     cache directory matching its program name (#1713, thanks to Alice Maz)
+  - Fixed bug in chicken-install regarding variable quotation on UNIX-like
+    systems which prevented installation into paths with spaces (#1685).
 
 5.2.0
 
