@@ -1392,8 +1392,10 @@
 			       ((string) #(1)))
 (##sys#foreign-symbol-argument (#(procedure #:clean #:enforce) ##sys#foreign-symbol-argument (symbol) symbol)
 			       ((symbol) #(1)))
-(##sys#foreign-pointer-argument (#(procedure #:clean #:enforce) ##sys#foreign-pointer-argument ((or pointer false)) pointer)
-				((pointer) #(1)))
+(##sys#foreign-pointer-argument (forall ((p (or locative pointer)))
+					(#(procedure #:clean #:enforce) ##sys#foreign-pointer-argument (p) p))
+				((pointer) (pointer) #(1))
+				((locative) (locative) #(1)))
 
 (##sys#check-blob (#(procedure #:clean #:enforce) ##sys#check-blob (blob #!optional *) *)
 		  ((blob) (let ((#(tmp) #(1))) '#t))
