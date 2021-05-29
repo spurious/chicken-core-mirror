@@ -1569,7 +1569,7 @@ C_word CHICKEN_run(void *toplevel)
   stack_bottom = C_stack_pointer;
 
   if(debug_mode)
-    C_dbg(C_text("debug"), C_text("stack bottom is 0x%lx.\n"), (C_word)stack_bottom);
+    C_dbg(C_text("debug"), C_text("stack bottom is 0x%lx\n"), (C_word)stack_bottom);
 
   /* The point of (usually) no return... */
 #ifdef HAVE_SIGSETJMP
