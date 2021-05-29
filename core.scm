@@ -2668,7 +2668,7 @@
 		       (transform (make-node '##core#inline
 					     (list "C_i_list_ref")
 					     (list rest-var (qnode (second params)))) here closure))
-		      ((##core#rest-null)
+		      ((##core#rest-null?)
 		       (transform (make-node '##core#inline
 					     (list "C_i_greater_or_equal_p")
 					     (list (qnode (second params))
