@@ -150,8 +150,10 @@ static C_TLS int timezone;
 
 #ifdef C_SIXTY_FOUR
 # define DEFAULT_STACK_SIZE            (1024 * 1024)
+# define DEFAULT_MAXIMAL_HEAP_SIZE     0x7ffffffffffffff0
 #else
 # define DEFAULT_STACK_SIZE            (256 * 1024)
+# define DEFAULT_MAXIMAL_HEAP_SIZE     0x7ffffff0
 #endif
 
 #define DEFAULT_SYMBOL_TABLE_SIZE      2999
@@ -159,7 +161,6 @@ static C_TLS int timezone;
 #define DEFAULT_HEAP_SIZE              DEFAULT_STACK_SIZE
 #define MINIMAL_HEAP_SIZE              DEFAULT_STACK_SIZE
 #define DEFAULT_SCRATCH_SPACE_SIZE     256
-#define DEFAULT_MAXIMAL_HEAP_SIZE      0x7ffffff0
 #define DEFAULT_HEAP_GROWTH            200
 #define DEFAULT_HEAP_SHRINKAGE         50
 #define DEFAULT_HEAP_SHRINKAGE_USED    25

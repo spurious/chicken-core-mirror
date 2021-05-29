@@ -35,6 +35,9 @@
     contributed by Sebastien Marie)
   - A feature corresponding to the word size is available
     regardless of the word size (#1693)
+  - The default maximum heap size on 64-bit platforms is now the
+    theoretical maximum addressable memory size (#1675).  Use -:m
+    if you would like to override this at run-time.
   - Deprecated C_(a_i_current_)milliseconds in favor of
     C_(a_i_)current_process_milliseconds to match the Scheme-level
     deprecation of current-milliseconds.
