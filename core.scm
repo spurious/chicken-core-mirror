@@ -2677,7 +2677,7 @@
 		       (transform (make-node '##core#inline
 					     (list "C_i_length")
 					     (list rest-var (qnode (second params)))) here closure))
-		      (else (bomb "Unknown rest op node class in while converting to closure. This shouldn't happen!" class))))
+		      (else (bomb "Unknown rest op node class while converting to closure. This shouldn't happen!" class))))
 
 		   (else val)) ) )
 
