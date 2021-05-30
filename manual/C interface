@@ -1536,7 +1536,7 @@ The C version of {{(equal? a b)}}.
 
 ==== C_i_pairp
 
- [C function] C_word C_i_pair_p(C_word x)
+ [C function] C_word C_i_pairp(C_word x)
 
 The C version of {{(pair? x)}}.
 
