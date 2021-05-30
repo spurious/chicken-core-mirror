@@ -1200,7 +1200,7 @@ These are misnamed because they don't calculate the Scheme "quotient",
 but the simple result of flonum {{n1}} divided by the flonum {{n2}},
 using the storage at {{ptr}}.  {{c}} should always be 2.
 
-{{C_a_i_flonum_checked}} will signal an error if {{n2}} is zero.
+{{C_a_i_flonum_quotient_checked}} will signal an error if {{n2}} is zero.
 
 ===== C_a_i_flonum_actual_quotient_checked
 
