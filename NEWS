@@ -57,6 +57,9 @@
   - An `emit-types-file` declaration has been added, which corresponds
     to the compiler flag of the same name (#1644, thanks to Marco Maggi
     for the suggestion).
+  - Fixed a bug caused by a bad interaction between two optimizations:
+    argvector rest ops would be applied even if a procedure already got
+    its rest arg consed at the call site (#1756, thanks to Sandra Snan).
 
 - Build system
   - Auto-configure at build time on most platforms. Cross-compilation

@@ -206,6 +206,7 @@
                      ((eq? '##core#variable (node-class arg)))
                      (var (first (node-parameters arg)))
                      ((not (db-get db var 'captured)))
+                     ((not (db-get db var 'consed-rest-arg)))
                      (info (db-get db var 'rest-cdr))
                      (restvar (car info))
                      (depth (cdr info))
@@ -569,6 +570,22 @@
 			       (set-cdr! a #f))))
 		       gae)
 		      n2)))))
+
+          ((##core#rest-cdr ##core#rest-car ##core#rest-null? ##core#rest-length)
+	   (let ((rest-var (first params)))
+	     ;; If rest-arg has been replaced with regular arg which
+	     ;; is explicitly consed at call sites, restore rest ops
+	     ;; as regular car/cdr calls on the rest list variable.
+	     ;; This can be improved, as it can actually introduce
+	     ;; many more cdr calls than necessary.
+	     (cond
+              ((or (test rest-var 'consed-rest-arg))
+	       (touch)
+	       (debugging 'o "resetting rest op for explicitly consed rest parameter" rest-var class)
+
+	       (replace-rest-op-with-list-ops class (varnode rest-var) params))
+
+              (else (walk-generic n class params subs fids gae #f))) ) )
 
 	  (else (walk-generic n class params subs fids gae #f)) ) ) )
     

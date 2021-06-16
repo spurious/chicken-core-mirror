@@ -29,3 +29,13 @@
 (assert (not (rest-nonnull-optimization 1)))
 (assert (not (rest-nonnull-optimization 1 2)))
 
+;; Regression test to make sure explicitly consed rest args don't get
+;; rest argvector ops for them (#1756)
+(let ()
+  (define mdplus
+    (lambda args
+      (let ((args args))
+        (if (pair? args)
+            (car args)))))
+  (mdplus '1 '2)
+  (mdplus '3 '4))
