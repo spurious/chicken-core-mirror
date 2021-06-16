@@ -34,7 +34,7 @@
      debugging-chicken with-debugging-output quit-compiling
      emit-syntax-trace-info check-signature build-lambda-list
      c-ify-string valid-c-identifier? read-expressions
-     bytes->words words->bytes
+     bytes->words words->bytes replace-rest-op-with-list-ops
      check-and-open-input-file close-checked-input-file fold-inner
      constant? collapsable-literal? immediate? basic-literal?
      canonicalize-begin-body string->expr llist-length llist-match?
@@ -778,6 +778,30 @@
 	(else (for-each walk subs)) ) ) )
 
   (walk node)  )
+
+(define (replace-rest-op-with-list-ops class rest-var-node params)
+  (case class
+    ((##core#rest-car)
+     (make-node '##core#inline
+		(list "C_i_list_ref")
+		(list rest-var-node (qnode (second params)))))
+    ((##core#rest-cdr)
+     (let lp ((cdr-calls (add1 (second params)))
+	      (var rest-var-node))
+       (if (zero? cdr-calls)
+	   var
+	   (lp (sub1 cdr-calls)
+	       (make-node '##core#inline (list "C_i_cdr") (list var))))))
+    ((##core#rest-null?)
+     (make-node '##core#inline
+		(list "C_i_greater_or_equalp")
+		(list (qnode (second params))
+		      (make-node '##core#inline (list "C_i_length") (list rest-var-node)))))
+    ((##core#rest-length)
+     (make-node '##core#inline
+		(list "C_i_length")
+		(list rest-var-node (qnode (second params)))))
+    (else (bomb "Unknown rest op node class while undoing rest op for explicitly consed rest arg. This shouldn't happen!" class))))
 
 ;; Maybe move to scrutinizer.  It's generic enough to keep it here though
 (define (tree-copy t)

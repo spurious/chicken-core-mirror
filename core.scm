@@ -2649,37 +2649,12 @@
 	     ;; This can be improved, as it can actually introduce
 	     ;; many more cdr calls than necessary.
 	     (cond ((eq? class '##core#rest-cdr)
-		    (let lp ((cdr-calls (add1 (second params)))
-			     (var rest-var))
-		      (if (zero? cdr-calls)
-			  (transform var here closure)
-			  (lp (sub1 cdr-calls)
-			      (make-node '##core#inline (list "C_i_cdr") (list var))))))
+		    (transform (replace-rest-op-with-list-ops class rest-var params) here closure))
 
-		   ;; If customizable, the list is consed up at the
-		   ;; call site and there is no argvector.  So convert
-		   ;; back to list-ref/list-tail calls.
-		   ;;
-		   ;; Alternatively, if n isn't val, this node was
-		   ;; processed and the variable got replaced by a
-		   ;; closure access.
-		   ((or (test here 'customizable)
-			(not (eq? val n)))
-		    (case class
-		      ((##core#rest-car)
-		       (transform (make-node '##core#inline
-					     (list "C_i_list_ref")
-					     (list rest-var (qnode (second params)))) here closure))
-		      ((##core#rest-null?)
-		       (transform (make-node '##core#inline
-					     (list "C_i_greater_or_equalp")
-					     (list (qnode (second params))
-						   (make-node '##core#inline (list "C_i_length") (list rest-var)))) here closure))
-		      ((##core#rest-length)
-		       (transform (make-node '##core#inline
-					     (list "C_i_length")
-					     (list rest-var (qnode (second params)))) here closure))
-		      (else (bomb "Unknown rest op node class while converting to closure. This shouldn't happen!" class))))
+		   ;; If n isn't val, this node was processed and the
+		   ;; variable got replaced by a closure access.
+		   ((not (eq? val n))
+		    (transform (replace-rest-op-with-list-ops class rest-var params) here closure))
 
 		   (else val)) ) )
 
