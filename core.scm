@@ -263,6 +263,7 @@
 ;   extended-binding -> <boolean>            If true: variable names an extended binding
 ;   unused -> <boolean>                      If true: variable is a formal parameter that is never used
 ;   rest-parameter -> #f | 'list             If true: variable holds rest-argument list
+;   consed-rest-arg -> <boolean>             If true: variable is a rest variable in a procedure called with consed rest list
 ;   rest-cdr -> (rvar . n)                   Variable references the cdr of rest list rvar after n cdrs (0 = rest list itself)
 ;   rest-null? -> (rvar . n)                 Variable checks if the cdr of rest list rvar after n cdrs is empty (0 = rest list itself)
 ;   derived-rest-vars -> (v1 v2 ...)         Other variables aliasing or referencing cdrs of a rest variable
@@ -2435,7 +2436,8 @@
 		      (cond ((and has (not (rassoc sym callback-names eq?)))
 			     (db-put! db (first lparams) 'has-unused-parameters #t) )
 			    (rest
-			     (db-put! db (first lparams) 'explicit-rest #t) ) ) ) ) ) ) ) ) )
+			     (db-put! db (first lparams) 'explicit-rest #t)
+			     (db-put! db rest 'consed-rest-arg #t) ) ) ) ) ) ) ) ) )
 
 	 ;; Make 'removable, if it has no references and is not assigned to, and one of the following:
 	 ;; - it has either a value that does not cause any side-effects

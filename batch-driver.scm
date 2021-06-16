@@ -147,7 +147,7 @@
 		       ((potential-values)
 			(set! pvals (cdar es)))
 		       ((replacable home contains contained-in use-expr closure-size rest-parameter
-				    captured-variables explicit-rest rest-cdr rest-null?)
+				    captured-variables explicit-rest rest-cdr rest-null? consed-rest-arg)
 			(printf "\t~a=~s" (caar es) (cdar es)) )
 		       ((derived-rest-vars)
 			(set! derived-rvars (cdar es)))
