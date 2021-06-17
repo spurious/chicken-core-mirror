@@ -237,6 +237,8 @@ by the startup code and will not be contained in the result of
 
 ; {{-:r}} : Writes trace output to stderr. This option has no effect in files compiled with the {{-no-trace}} options.
 
+; {{-:RNUMBER}} : Specifies the initial number passed to seed the {{rand()}} PRNG (which is currently only used to randomize the symbol table).  If not supplied, the current system time is used.  This can be useful when debugging or benchmarking because it removes a source of nondeterminism which can affect how soon or how often the GC is triggered.
+
 ; {{-:sNUMBER}} : Specifies stack size.
 
 ; {{-:tNUMBER}} : Specifies symbol table size.

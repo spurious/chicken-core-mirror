@@ -454,6 +454,7 @@ static C_TLS int
   stack_size_changed,
   dlopen_flags,
   heap_size_changed,
+  random_state_initialized = 0,
   chicken_is_running,
   chicken_ran_once,
   pass_serious_signals = 1,
@@ -845,7 +846,10 @@ int CHICKEN_initialize(int heap, int stack, int symbols, void *toplevel)
   current_module_handle = NULL;
   callback_continuation_level = 0;
   gc_ms = 0;
-  srand(C_fix(time(NULL)));
+  if (!random_state_initialized) {
+    srand(time(NULL));
+    random_state_initialized = 1;
+  }
 
   for(i = 0; i < C_RANDOM_STATE_SIZE / sizeof(C_uword); ++i)
     random_state[ i ] = rand();
@@ -1379,6 +1383,7 @@ void CHICKEN_parse_command_line(int argc, char *argv[], C_word *heap, C_word *st
 		 " -:huPERCENTAGE   set percentage of memory used at which heap will be shrunk\n"
 		 " -:hSIZE          set fixed heap size\n"
 		 " -:r              write trace output to stderr\n"
+		 " -:RSEED          initialize rand() seed with SEED (helpful for benchmark stability)\n"
 		 " -:p              collect statistical profile and write to file at exit\n"
 		 " -:PFREQUENCY     like -:p, specifying sampling frequency in us (default: 10000)\n"
 		 " -:sSIZE          set nursery (stack) size\n"
@@ -1493,6 +1498,11 @@ void CHICKEN_parse_command_line(int argc, char *argv[], C_word *heap, C_word *st
 	case 'r':
 	  show_trace = 1;
 	  break;
+
+	case 'R':
+	  srand((unsigned int)arg_val(ptr));
+	  random_state_initialized = 1;
+	  goto next;
 
 	case 'x':
 	  C_abort_on_thread_exceptions = 1;
