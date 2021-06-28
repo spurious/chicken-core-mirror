@@ -276,7 +276,14 @@ The rationale for providing the {{<from-index>}} (which is not
 provided in the SCSH {{regexp-fold}} utility), is because this
 information is useful (e.g. for extracting the unmatched portion of
 the string before the current match, as needed in
-{{irregex-replace}}), and not otherwise directly accessible.
+{{irregex-replace/all}}), and not otherwise directly accessible.
+
+Note when the pattern matches an empty string, to avoid an infinite
+loop we continue from one char after the end of the match (as opposed
+to the end in the normal case).  The {{<from-index>}} passed to
+the subsequent \scheme{<kons>} or {{<finish>}} still refers to
+the original previous match end, however, so {{irregex-split}}
+and {{irregex-replace/all}}, etc. do the right thing.
 
 The optional {{<finish>}} takes two arguments:
 
