@@ -827,11 +827,15 @@ EOF
 			     [(and (> (string-length arg) 3) (string=? "-Wl," (substring arg 0 4)))
 			      (set! link-options (append link-options (list arg))) ]
 			     [(> (string-length arg) 2)
- 			      (let ([opts (cdr (string->list arg))])
-				(if (null? (lset-difference/eq? opts short-options))
- 				    (set! rest
- 				      (append (map (lambda (o) (string-append "-" (string o))) opts) rest) )
- 				    (stop "invalid option `~A'" arg) ) ) ]
+			      (let ([opts (cdr (string->list arg))])
+				(cond ((null? (lset-difference/eq? opts short-options))
+				       (set! rest
+					 (append (map (lambda (o)
+							(string-append "-" (string o))) opts) 
+						 rest) ))
+				      ((char=? #\l (car opts))
+				       (stop "invalid option `~A' - did you mean `-L -l<library>'?" arg))
+				      (else (stop "invalid option `~A'" arg) ) )) ]
 			     [else (stop "invalid option `~A'" s)] ) ]
 		      [(file-exists? arg)
 		       (let-values ([(dirs name ext) (decompose-pathname arg)])
