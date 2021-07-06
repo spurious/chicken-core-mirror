@@ -30,6 +30,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; History
+;; 0.9.10: 2021/07/06 - fixes for submatches under kleene star, empty seqs
+;;                     in alternations, and bol in folds for backtracking
+;;                     matcher (thanks John Clements and snan for reporting
+;;                     and Peter Bex for fixing)
 ;; 0.9.9: 2021/05/14 - more comprehensive fix for repeated empty matches
 ;; 0.9.8: 2020/07/13 - fix irregex-replace/all with look-behind patterns
 ;; 0.9.7: 2019/12/31 - more intuitive handling of empty matches in -fold,
@@ -3508,9 +3512,10 @@
                (fail))))
         ((bol)
          (lambda (cnk init src str i end matches fail)
-           (if (or (and (eq? src (car init)) (eqv? i (cdr init)))
-                   (and (> i ((chunker-get-start cnk) src))
-                        (eqv? #\newline (string-ref str (- i 1)))))
+           (if (let ((ch (if (> i ((chunker-get-start cnk) src))
+                             (string-ref str (- i 1))
+                             (chunker-prev-char cnk init src))))
+                 (or (not ch) (eqv? #\newline ch)))
                (next cnk init src str i end matches fail)
                (fail))))
         ((bow)
@@ -3908,13 +3913,14 @@
                     matches)))
             (if (not m)
                 (finish from acc)
-                (let ((j (%irregex-match-end-index m 0))
+                (let ((j-start (%irregex-match-start-index m 0))
+                      (j (%irregex-match-end-index m 0))
                       (acc (kons from m acc)))
                   (irregex-reset-matches! matches)
                   (cond
                    ((flag-set? (irregex-flags irx) ~consumer?)
                     (finish j acc))
-                   ((= j i)
+                   ((= j j-start)
                     ;; skip one char forward if we match the empty string
                     (lp (list str j end) j (+ j 1) acc))
                    (else
