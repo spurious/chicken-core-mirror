@@ -952,7 +952,9 @@ html:
 
 # cleaning up
 
-.PHONY: clean distclean spotless confclean testclean
+.PHONY: clean spotless confclean testclean
+
+BUILD_CONFIG_FILES = chicken-config.h chicken-defaults.h chicken-install.rc chicken-uninstall.rc
 
 clean:
 	-$(REMOVE_COMMAND) $(REMOVE_COMMAND_OPTIONS) $(PROGRAM_PREFIX)chicken$(PROGRAM_SUFFIX)$(EXE) $(PROGRAM_PREFIX)csi$(PROGRAM_SUFFIX)$(EXE) $(PROGRAM_PREFIX)csc$(PROGRAM_SUFFIX)$(EXE) \
@@ -967,20 +969,18 @@ clean:
 	  $(PRIMARY_LIBCHICKEN) \
 	  lib$(PROGRAM_PREFIX)chicken$(PROGRAM_SUFFIX)$(A) \
 	  $(IMPORT_LIBRARIES:=.import.so) $(LIBCHICKEN_IMPORT_LIBRARY) \
-	  $(foreach lib,$(DYNAMIC_IMPORT_LIBRARIES),chicken.$(lib).import.scm)
+	  $(foreach lib,$(DYNAMIC_IMPORT_LIBRARIES),chicken.$(lib).import.scm) \
+	  $(BUILD_CONFIG_FILES)
 ifdef USES_SONAME
 	-$(REMOVE_COMMAND) $(REMOVE_COMMAND_OPTIONS) lib$(PROGRAM_PREFIX)chicken$(PROGRAM_SUFFIX).so.$(BINARYVERSION)
 endif
 
 confclean:
-	-$(REMOVE_COMMAND) $(REMOVE_COMMAND_OPTIONS) \
-	  chicken-config.h chicken-defaults.h chicken-install.rc chicken-uninstall.rc
+	-$(REMOVE_COMMAND) $(REMOVE_COMMAND_OPTIONS) $(BUILD_CONFIG_FILES)
 
-spotless: distclean testclean
+spotless: clean testclean
 	-$(REMOVE_COMMAND) $(REMOVE_COMMAND_OPTIONS) $(DISTFILES) \
 	buildid buildbranch
-
-distclean: clean confclean
 
 testclean:
 	-$(REMOVE_COMMAND) $(REMOVE_COMMAND_RECURSIVE_OPTIONS) \

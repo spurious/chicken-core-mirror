@@ -78,6 +78,9 @@
     still requires PLATFORM to be set, and it can still be provided
     manually, but it is no longer required in the common case.
   - Fix Linux to MingW cross-compilation (#1768, thanks to Théo Cavignac)
+  - The `clean' target for make now also removes build configuration files.
+  - The `distclean' target for make has been removed (now `clean' does what
+    `distclean' used to do).
 
 - Tools
   - Fixed a bug in chicken-install (#1744) that would cause
