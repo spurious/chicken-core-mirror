@@ -33,6 +33,10 @@
   - Made topological-sort behave better when dependency target is listed
     multiple times by concatenating dependencies (fixes #1185).
 
+- Module system
+  - Reexported macros now work when the reexporting module redefines
+    identifiers from the original (fixes #1757, reported by Sandra Snan).
+
 - Runtime system
   - Sleeping primordial thread doesn't forget mutations made to
     parameters in interrupt handlers anymore. (See #1638. Fix

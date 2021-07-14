@@ -385,16 +385,18 @@
 	   'import "cannot find implementation of re-exported syntax"
 	   name))))
   (let* ((sexps
-	  (map (lambda (se)
-		 (if (symbol? se)
-		     (find-reexport se)
-		     (list (car se) #f (##sys#ensure-transformer (cdr se) (car se)))))
-	       sexports))
+	  (filter-map (lambda (se)
+			(and (not (symbol? se))
+			     (list (car se) #f (##sys#ensure-transformer (cdr se) (car se)))))
+		      sexports))
+	 (reexp-sexps
+	  (filter-map (lambda (se) (and (symbol? se) (find-reexport se)))
+		      sexports))
 	 (nexps
 	  (map (lambda (ne)
 		 (list (car ne) #f (##sys#ensure-transformer (cdr ne) (car ne))))
 	       sdefs))
-	 (mod (make-module name lib '() vexports sexps iexports))
+	 (mod (make-module name lib '() vexports (append sexps reexp-sexps) iexports))
 	 (senv (if (or (not (null? sexps))  ; Only macros have an senv
 		       (not (null? nexps))) ; which must be patched up
 		   (merge-se
