@@ -687,18 +687,7 @@ _/        _/    _/    _/    _/        _/  _/    _/        _/    _/_/
 	extensions for Scheme and CHICKEN programming.
 
 
- 8. Compatibility notes
-
-        In CHICKEN 4, the macro system has been reimplemented
-	completely and provides module system, which has considerably
-	more flexibility and power, but will require the
-	re-implementation of macros in code that previously was used
-	with CHICKEN 3. Notably, `define-macro' is not available
-	anymore. See the manual on how to translate such macros to
-	low-level hygienic macros or ask on the CHICKEN mailing list.
-
-
- 9. What's next?
+ 8. What's next?
 
         If you find any bugs, or want to report a problem, please send
         a detailed bug report.
