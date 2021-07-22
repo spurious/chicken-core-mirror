@@ -81,6 +81,10 @@
   - Fixed bug in chicken-install regarding variable quotation on UNIX-like
     systems which prevented installation into paths with spaces (#1685).
 
+- Module system
+  - Fixed a memory leak when calling (import) multiple times in a row
+    on the same module (#1772; reported by "plugd" on IRC).
+
 5.2.0
 
 - Core libraries

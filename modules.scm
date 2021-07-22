@@ -820,8 +820,8 @@
        cm
        (merge-se (module-iexports cm) vsi))
       (dm "export-list: " (module-export-list cm)))
-    (import-env (append vsv (import-env)))
-    (macro-env (append vss (macro-env)))))
+    (import-env (merge-se (import-env) vsv))
+    (macro-env (merge-se (macro-env) vss))))
 
 (define (module-rename sym prefix)
   (##sys#string->symbol
