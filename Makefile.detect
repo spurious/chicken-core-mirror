@@ -19,7 +19,7 @@ else
 
 # Now we can use uname tests
 uname_s:=$(shell uname)
-uname_o:=$(shell uname -o)
+uname_o:=$(shell uname -o 2>/dev/null)
 
 # Check for specific platforms
 ifeq ($(uname_o),Msys)
