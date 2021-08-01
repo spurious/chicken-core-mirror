@@ -11,3 +11,8 @@
 (import reexport-m8)
 (assert (equal? '(d c b a) (reexported-reverse '(a b c d))))
 (assert (equal? '(d c b a) (reexported-local-reverse '(a b c d))))
+
+;; Regression test for #1771 where reexports would get ignored by
+;; "except" specifier.
+(import (except reexport-m10 define))
+(define something 1) ;; If reexport messed up, this would be syntax from reexport-m9 expanding to (error ...)

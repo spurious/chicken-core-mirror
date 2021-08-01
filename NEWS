@@ -36,6 +36,8 @@
 - Module system
   - Reexported macros now work when the reexporting module redefines
     identifiers from the original (fixes #1757, reported by Sandra Snan).
+  - When using "except" in "import" to omit reexported macros,
+    they are really not imported (#1771, reported by Sandra Snan).
 
 - Runtime system
   - Sleeping primordial thread doesn't forget mutations made to

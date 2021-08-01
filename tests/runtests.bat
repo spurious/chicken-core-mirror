@@ -334,6 +334,10 @@ if errorlevel 1 exit /b 1
 if errorlevel 1 exit /b 1
 %compile_s% reexport-m8.scm -J
 if errorlevel 1 exit /b 1
+%compile_s% reexport-m9.scm -J
+if errorlevel 1 exit /b 1
+%compile_s% reexport-m10.scm -J
+if errorlevel 1 exit /b 1
 %compile% reexport-tests-2.scm
 if errorlevel 1 exit /b 1
 a.out
