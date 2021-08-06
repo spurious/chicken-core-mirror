@@ -349,10 +349,10 @@ _/        _/    _/    _/    _/        _/  _/    _/        _/    _/_/
 	    |   |   |-- chicken.png
 	    |   |   `-- *.html
 	    |   |-- CHICKEN.icns                      (Macintosh)
+	    |   |-- mac.r                             (Macintosh)
 	    |   |-- chicken.rc.o                      (Windows)
 	    |   |-- feathers.tcl
 	    |   `-- setup.defaults
-	    |-- mac.r                                 (Macintosh)
 	    `-- man
 		`-- man1
 		    |-- chicken-install.1

@@ -458,7 +458,7 @@ else
 endif
 	$(call echo, >>, $@,#endif)
 	$(call echo, >>, $@,#ifndef C_TARGET_SHARE_HOME)
-	$(call echo, >>, $@,# define C_TARGET_SHARE_HOME "$(TARGET_PREFIX)/share")
+	$(call echo, >>, $@,# define C_TARGET_SHARE_HOME "$(TARGET_PREFIX)/share/chicken")
 	$(call echo, >>, $@,#endif)
 	$(call echo, >>, $@,#ifndef C_TARGET_INCLUDE_HOME)
 	$(call echo, >>, $@,# define C_TARGET_INCLUDE_HOME "$(TARGET_PREFIX)/include/chicken")
