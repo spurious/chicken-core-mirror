@@ -345,13 +345,14 @@ _/        _/    _/    _/    _/        _/  _/    _/        _/    _/_/
 	    |   |   |-- LICENSE
 	    |   |   |-- README
 	    |   |   |-- DEPRECATED
-	    |   |   |-- mac.r                         (Macintosh)
-	    |   |   |-- CHICKEN.icns                  (Macintosh)
 	    |   |   |-- manual-html
 	    |   |   |-- chicken.png
-	    |   |   |-- feathers.tcl
 	    |   |   `-- *.html
+	    |   |-- CHICKEN.icns                      (Macintosh)
+	    |   |-- chicken.rc.o                      (Windows)
+	    |   |-- feathers.tcl
 	    |   `-- setup.defaults
+	    |-- mac.r                                 (Macintosh)
 	    `-- man
 		`-- man1
 		    |-- chicken-install.1
