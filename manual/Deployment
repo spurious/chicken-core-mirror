@@ -15,7 +15,7 @@ There are several options for distributing software written in CHICKEN for
 use on other machines or by other people:
 
 * Distribute source code, which requires that the target system has a compatible version of CHICKEN installed
-* Distribute C files generated from Scheme source code and compile them binaries on the target system - this also requires a matching CHICKEN installation on the target
+* Distribute C files generated from Scheme source code and compile them to binaries on the target system - this also requires a matching CHICKEN installation on the target
 * Distribute compiled binaries, either statically linked or built in such a way that all required extensions and libraries are included in the distribution
 
 The rest of this chapter addresses the third option, for which several options exist,
@@ -125,7 +125,8 @@ the library that is linked into plain CHICKEN-compiled applications:
   % cp $CHICKEN_BUILD/chicken-config.h .
   % cp $CHICKEN_BUILD/buildtag.h .
   % gcc -Os -fomit-frame-pointer -DHAVE_CHICKEN_CONFIG_H hello.c \
-    build-version.c eval.c expand.c internal.c library.c modules.c runtime.c \
+    build-version.c chicken-syntax.c eval.c expand.c internal.c \
+    library.c modules.c runtime.c \
     -o hello -lm
 
 Once we have all the files together, we can create a tarball:

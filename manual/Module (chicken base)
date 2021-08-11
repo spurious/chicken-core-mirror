@@ -77,7 +77,7 @@ imaginary component that's nan.
 This procedure is compatible with the definition from the R7RS
 {{(scheme inexact)}} library.
 
-==== finite?
+==== infinite?
 
 <procedure>(infinite? N)</procedure>
 

@@ -139,11 +139,11 @@ both strings).
 
 === substring-index
 
-<procedure>(substring-index WHICH WHERE [START])</procedure><br>
-<procedure>(substring-index-ci WHICH WHERE [START])</procedure>
+<procedure>(substring-index MAYBE-SUBSTRING STRING [START])</procedure><br>
+<procedure>(substring-index-ci MAYBE-SUBSTRING STRING [START])</procedure>
 
-Searches for first index in string {{WHERE}} where string
-{{WHICH}} occurs.  If the optional argument {{START}} is given,
+Searches for first index in string {{STRING}} where string
+{{MAYBE-SUBSTRING}} occurs.  If the optional argument {{START}} is given,
 then the search starts at that index.  {{substring-index-ci}}
 is a case-insensitive version of {{substring-index}}.
 

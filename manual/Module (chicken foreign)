@@ -119,7 +119,7 @@ use {{define-external}} (see the Manual section on
 [[Callbacks]]).
 For example, the following code:
 <enscript lang="scheme">
-(import foreign)
+(import (chicken foreign))
 (define-foreign-variable x double "var_x")
 (print x)
 </enscript>

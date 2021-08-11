@@ -107,7 +107,7 @@ as
                     (else `(,(rename 'if)
                             ,test
                              (,(rename 'begin) ,@(cdr first))
-                             (,(r 'cond) ,@rest)))))))))
+                             (,(rename 'cond) ,@rest)))))))))
 
 In this example the identifier {{else}} is renamed before being passed
 to the comparison predicate, so the comparison will be true if and

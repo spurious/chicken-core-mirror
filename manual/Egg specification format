@@ -120,8 +120,9 @@ cached by egg servers.
 
  [egg property] (components COMPONENT ...)
 
-Lists components (extensions, programs, include- or data files)
-that this extension installs. See below for information on how
+Lists components (extensions, programs, include- or data files) that
+this extension installs. See [[#component-types|Component types]] and
+[[#component-properties|component properties]] for information on how
 to specify component-specific information.
 
 ==== host
@@ -169,7 +170,7 @@ forms for constraining mode and linkage.
 
 Signal an error and abort processing. Mostly useful inside {{cond-expand}} forms.
 
-=== Components
+=== Component types
 
 ==== extension
 
@@ -375,13 +376,12 @@ to this component and that the object components are dependencies.
 
  [egg property] (destination NAME)
 
-Specifies an alternative installation destination for the built
-component and only applies to components of type {{data}}, {{c-include}}
-and {{scheme-include}}. {{NAME}} must be a relative path and is
-considered relative to CHICKEN's installation prefix.
-
-This property should only be used in extreme cases, as it is recommended
-to use the default installation locations, which are:
+Specifies an alternative installation destination for the
+built component and only applies
+to components of type {{data}}, {{c-include}} and {{scheme-include}}.
+This property should only be used in extreme
+cases, as it is recommended to use the default installation 
+locations, which are:
 
 * for C include files: {{<PREFIX>/include/chicken/}}
 

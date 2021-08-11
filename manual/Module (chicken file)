@@ -31,9 +31,9 @@ Copies {{ORIGFILE}} (a string denoting some filename) to {{NEWFILE}},
 {{BLOCKSIZE}} bytes at a time.  {{BLOCKSIZE}} defaults to 1024, and
 must be a positive integer.  Returns the number of bytes copied on
 success, or errors on failure.  {{CLOBBER}} determines the behaviour
-of {{file-copy}} when {{NEWFILE}} is already extant.  When set to
+of {{copy-file}} when {{NEWFILE}} is already extant.  When set to
 {{#f}} (default), an error is signaled.  When set to any other value,
-{{NEWFILE}} is overwritten.  {{file-copy}} will work across
+{{NEWFILE}} is overwritten.  {{copy-file}} will work across
 filesystems and devices and is not platform-dependent.
 
 ==== move-file

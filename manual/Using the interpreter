@@ -68,7 +68,7 @@ to the shell. Any non-numeric result exits with status zero:
  #;3>
 
 When {{csi}} is started with the {{-script}} option, the feature identifier {{chicken-script}}
-is defined, so can conditionally execute code depending on wether the file is
+is defined, so can conditionally execute code depending on whether the file is
 executed as a script or normally loaded into the interpreter, say for debugging purposes:
 
 <enscript highlight=scheme>
@@ -142,7 +142,7 @@ procedure (see [[Module (chicken csi)]]).
 === Getting error information
 
 Interpreted code has some extended debugging information available
-that can be used to locate errors and obtaining information about the
+that can be used to locate errors and obtain information about the
 lexical environment that was effective at the point of error. When an
 error occurs in an evaluated expression, a "call trace" is printed -
 the list of calls up to the error location. Note that this does not
@@ -168,7 +168,7 @@ expression, possibly following the name of the procedure containing
 the call expression.
 
 If the trace-buffer entry contains lexical environment information
-than the complete environment of the call site is shown.
+then the complete environment of the call site is shown.
 
 Use {{,f}} to select a frame by number, if you want to inspect the
 lexical environment of an earlier frame. The {{,g}} command lets you

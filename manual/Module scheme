@@ -266,7 +266,7 @@ result of the set! expression is unspecified.
  (+ x 1)                         ===>  5
 
 As an extension to R5RS, {{set!}} for unbound toplevel variables is
-allowed.  Also, {{set! (PROCEDURE ...) ...)}} is supported, as CHICKEN
+allowed.  Also, {{(set! (PROCEDURE ...) ...)}} is supported, as CHICKEN
 implements [[http://srfi.schemers.org/srfi-17/srfi-17.html|SRFI-17]].
 
 === Derived expression types

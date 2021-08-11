@@ -123,7 +123,41 @@ the source text should be read from standard input.
 
 ; -optimize-leaf-routines : Enable leaf routine optimization.
 
-; -optimize-level LEVEL : Enables certain sets of optimization options. {{LEVEL}} should be an integer. Level {{0}} is equivalent to {{-no-usual-integrations -no-compiler-syntax}} (no optimization), level {{1}  is equivalent to {{-optimize-leaf-routines}} (minimal optimization), level {{2}} is equivalent to {{-optimize-leaf-routines -inline -lfa2}} (enable optimizations that do not break standard compliance, this is the default), level {{3}} is equivalent to {{-optimize-leaf-routines -local -inline -lfa2 -inline-global -specialize}} (maximal optimization, while still "safe"), level {{4}} is equivalent to {{-optimize-leaf-routines -local -inline -lfa2 -inline-global -specialize -unsafe}} (maximal optimization, "unsafe") and any higher level is equivalent to {{-optimize-leaf-routines -block -inline -lfa2 -inline-global -specialize -unsafe -disable-interrupts -no-trace -no-lambda-info -clustering}} (all possible optimizations, "unsafe").
+; -optimize-level LEVEL : Enables certain sets of optimization options. {{LEVEL}} should be an integer.
+
+<table>
+<tr><th>LEVEL</th><th>Equivalent flags</th><th>Explanation</th></tr>
+<tr>
+<td>0</td>
+<td>{{-no-usual-integrations -no-compiler-syntax}}</td>
+<td>No optimization</td>
+</tr>
+<tr>
+<td>1</td>
+<td>{{-optimize-leaf-routines}}</td>
+<td>Minimal optimization</td>
+</tr>
+<tr>
+<td>2 '''(Default)'''</td>
+<td>{{-optimize-leaf-routines -inline -lfa2}}</td>
+<td>Enable optimizations that do not break standard compliance</td>
+</tr>
+<tr>
+<td>3</td>
+<td>{{-optimize-leaf-routines -local -inline -lfa2 -inline-global -specialize}}</td>
+<td>Maximal optimization, while still "safe"</td>
+</tr>
+<tr>
+<td>4</td>
+<td>{{-optimize-leaf-routines -local -inline -lfa2 -inline-global -specialize -unsafe}}</td>
+<td>Maximal optimization, "unsafe"</td>
+</tr>
+<tr>
+<td>5 (or higher)</td>
+<td>{{-optimize-leaf-routines -block -inline -lfa2 -inline-global -specialize -unsafe -disable-interrupts -no-trace -no-lambda-info -clustering}}</td>
+<td>All possible optimizations, "unsafe"</td>
+</tr>
+</table>
 
 ; -output-file FILENAME : Specifies the pathname of the generated C file. Default is to use the source filename with the extension replaced by {{.c}}.
 

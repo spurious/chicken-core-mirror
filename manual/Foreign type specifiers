@@ -116,8 +116,9 @@ Either a fixnum or a flonum in the range of an (unsigned) machine ''long''.
 Similar to {{integer32}} on 32-bit systems or {{integer64}} on 64-bit.
 
 <type>size_t</type>
+<type>ssize_t</type>
 
-A direct mapping to C's {{size_t}}.
+A direct mapping to C's {{size_t}} and {{ssize_t}}.
 
 === Floating-point
 
@@ -372,6 +373,7 @@ The foreign type {{TYPE}} with an additional {{const}} qualifier.
 <tr><td>{{[unsigned-]integer64}}</td><td>{{[unsigned] int64_t}}</td></tr>
 <tr><td>{{[unsigned-]long}}</td><td>{{[unsigned] long}}</td></tr>
 <tr><td>{{size_t}}</td><td>{{size_t}}</td></tr>
+<tr><td>{{ssize_t}}</td><td>{{ssize_t}}</td></tr>
 <tr><td>{{float}}</td><td>{{float}}</td></tr>
 <tr><td>{{double}}</td><td>{{double}}</td></tr>
 <tr><td>{{number}}</td><td>{{double}}</td></tr>

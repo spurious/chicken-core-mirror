@@ -126,6 +126,12 @@ Get or set the process group ID of the process specified by {{PID}}.
 '''NOTE''': On native Windows builds (all except cygwin), this
 procedure is unimplemented and will raise an error.
 
+==== create-session
+
+<procedure>(create-session)</procedure>
+
+Creates a new session with the current process as group leader. Returns current process id on success. Equivalent to setsid(2).
+
 ==== user-information
 
 <procedure>(user-information USER [AS-VECTOR])</procedure>

@@ -25,7 +25,7 @@ current setting of the {{PATH}} environment variable while {{execve(3)}} does no
 This procedure never returns; it either replaces the process with a new one
 or it raises an exception in case something went wrong executing the program.
 
-On Windows, these procedures all have an additoinal optional parameter
+On Windows, these procedures all have an additional optional parameter
 {{EXACT-FLAG}}, which defaults to {{#f}}. When {{#f}} is passed, any
 argument string with embedded whitespace will be wrapped in
 quotes. When {{#t}} no such wrapping occurs.
@@ -178,16 +178,6 @@ which data written by the sub-process can be read, an output port from
 which any data written to will be received as input in the sub-process,
 the process-id of the started sub-process, and an input port from
 which data written by the sub-process to {{stderr}} can be read.
-
-==== create-session
-
-<procedure>(create-session)</procedure>
-
-Creates a new session if the calling process is not a process group leader and returns
-the session ID.
-
-'''NOTE''': On native Windows builds (all except cygwin), this
-procedure is unimplemented and will raise an error.
 
 === Shell commands
 

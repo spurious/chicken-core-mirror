@@ -47,7 +47,7 @@ as a temporary place to store the target files. A few things to note:
 libraries will finally be installed. In this case it will be {{/usr/lib}}.
 
 * {{PLATFORM}} determines the target platform. It must be one of the officially
-supported platforms CHICKEN runs on.
+supported platforms CHICKEN runs on. Note that it actually refer to the extension of a dedicated Makefile (`Makefile.linux` in our case).
 
 * {{HOSTSYSTEM}} is an identifier for the target system and will be used as
 the name prefix of the cross C compiler (in this case {{arm-none-linux-gnueabi-gcc}}).
@@ -109,8 +109,8 @@ You should now have these files on {{~/target}}:
          `-- man1
              :
 
-You should now transfer {{libchicken.so}} to the target system, and place
-it in {{/usr}}.
+You should now transfer {{~/target/usr/lib}} to the target system, and place
+its contents in {{/usr/lib}}. You may want to omit the static library {{libchicken.a}} if the target memory is limited.
 
 ==== Building the "cross chicken"
 
@@ -133,7 +133,7 @@ Again, unpack a CHICKEN release tarball or a source tree and run
 into. It is recommended not to install into a standard location (like {{/usr/local}}
 or {{$HOME}}) - some files will conflict with a normal CHICKEN installation.
 
-* {{TARGETSYSTEM}} gives the name-prefix of the cross C compiler.
+* {{TARGETSYSTEM}} gives the name-prefix of the cross C compiler and other tools (C++ compiler, librarian (ar) and ressource compiler (for windows)).
 
 * {{PROGRAM_PREFIX}} determines the name-prefix of the CHICKEN tools to be created.
 
@@ -184,21 +184,45 @@ In {{~/cross-chicken}}, you should find the following:
 To make sure that the right C compiler is used, we ask {{arm-csc}} to show
 the name of the cross C compiler:
 
-  % ~/cross-chicken/arm-csc -cc-name
+  % ~/cross-chicken/bin/arm-csc -cc-name
   arm-none-linux-gnueabi-gcc
 
 Looks good.
+
+==== Special notes for Linux to Windows cross development
+
+To cross compile from Linux to Windows, you will need to use a Linux build of MingGW-w64 with you can find in most distribution.
+
+As far as the runtime is concerned, the procedure is the same that what have been shown before, using the platform name {{cross-linux-mingw}}.
+
+The procedure to compile the compiler however require some more care:
+* The platform name is {{linux}} because it is where you want your compiler to run
+* You have to set the {{TARGET_LIBRARIES}} as this is different between Linux and Windows:
+  For Linux target, this variable contains {{-ldl -lm}}, while for Windows target it should be {{-lm -lws2_32}}.
+* You have to make sure you are pointing to the right toolchain (see next paragraph).
+
+In order to compile the C sources that Chicken will produce you have to make sure that you provide the right toolchain in both runtime and compiler steps.
+
+In most cases, you want to do that by setting {{HOSTSYSTEM}} when building the runtime and {{TARGETSYSTEM}} when building the compiler to something similar to {{x86_64-w64-mingw32}} (check you distribution binaries).
+
+If your distribution does not stick to the {{PREFIX-TOOLNAME}} convention you may want to set some following variables (runtime step/compiler step):
+* {{C_COMPILER}}/{{TARGET_C_COMPILER}}
+* {{CXX_COMPILER}}/{{TARGET_CXX_COMPILER}}
+* {{LIBRARIAN}}/{{TARGET_LIBRARIAN}} for {{ar}}
+* {{RC_COMPILER}}/{{TARGET_RC_COMPILER}} for {{windres}}
+
+You may need this trick to pick {{x86_64-w64-mingw32-gcc-posix}} over {{x86_64-w64-mingw32-gcc-win32}} in Debian for example (those correspond to different thread APIs).
 
 === Using it
 
 ==== Compiling simple programs
 
-  % ~/cross-chicken/arm-csc -v hello.scm
+  % ~/cross-chicken/bin/arm-csc -v hello.scm
   /home/felix/cross-chicken/arm-cross-chicken/bin/arm-chicken hello.scm -output-file hello.c -quiet
   arm-none-linux-gnueabi-gcc hello.c -o hello.o -c -fno-strict-aliasing -DHAVE_CHICKEN_CONFIG_H -g -Wall \
     -Wno-unused -I /home/felix/cross-chicken/arm-chicken/include
   rm hello.c
-  arm-none-linux-gnueabi-gcc hello.o -o hello -L/home/felix/cross-chicken/arm-chicken/lib  -Wl,-rpath=/usr/lib -lm \
+  arm-none-linux-gnueabi-gcc hello.o -o hello -L/home/felix/cross-chicken/arm-chicken/lib  -Wl,-R/usr/lib -lm \
     -ldl -lchicken
   rm hello.o
 
@@ -228,7 +252,7 @@ extension, like the import library of modules. One option is to copy
 the import-library source file into the repository of the host compiler:
 
  # optionally, you can compile the import library:
- # ~/cross-chicken/arm-csc -O3 -d0 -s target-only-extension.import.scm
+ # ~/cross-chicken/bin/arm-csc -O3 -d0 -s target-only-extension.import.scm
  cp target-only-extension.import.scm ~/cross-chicken/lib/chicken/9
 
 === Final notes

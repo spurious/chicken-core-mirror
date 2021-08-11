@@ -67,7 +67,7 @@ Returns {{#t}} if {{PORT}} is connected to a terminal and
 
 <procedure>(terminal-size PORT)</procedure>
 
-Returns two values, the number of columns and rows of the terminal
+Returns two values, the number of rows and columns of the terminal
 that is connected to {{PORT}} or {{0}}, {{0}} if the terminal size can
 not be obtained.
 

@@ -128,7 +128,7 @@ or {{:}} should follow the syntax given below:
 <tr><td>{{list}}</td><td>null or pair</td></tr>
 <tr><td>{{locative}}</td><td>locative object</td></tr>
 <tr><td>{{null}}</td><td>empty list</td></tr>
-<tr><td>{{number}}</td><td>fixnum or float</td></tr>
+<tr><td>{{number}}</td><td>either integer, float, ratnum or cplxnum</td></tr>
 <tr><td>{{pair}}</td><td>pair</td></tr>
 <tr><td>{{pointer-vector}}</td><td>vector or native pointers</td></tr>
 <tr><td>{{pointer}}</td><td>native pointer</td></tr>
@@ -257,7 +257,7 @@ definitions in an internal format to {{FILENAME}}.
 
 {{-consult-types-file FILENAME}} loads and registers the type-information
 in {{FILENAME}} which should be a file generated though a previous use
-of {{-emit-types-file}} compiler option or {{emit-types-file}} declaration.
+of {{-emit-types-file}}.
 
 If library code is used with {{import}}
 and a {{.types}} file of the same name exists in the

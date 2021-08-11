@@ -339,6 +339,63 @@ the modules that are referred to by compiled code, and thus
 the binding information and exported syntax of the former
 must be available separately.
 
+=== Example of compiling modules and linking them into an executable
+
+Here is a test module, in the file mymod.scm:
+
+<enscript highlight=scheme>
+(module mymod (hello)
+  (import scheme)
+  (define (hello)
+    (display "Hello, World, I'm in mymod!")
+    (newline)))
+</enscript>
+
+Here is the main module, in the file trymod.scm:
+
+<enscript highlight=scheme>
+(module trymod ()
+  (import scheme)
+  (import mymod)
+  (display "I'm in trymod!")
+  (newline)
+  (hello)
+  (display "Now I'm back in trymod!")
+  (newline))
+</enscript>
+
+You can compile mymod.scm into a shared object and compile trymod.scm into an executable  trymod that uses that shared object like this:
+
+  csc -s -J mymod.scm
+  csc trymod.scm
+
+You can execute trymod and it will load the shared object mymod.so.  When loading a shared
+object, the CHICKEN runtime uses the libld API to obtain the entry point ("C_toplevel") to invoke top-level initialization code of the module (which also setups up global bindings, etc.).  However, if you move the trymod executable to another directory, it won't be able to find mymod.so to load it.  If you want include the object into the executable directly, it needs to have a unique entry point name, separate from any other entry point of other linked modules.  
+
+To give the module a name, we pass the "-unit modulename" argument to csc, and the name of the module is added to the entry point, so the entry point for mymod would become "C_mymod_toplevel".  Then the "-uses modulename" argument is passed to csc while compiling and linking trymod so it knows to use that entry point.
+
+To compile mymod.scm and trymod.scm and link them into the executable trymod, issue the following commands:
+
+  csc -c -J mymod.scm -unit mymod -o mymod.o
+  csc -o trymod mymod.o -uses mymod trymod.scm
+
+This creates an executable that is dynamically linked against libchicken.so, but which includes the mymod.o object file directly.
+
+To create an executable that is statically linked, issue the following commands: 
+
+  csc -c -static -J mymod.scm -unit mymod -o mymod.o
+  csc -o trymod -static mymod.o -uses mymod trymod.scm
+
+If you later add another module you'd need to compile it similar to how mymod.scm is 
+compiled and add a "modulename.o -uses modulename" to the csc command that compiles trymod.scm.
+
+It is possible to use the csm program installed by the [[/egg/csm|csm egg]] to do this automatically.  To produce a dynamically linked program you would do:
+
+  csm -program trymod
+
+To produce a statically linked program you would do:
+
+  csm -static -program trymod
 
 === Functors
 

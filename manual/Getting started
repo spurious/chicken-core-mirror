@@ -94,7 +94,7 @@ to use and modify as long as the original authors are acknowledged.
 
 Scheme cognoscenti will appreciate the method of compilation and the
 design of the runtime-system, which follow closely Henry Baker's
-[[http://home.pipeline.com/~hbaker1/CheneyMTA.html|CONS Should Not
+[[https://web.archive.org/web/20200223051632/http://home.pipeline.com/~hbaker1/CheneyMTA.html|CONS Should Not
 CONS Its Arguments, Part II: Cheney on the M.T.A.]] paper and expose a
 number of interesting properties.
 
@@ -187,11 +187,11 @@ can pretty much ignore the C compiler once you have installed it.)
 * On Macintosh OS X, you will need the XCode tools, which are 
   installable from the App Store.
 * On Windows, you have three choices:
-* Cygwin ([[http://sourceware.org/cygwin/]]) provides a relatively
+* Cygwin ([[https://www.cygwin.com/]]) provides a relatively
   full-featured Unix environment for Windows.  CHICKEN works
   substantially the same in Cygwin and Unix. 
 * The GNU Compiler Collection has been ported to Windows, in the
-  MinGW system ([[http://mingw.sourceforge.net]]). Unlike Cygwin,
+  MinGW system ([[http://mingw-w64.org/]]). Unlike Cygwin,
   executables produced with MinGW do not need the Cygwin DLLs in order
   to run.   MSYS is a companion package to MinGW; it provides a minimum
   Unix-style development/build environment, again ported from free
@@ -218,8 +218,7 @@ for information about how to obtain them.
 The simplest development environment is a text editor and terminal
 window (Windows: Command Prompt, OSX: Terminal, Linux/Unix: xterm) for
 using the interpreter and/or invoking the compiler.  If you install one
-of the line editing extensions (e.g., [[/egg/breadline|breadline]],
-[[/egg/parley|parley]], [[/egg/linenoise|linenoise]]), you have some
+of the line editing extensions (e.g., [[/egg/breadline|breadline]], [[/egg/linenoise|linenoise]]), you have some
 useful command line editing features in the interpreter (e.g., Emacs
 or vi-compatible line editing, customization).
 
@@ -529,6 +528,13 @@ name), and that it returns an integer result (the {{int}} before.) Now we can in
 
  $ gcc -c fib.c
  $ csc -o fib-user fib.o fib-user.scm
+
+If using MinGW on Windows,
+
+ > gcc -c fib.c -o fib.obj
+ > csc -o fib-user fib.obj fib-user.scm
+
+Then run the executable.
  $ ./fib-user
  0 1 1 2 3 5 8 13 21 34 55 
 
