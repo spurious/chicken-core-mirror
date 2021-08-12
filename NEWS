@@ -1,4 +1,4 @@
-5.2.1
+5.3.0
 
 - Core libraries
   - Fixed an inadvertant error during error reporting in the `numerator`
