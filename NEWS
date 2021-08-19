@@ -1,4 +1,11 @@
-5.3.0
+5.3.0rc2
+
+- Core libraries
+  - The srfi-17 module now exports the `getter-with-setter` and `setter`
+    procedures, not just the set! macro (thanks to Lassi Kortela)
+
+
+5.3.0rc1
 
 - Core libraries
   - Fixed an inadvertant error during error reporting in the `numerator`
