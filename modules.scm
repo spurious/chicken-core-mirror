@@ -1152,8 +1152,11 @@
 (##sys#register-primitive-module
  'srfi-16 '() (se-subset '(case-lambda) ##sys#chicken.base-macro-environment))
 
-(##sys#register-primitive-module
- 'srfi-17 '() (se-subset '(set!) ##sys#default-macro-environment))
+(##sys#register-core-module
+ 'srfi-17 'library
+ '((getter-with-setter . chicken.base#getter-with-setter)
+   (setter . chicken.base#setter))
+ (se-subset '(set!) ##sys#default-macro-environment))
 
 (##sys#register-core-module
  'srfi-23 'library '((error . chicken.base#error)))
