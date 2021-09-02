@@ -98,7 +98,7 @@
                          (let ((mode (file-creation-mode)))
                            (set! (file-creation-mode) umask)
                            (delete-file* "posix-tests.out")
-                           (file-open "posix-tests.out" open/creat given ...)
+                           (file-close (file-open "posix-tests.out" open/creat given ...))
                            (assert (equal? (file-permissions "posix-tests.out") expected))
                            (set! (file-creation-mode) mode))))))
   ;; default file mode

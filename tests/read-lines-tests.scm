@@ -46,8 +46,11 @@ EOF
 (test-error
  "with an invalid second argument (max)"
  (call-with-input-file input-test-file
-  (lambda (port)
-    (read-lines port 2.0))))
+   (lambda (port)
+     (dynamic-wind
+	 void
+	 (lambda () (read-lines port 2.0))
+	 (lambda () (close-input-port port))))))
 
 (test-end "read-lines")
 
