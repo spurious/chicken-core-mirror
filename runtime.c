@@ -13343,7 +13343,7 @@ static inline C_u64 random64() {
 #endif
 }
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__TINYC__)
 # define	clz64	__builtin_clzll		
 #else
 /* https://en.wikipedia.org/wiki/Find_first_set#CLZ */
