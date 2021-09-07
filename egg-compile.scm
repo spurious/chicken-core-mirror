@@ -80,18 +80,29 @@
     ((unix) "cp -r")
     ((windows) "xcopy /y /i /e")))
 
+(define (copy-file-command platform)
+  (case platform
+    ((unix) "cp")
+    ((windows) "copy /y")))
+
 (define (mkdir-command platform)
   (case platform
     ((unix) "mkdir -p")
     ((windows) "mkdir")))
 
 (define (install-executable-command platform)
-  (string-append default-install-program " "
-		 default-install-program-executable-flags))
+  (case platform
+    ((windows) (copy-file-command 'windows))
+    (else
+     (string-append default-install-program " "
+                    default-install-program-executable-flags))))
 
 (define (install-file-command platform)
-  (string-append default-install-program " "
-		 default-install-program-data-flags))
+  (case platform
+    ((windows) (copy-file-command 'windows))
+    (else
+     (string-append default-install-program " "
+                    default-install-program-data-flags))))
 
 (define (remove-file-command platform)
   (case platform
