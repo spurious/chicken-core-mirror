@@ -1,3 +1,15 @@
+5.3.0rc3
+
+- Build system
+  - Fix build with tcc.
+  - Fix a few tests on Windows so the suite passes once again.
+
+- Tools
+  - Fix a problem with egg installation scripts on Windows, where the
+    platform was not correctly identified, depending on the shell used
+    during installation of the core system (thanks again to Mark Fisher
+    for reporting and helping in finding the culprit).
+
 5.3.0rc2
 
 - Core libraries
@@ -5,11 +17,6 @@
     procedures, not just the set! macro (thanks to Lassi Kortela)
   - Fix hang in chicken-install -update-db on Windows (thanks to Mark
     Fisher for reporting and Jani Hakala for debugging and patch).
-- Tools
-  - Fix a problem with egg installation scripts on Windows, where the
-    platform was not correctly identified, depending on the shell used
-    during installation of the core system (thanks again to Mark Fisher
-    for reporting and helping in finding the culprit).
 
 5.3.0rc1
 
