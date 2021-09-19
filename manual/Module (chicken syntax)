@@ -24,7 +24,7 @@ and implicit renaming macros.
 
 The low-level macro facility that CHICKEN provides is called "explicit
 renaming" and allows writing hygienic or non-hygienic macros
-procedurally.  When given a the return value of the one of the
+procedurally.  When given the return value of one of the
 procedures {{er-macro-transformer}} or {{ir-macro-transformer}}
 instead of a {{syntax-rules}} form, {{define-syntax}} evaluates the
 procedure in a distinct expansion environment (initially having access
