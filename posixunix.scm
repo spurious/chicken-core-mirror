@@ -602,6 +602,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
   (getter-with-setter
    (foreign-lambda int "C_getuid")
    (lambda (id)
+     (##sys#check-fixnum id 'current-user-id)
      (when (fx< (##core#inline "C_setuid" id) 0)
        (##sys#update-errno)
        (##sys#error 'current-user-id!-setter "cannot set user ID" id) ) )
@@ -611,29 +612,32 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
   (getter-with-setter
    (foreign-lambda int "C_geteuid")
    (lambda (id)
-    (when (fx< (##core#inline "C_seteuid" id) 0)
-      (##sys#update-errno)
-      (##sys#error 
-	 'effective-user-id!-setter "cannot set effective user ID" id) ) )
+     (##sys#check-fixnum id 'current-effective-user-id)
+     (when (fx< (##core#inline "C_seteuid" id) 0)
+       (##sys#update-errno)
+       (##sys#error
+	'effective-user-id!-setter "cannot set effective user ID" id) ) )
    "(chicken.process-context.posix#current-effective-user-id)"))
 
 (set! chicken.process-context.posix#current-group-id
   (getter-with-setter
    (foreign-lambda int "C_getgid")
    (lambda (id)
-    (when (fx< (##core#inline "C_setgid" id) 0)
-      (##sys#update-errno)
-      (##sys#error 'current-group-id!-setter "cannot set group ID" id) ) )
+     (##sys#check-fixnum id 'current-group-id)
+     (when (fx< (##core#inline "C_setgid" id) 0)
+       (##sys#update-errno)
+       (##sys#error 'current-group-id!-setter "cannot set group ID" id) ) )
    "(chicken.process-context.posix#current-group-id)") )
 
 (set! chicken.process-context.posix#current-effective-group-id
   (getter-with-setter 
    (foreign-lambda int "C_getegid")
    (lambda (id)
-    (when (fx< (##core#inline "C_setegid" id) 0)
-      (##sys#update-errno)
-      (##sys#error 
-	 'effective-group-id!-setter "cannot set effective group ID" id) ) )
+     (##sys#check-fixnum id 'current-effective-group-id)
+     (when (fx< (##core#inline "C_setegid" id) 0)
+       (##sys#update-errno)
+       (##sys#error
+	'effective-group-id!-setter "cannot set effective group ID" id) ) )
    "(chicken.process-context.posix#current-effective-group-id)") )
 
 (define-foreign-variable _user-name nonnull-c-string "C_user->pw_name")
