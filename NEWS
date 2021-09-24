@@ -1,3 +1,12 @@
+5.3.0rc4
+
+- Core libraries
+  - In (chicken process-context posix), the setters for current-user-id,
+    current-effective-user-id and current-group-id now check that the
+    new user/group value is a fixnum instead of blindly passing it on
+    to the C implementation (which would cause bogus user ids to be set).
+    Fixes #1787, thanks to Christopher Brannon.
+
 5.3.0rc3
 
 - Build system
