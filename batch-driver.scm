@@ -676,7 +676,7 @@
 	       (initialize-analysis-database)
 
 	       ;; collect requirements and load inline files
-	       (let ((extensions (remove chicken.load#core-unit? required-libraries)))
+	       (let ((extensions required-libraries))
 		 (when enable-inline-files
 		   (for-each
 		    (lambda (id)
@@ -851,7 +851,7 @@
 
                               ;; generate link file
 			      (when emit-link-file
-				(let ((exts (remove chicken.load#core-unit? required-libraries)))
+				(let ((exts required-libraries))
 				  (dribble "generating link file `~a' ..." emit-link-file)
 				  (with-output-to-file emit-link-file (cut pp exts))))
 

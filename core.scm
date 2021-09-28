@@ -738,13 +738,17 @@
 			((##core#require)
 			 (let ((lib (cadr x))
 			       (mod (and (pair? (cddr x)) (caddr x))))
-			   (set! required-libraries (lset-adjoin/eq? required-libraries lib))
-			   (walk (##sys#process-require
-				  lib mod
-				  (if (or (memq lib linked-libraries) static-extensions)
-				      'static
-				      'dynamic))
-				 e dest ldest h ln #f)))
+			   (let-values (((reqform builtin) 
+                                          (##sys#process-require
+						    lib mod
+			                    (if (or (memq lib linked-libraries) 
+			                            static-extensions)
+				              'static
+				              'dynamic))))
+                             (unless builtin
+				(set! required-libraries 
+                                 (lset-adjoin/eq? required-libraries lib)))
+                             (walk reqform e dest ldest h ln #f))))
 
 			((##core#let)
 			 (let* ((bindings (cadr x))

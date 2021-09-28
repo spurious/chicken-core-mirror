@@ -1,5 +1,9 @@
 5.3.0rc4
 
+- Compiler
+  - Statically linked programs using built-in libraries are supported
+    again (fixes #1788, a regression from 5.2.0).
+
 - Core libraries
   - In (chicken process-context posix), the setters for current-user-id,
     current-effective-user-id and current-group-id now check that the

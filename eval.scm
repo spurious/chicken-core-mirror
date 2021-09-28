@@ -596,8 +596,9 @@
 
 			 [(##core#require)
 			  (let ((lib (cadr x))
-				(mod (and (pair? (cddr x)) (caddr x))))
-			    (compile (##sys#process-require lib mod #f) e #f tf cntr #f))]
+			  	 (mod (and (pair? (cddr x)) (caddr x))))
+                            (let-values (((reqform _) (##sys#process-require lib mod #f)))
+			      (compile reqform e #f tf cntr #f)))]
 
 			 [(##core#elaborationtimeonly ##core#elaborationtimetoo) ; <- Note this!
 			  (##sys#eval/meta (cadr x))
@@ -1250,20 +1251,26 @@
 (define (##sys#process-require lib mod compile-mode)
   (let ((mod (or (eq? lib mod) mod)))
     (cond
-      ((assq lib core-unit-requirements) => cdr)
-      ((memq lib builtin-features) '(##core#undefined))
+      ((assq lib core-unit-requirements) => 
+        (lambda (a) (values (cdr a) #f)))
+      ((memq lib builtin-features) 
+        (values '(##core#undefined) #t))
       ((memq lib core-units)
-       (if compile-mode
-	   `(##core#callunit ,lib)
-	   `(chicken.load#load-unit (##core#quote ,lib)
-				    (##core#quote #f)
-				    (##core#quote #f))))
+        (values
+          (if compile-mode
+   	      `(##core#callunit ,lib)
+	      `(chicken.load#load-unit (##core#quote ,lib)
+	  			       (##core#quote #f)
+				       (##core#quote #f)))
+          #t))
       ((eq? compile-mode 'static)
-       `(##core#callunit ,lib))
+       (values `(##core#callunit ,lib) #f))
       (else
-       `(chicken.load#load-extension (##core#quote ,lib)
-				     (##core#quote ,mod)
-				     (##core#quote #f))))))
+       (values
+          `(chicken.load#load-extension (##core#quote ,lib)
+				        (##core#quote ,mod)
+				        (##core#quote #f))
+          #f)))))
 
 ;;; Find included file:
 
