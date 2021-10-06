@@ -38,7 +38,7 @@ procedure is unimplemented and will raise an error.
 ==== current-user-id
 
 <procedure>(current-user-id)</procedure>
- [setter] (set! (current-user-id) UID)
+<setter>(set! (current-user-id) UID)</setter>
 
 Get or set the real user-id of the current process. The procedure corresponds to the getuid and setuid C functions.
 
@@ -60,7 +60,7 @@ associated with the current process, so it is safe to use.
 ==== current-effective-user-id
 
 <procedure>(current-effective-user-id)</procedure>
- [setter] (set! (current-effective-user-id) UID)
+<setter>(set! (current-effective-user-id) UID)</setter>
 
 Get or set the effective user-id of the current process.
 
@@ -80,7 +80,7 @@ procedure is unimplemented and will raise an error.
 ==== current-group-id
 
 <procedure>(current-group-id)</procedure>
- [setter] (set! (current-group-id) GID)
+<setter>(set! (current-group-id) GID)</setter>
 
 Get or set the real group-id of the current process.
 
@@ -90,7 +90,7 @@ procedure is unimplemented and will raise an error.
 ==== current-effective-group-id
 
 <procedure>(current-effective-group-id)</procedure>
- [setter] (set! (current-effective-group-id) GID)
+<setter>(set! (current-effective-group-id) GID)</setter>
 
 Get or set the effective group-id of the current process.
 ID can be found, then {{#f}} is returned.
@@ -119,7 +119,7 @@ procedure is unimplemented and will raise an error.
 ==== process-group-id
 
 <procedure>(process-group-id PID)</procedure>
- [setter] (set! (process-group-id PID) PGID)
+<setter>(set! (process-group-id PID) PGID)</setter>
 
 Get or set the process group ID of the process specified by {{PID}}.
 

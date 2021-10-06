@@ -308,10 +308,11 @@ Returns an s-expression with debug information for the procedure
 
 ==== warning
 
-<procedure>(warning STRING EXP ...)</procedure>
+<procedure>(warning MESSAGE [EXP ...])</procedure>
 
-Displays a warning message (if warnings are enabled with
-{{enable-warnings}}) and continues execution.
+Displays a warning message (if warnings are enabled with {{enable-warnings}}),
+from the {{MESSAGE}}, and optional {{EXP}} arguments, then continues execution.
+{{MESSAGE}}, and {{EXP}}, may be {{any}} object.
 
 
 === Lists
@@ -1094,12 +1095,6 @@ interpreted.
 
 
 === Conditional forms
-
-==== select
-
-<macro>(select EXP ((KEY ...) EXP1 ...) ... [(else EXPn ...)])</macro>
-
-This is similar to {{case}}, but the keys are evaluated.
 
 ==== unless
 

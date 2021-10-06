@@ -16,7 +16,7 @@ On systems that support dynamic loading, the {{irregex}} module can be
 made available in the CHICKEN interpreter ({{csi}}) by entering
 
 <enscript highlight=scheme>
-(import irregex)
+(import (chicken irregex))
 </enscript>
 
 === Procedures
@@ -222,7 +222,7 @@ Examples:
 
 (irregex-replace/all "[aeiou]" "hello world" "*") => "h*ll* w*rld"
 
-(irregex-replace/all '(* "poo ") "poo poo platter" "*") => "**p*l*a*t*t*e*r"
+(irregex-replace/all '(* "foo ") "foo foo platter" "*") => "**p*l*a*t*t*e*r"
 
 (irregex-replace "(.)(.)" "ab" 2 1 "*")  => "ba*"
 

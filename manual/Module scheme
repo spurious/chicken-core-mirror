@@ -3301,7 +3301,7 @@ if you need a different behavior.
 <procedure>(with-input-from-file string thunk [mode ...])</procedure><br>
 <procedure>(with-output-to-file string thunk [mode ...])</procedure><br>
 
-String should be a string naming a file, and proc should be a procedure
+String should be a string naming a file, and thunk should be a procedure
 of no arguments. For with-input-from-file, the file should already
 exist; for with-output-to-file, the effect is unspecified if the file
 already exists. The file is opened for input or output, an input or

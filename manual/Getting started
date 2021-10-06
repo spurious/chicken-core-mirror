@@ -238,11 +238,11 @@ To invoke the CHICKEN interpreter, you use the {{csi}} command.
  CHICKEN
  (c) 2008-2021, The CHICKEN Team
  (c) 2000-2007, Felix L. Winkelmann
- Version 5.0.0 (rev 6653dce)
+ Version 5.2.0 (rev 317468e4)
  linux-unix-gnu-x86-64 [ 64bit dload ptables ]
-
+ 
  Type ,? for help.
- #;1>
+ #;1> 
 
 This brings up a brief banner, and then the prompt. You can use this
 pretty much like any other Scheme system, e.g., 
