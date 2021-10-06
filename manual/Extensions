@@ -204,7 +204,7 @@ that exports one macro ({{prog1}}) and one procedure ({{my-sum}}):
 
 (module my-lib
   *
-  (import scheme chicken)
+  (import scheme (chicken base))
 
 (define-syntax prog1
   (syntax-rules ()

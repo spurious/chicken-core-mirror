@@ -12,7 +12,7 @@ declarations override command-line options. When multiple declarations
 conflict, the one appearing textually last overrides any previous one.
 
 Declarations can be used to improve performance and to give entities
-like procedures are variables special properties that can result in
+like procedures and variables special properties that can result in
 better performing code. Most of these declarations subtly change the
 semantics of standard Scheme code with respect to the declared
 entities, so care must be taken when using them.
