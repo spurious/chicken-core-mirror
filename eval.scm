@@ -1252,7 +1252,7 @@
   (let ((mod (or (eq? lib mod) mod)))
     (cond
       ((assq lib core-unit-requirements) => 
-        (lambda (a) (values (cdr a) #f)))
+        (lambda (a) (values (cdr a) #t)))
       ((memq lib builtin-features) 
         (values '(##core#undefined) #t))
       ((memq lib core-units)
