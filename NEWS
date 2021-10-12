@@ -1,3 +1,9 @@
+5.3.1
+
+- Build system
+  - Default "cc" on BSD systems for building CHICKEN to avoid ABI problems
+    when linking with C++ code.
+
 5.3.0rc4
 
 - Compiler
