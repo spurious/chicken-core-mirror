@@ -63,10 +63,6 @@
 	    (cons (car a) (if (symbol? (cdr a)) (cdr a) '<macro>)))
 	  ?se))))
 
-(set! ##sys#features
-  (append '(#:srfi-0 #:srfi-2 #:srfi-6 #:srfi-9 #:srfi-46 #:srfi-55 #:srfi-61)
-	  ##sys#features))
-
 (define-alias dd d)
 (define-alias dm d)
 (define-alias dx d)
@@ -1585,3 +1581,7 @@
   (fixup-macro-environment (##sys#macro-environment)))
 
 (define ##sys#meta-macro-environment (make-parameter (##sys#macro-environment)))
+
+;; register features
+
+(register-feature! 'srfi-0 'srfi-46 'srfi-61 'srfi-87)

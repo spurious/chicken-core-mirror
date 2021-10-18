@@ -43,7 +43,8 @@
         (chicken base)
         (chicken fixnum)
         (chicken syntax)
-        (chicken internal))
+        (chicken internal)
+        (chicken platform))
 
 (include "common-declarations.scm")
 (include "mini-srfi-1.scm")
@@ -1307,4 +1308,4 @@
 
 ;; register features
 
-(chicken.platform#register-feature! 'srfi-8 'srfi-11 'srfi-15 'srfi-16 'srfi-26 'srfi-31)
+(register-feature! 'srfi-2 'srfi-8 'srfi-9 'srfi-11 'srfi-15 'srfi-16 'srfi-26 'srfi-31 'srfi-55)

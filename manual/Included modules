@@ -55,6 +55,33 @@ additional modules through the [[Extensions|eggs]] system.
 * [[Module (chicken time posix)]] : Manipulating POSIX time
 * [[Module (chicken type)]] : Defining and using static typing information
 
+In addition to the core modules listed above, the following SRFI modules can be
+imported. These provide access to identifiers described by the SRFI, but which
+may already be defined by other parts of CHICKEN's standard library.
+
+* Module srfi-0 : Feature-based conditional expansion construct
+* Module srfi-2 : AND-LET*: an AND with local bindings, a guarded LET* special form
+* Module srfi-6 : Basic String Ports
+* Module srfi-8 : receive: Binding to multiple values
+* Module srfi-9 : Defining Record Types
+* Module srfi-10 : #, external form
+* Module srfi-11 : Syntax for receiving multiple values
+* Module srfi-12 : Exception Handling
+* Module srfi-15 : Syntax for dynamic scoping
+* Module srfi-16 : Syntax for procedures of variable arity
+* Module srfi-17 : Generalized set!
+* Module srfi-23 : Error reporting mechanism
+* Module srfi-26 : Notation for Specializing Parameters without Currying
+* Module srfi-28 : Basic Format Strings
+* Module srfi-31 : A special form `rec' for recursive evaluation
+* Module srfi-39 : Parameter objects
+* Module srfi-55 : require-extension
+* Module srfi-88 : Keyword objects
+* Module srfi-98 : An interface to access environment variables
+
+Other SRFI features may be supported but do not correspond to any importable module.
+Refer to {{cond-expand}} for a list of non-module SRFI feature identifiers.
+
 ---
 Previous: [[Extensions to the standard]]
 

@@ -6,6 +6,8 @@
 Homogeneous numeric vector datatypes.  Also see the
 [[http://srfi.schemers.org/srfi-4/srfi-4.html|original SRFI-4 document]].
 
+When loaded, the feature identifier {{srfi-4}} is defined.
+
 === CHICKEN implementation specifics and extensions
 
 * Procedures for [[Module (chicken blob)|blob]] conversion, subvectors and vector I/O are provided.
