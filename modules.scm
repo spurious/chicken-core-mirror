@@ -442,9 +442,10 @@
     (set! ##sys#module-table (cons (cons name mod) ##sys#module-table)) 
     mod))
 
-;; same as register-core-module, but uses module's name as its library
+;; same as register-core-module (above) but does not load any code,
+;; used to register modules that provide only syntax
 (define (##sys#register-primitive-module name vexports #!optional (sexports '()))
-  (##sys#register-core-module name name vexports sexports))
+  (##sys#register-core-module name #f vexports sexports))
 
 (define (find-export sym mod indirect)
   (let ((exports (module-export-list mod)))
@@ -1095,19 +1096,18 @@
   (##sys#register-core-module 'r5rs-null #f '() r4rs-syntax))
 
 (##sys#register-module-alias 'r5rs 'scheme)
-(##sys#register-module-alias 'srfi-88 'chicken.keyword)
 
 (define-inline (se-subset names env) (map (cut assq <> env) names))
 
 ;; Hack for library.scm to use macros from modules it defines itself.
-(##sys#register-core-module
- 'chicken.internal.syntax #f '() (##sys#macro-environment))
+(##sys#register-primitive-module
+ 'chicken.internal.syntax '() (##sys#macro-environment))
 
-(##sys#register-core-module
- 'chicken.module #f '() ##sys#chicken.module-macro-environment)
+(##sys#register-primitive-module
+ 'chicken.module '() ##sys#chicken.module-macro-environment)
 
-(##sys#register-core-module
- 'chicken.type #f '() ##sys#chicken.type-macro-environment)
+(##sys#register-primitive-module
+ 'chicken.type '() ##sys#chicken.type-macro-environment)
 
 (##sys#register-primitive-module
  'srfi-0 '() (se-subset '(cond-expand) ##sys#default-macro-environment))

@@ -24,7 +24,8 @@
 ; POSSIBILITY OF SUCH DAMAGE.
 
 
-(##sys#register-primitive-module
+(##sys#register-core-module
  'chicken.foreign
+ 'chicken.foreign ; mapped to distinct run/compile-time requirements in eval unit
  '()
  ##sys#chicken-ffi-macro-environment)

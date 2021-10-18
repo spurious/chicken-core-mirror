@@ -25,7 +25,7 @@
 
 (##sys#register-core-module
  'chicken.condition
- 'library
+ 'chicken.condition ; mapped to distinct run/compile-time requirements in eval unit
  '((abort . chicken.condition#abort)
    (signal . chicken.condition#signal)
    (current-exception-handler . chicken.condition#current-exception-handler)
