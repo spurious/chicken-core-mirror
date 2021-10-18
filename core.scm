@@ -315,7 +315,7 @@
      extended-bindings standard-bindings
 
      ;; Non-booleans set and read by the (batch) driver
-     required-libraries linked-libraries used-libraries
+     required-extensions linked-libraries used-libraries
 
      ;; non-booleans set by the (batch) driver, and read by the (c) backend
      target-heap-size target-stack-size unit-name used-units
@@ -450,7 +450,7 @@
 (define callback-names '())
 (define toplevel-scope #t)
 (define toplevel-lambda-id #f)
-(define required-libraries '())
+(define required-extensions '())
 (define linked-libraries '())
 (define used-libraries '())
 
@@ -738,17 +738,14 @@
 			((##core#require)
 			 (let ((lib (cadr x))
 			       (mod (and (pair? (cddr x)) (caddr x))))
-			   (let-values (((reqform builtin) 
-                                          (##sys#process-require
-						    lib mod
-			                    (if (or (memq lib linked-libraries) 
-			                            static-extensions)
-				              'static
-				              'dynamic))))
-                             (unless builtin
-				(set! required-libraries 
-                                 (lset-adjoin/eq? required-libraries lib)))
-                             (walk reqform e dest ldest h ln #f))))
+			   (unless (chicken.load#core-library? lib)
+			     (set! required-extensions (lset-adjoin/eq? required-extensions lib)))
+			   (walk (##sys#process-require
+				  lib mod
+				  (if (or (memq lib linked-libraries) static-extensions)
+				      'static
+				      'dynamic))
+				 e dest ldest h ln #f)))
 
 			((##core#let)
 			 (let* ((bindings (cadr x))

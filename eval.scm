@@ -596,9 +596,8 @@
 
 			 [(##core#require)
 			  (let ((lib (cadr x))
-			  	 (mod (and (pair? (cddr x)) (caddr x))))
-                            (let-values (((reqform _) (##sys#process-require lib mod #f)))
-			      (compile reqform e #f tf cntr #f)))]
+				(mod (and (pair? (cddr x)) (caddr x))))
+			    (compile (##sys#process-require lib mod #f) e #f tf cntr #f))]
 
 			 [(##core#elaborationtimeonly ##core#elaborationtimetoo) ; <- Note this!
 			  (##sys#eval/meta (cadr x))
@@ -904,6 +903,7 @@
 
 ;;; Core unit information
 
+;; this maps built-in library names to require forms when the mapping isn't 1:1
 (define-constant core-unit-requirements
   '((chicken.foreign
      . (##core#require-for-syntax chicken-ffi-syntax))
@@ -912,6 +912,9 @@
 	(##core#require-for-syntax chicken-syntax)
 	(##core#require library)))))
 
+;; this list contains built-in units that are provided by libchicken
+;; and should not be treated as separate extension libraries during
+;; linking (they are omitted from types/inline/link files etc.)
 (define-constant core-units
   '(chicken-syntax chicken-ffi-syntax continuation data-structures
     debugger-client eval eval-modules expand extras file internal
@@ -934,16 +937,9 @@
 
 (define ##sys#load-dynamic-extension default-load-library-extension)
 
-(define (chicken.load#core-unit? id) ; used by batch-driver.scm
+(define (chicken.load#core-library? id) ; used by core.scm
   (or (memq id core-units)
       (assq id core-unit-requirements)))
-
-; these are actually in unit extras, but that is used by default
-
-(define-constant builtin-features
-  '(srfi-30 srfi-46 srfi-61 srfi-62                     ; runtime
-    srfi-0 srfi-2 srfi-8 srfi-9 srfi-11 srfi-15 srfi-16 ; syntax
-    srfi-17 srfi-26 srfi-31 srfi-55 srfi-87 srfi-88))   ; syntax cont
 
 (define default-dynamic-load-libraries
   (case (software-version)
@@ -1251,26 +1247,19 @@
 (define (##sys#process-require lib mod compile-mode)
   (let ((mod (or (eq? lib mod) mod)))
     (cond
-      ((assq lib core-unit-requirements) => 
-        (lambda (a) (values (cdr a) #t)))
-      ((memq lib builtin-features) 
-        (values '(##core#undefined) #t))
+      ((assq lib core-unit-requirements) => cdr)
       ((memq lib core-units)
-        (values
-          (if compile-mode
-   	      `(##core#callunit ,lib)
-	      `(chicken.load#load-unit (##core#quote ,lib)
-	  			       (##core#quote #f)
-				       (##core#quote #f)))
-          #t))
+       (if compile-mode
+           `(##core#callunit ,lib)
+           `(chicken.load#load-unit (##core#quote ,lib)
+                                    (##core#quote #f)
+                                    (##core#quote #f))))
       ((eq? compile-mode 'static)
-       (values `(##core#callunit ,lib) #f))
+       `(##core#callunit ,lib))
       (else
-       (values
-          `(chicken.load#load-extension (##core#quote ,lib)
-				        (##core#quote ,mod)
-				        (##core#quote #f))
-          #f)))))
+       `(chicken.load#load-extension (##core#quote ,lib)
+                                     (##core#quote ,mod)
+                                     (##core#quote #f))))))
 
 ;;; Find included file:
 

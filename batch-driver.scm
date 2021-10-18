@@ -676,7 +676,7 @@
 	       (initialize-analysis-database)
 
 	       ;; collect requirements and load inline files
-	       (let ((extensions required-libraries))
+	       (let ((extensions required-extensions))
 		 (when enable-inline-files
 		   (for-each
 		    (lambda (id)
@@ -851,7 +851,7 @@
 
                               ;; generate link file
 			      (when emit-link-file
-				(let ((exts required-libraries))
+				(let ((exts required-extensions))
 				  (dribble "generating link file `~a' ..." emit-link-file)
 				  (with-output-to-file emit-link-file (cut pp exts))))
 
