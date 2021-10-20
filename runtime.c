@@ -130,20 +130,6 @@ static C_TLS int timezone;
 # include <mach-o/dyld.h>
 #endif
 
-#ifdef HAVE_CONFIG_H
-# ifdef PACKAGE
-#  undef PACKAGE
-# endif
-# ifdef VERSION
-#  undef VERSION
-# endif
-# include <chicken-config.h>
-
-# ifndef HAVE_ALLOCA
-#  error this package requires "alloca()"
-# endif
-#endif
-
 /* Parameters: */
 
 #define RELAX_MULTIVAL_CHECK

@@ -44,7 +44,7 @@
 /*
  * N.B. This file MUST not rely upon "chicken-config.h"
  */
-#if defined(HAVE_CONFIG_H) || defined(HAVE_CHICKEN_CONFIG_H)
+#if defined(HAVE_CHICKEN_CONFIG_H)
 # include "chicken-config.h"
 #endif
 
