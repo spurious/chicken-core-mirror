@@ -38,9 +38,6 @@ procedure {{THUNK}} is invoked and the result value is returned. If
 (increase 123 #:amount 10)                          ==> 133
 </enscript>
 
-Note: the {{KEYWORD}} may actually be any kind of object.
-
-
 ==== keyword?
 
 <procedure>(keyword? X)</procedure>
