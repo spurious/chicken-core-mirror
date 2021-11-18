@@ -38,10 +38,12 @@ There are also situation-specific feature identifiers: {{compiling}} during
 compilation, {{csi}} when running in the interpreter, and {{compiler-extension}}
 when running within the compiler.
 
-The following feature-identifier classes are available in all situations:
-{{(machine-byte-order)}}, {{(machine-type)}}, {{(software-type)}},
-{{(software-version)}}, where the actual feature-identifier is platform
-dependent.
+The symbols returned by the following procedures from
+[[Module (chicken platform)|(chicken platform)]] are also available
+as feature-identifiers in all situations: {{(machine-byte-order)}},
+{{(machine-type)}}, {{(software-type)}}, {{(software-version)}}. For
+example, the {{machine-type}} class of feature-identifiers include
+{{arm}}, {{alpha}}, {{mips}}, etc.
 
 Platform endianness is indicated by the {{little-endian}} and {{big-endian}}
 features.

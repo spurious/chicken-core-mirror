@@ -30,6 +30,21 @@ following syntactic forms: {{import}}, {{require-extension}},
 {{require-library}}, {{begin-for-syntax}}, {{export}}, {{module}},
 {{cond-expand}}, {{syntax}}, {{reexport}}, {{import-for-syntax}}.
 
+=== Assignment to unbound variables
+
+{{set!}} may assign values to unbound variables; this creates a new
+top-level binding for the variable, as if {{define}} had been used
+instead. This extension must be used with care, as typos might cause
+unexpected results:
+
+<enscript highlight="scheme">
+> (let ((frob 5))
+    (set! frov (+ frob 1))  ; oops!
+    frob)
+> 5
+> frov
+> 6
+</enscript>
 
 == Unconfirmed deviations
 
