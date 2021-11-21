@@ -39,6 +39,17 @@ example:
  a point with x=1 and y=2
 
 
+=== default-evaluator
+
+<procedure>(default-evaluator EXPR)</procedure>
+
+Takes {{EXPR}} and processes any of the built-in toplevel commands provided
+by {{csi}}. If {{EXPR}} is not a toplevel command, then it is evaluated using
+{{eval}}. This procedure is intended to be passed as an argument to {{repl}}
+to allow using {{csi}}s toplevel commands and history management in user-defined
+read-eval-print loops.
+
+
 === editor-command
 
 <parameter>editor-command</parameter>

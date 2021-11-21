@@ -19,6 +19,7 @@ If {{EVALUATOR}} is given, it should be a procedure of one argument that
 is used in place of {{eval}} to evaluate each entered expression.
 
 You can use {{quit}} to terminate the current read-eval-print loop.
+Encountering end-of-file also terminates the current REPL.
 
 
 === repl-prompt

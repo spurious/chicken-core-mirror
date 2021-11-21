@@ -41,7 +41,7 @@ EOF
 ) )
 
 (module chicken.csi
-  (editor-command toplevel-command set-describer!)
+  (editor-command toplevel-command set-describer! default-evaluator)
 
 (import scheme
 	chicken.base
@@ -279,7 +279,7 @@ EOF
 	 (set! command-table (cons (list name proc help) command-table))))
   (##sys#void))
 
-(define csi-eval
+(define default-evaluator
   (let ((eval eval)
 	(load-noisily load-noisily)
 	(read read)
@@ -291,7 +291,7 @@ EOF
 	(pretty-print pretty-print)
 	(values values) )
     (lambda (form)
-      (cond ((eof-object? form) (exit))
+      (cond ((eof-object? form) (quit))
 	    ((and (pair? form)
 		  (eq? 'unquote (##sys#slot form 0)) )
 	     (let ((cmd (cadr form)))
@@ -1092,9 +1092,9 @@ EOF
 	(set! ##sys#notices-enabled #f))
       (do ([args args (cdr args)])
 	  ((null? args)
+	   (register-repl-history!)
 	   (unless batch
-	     (register-repl-history!)
-	     (repl csi-eval)
+	     (repl default-evaluator)
 	     (##sys#write-char-0 #\newline ##sys#standard-output) ) )
 	(let* ((arg (car args)))
 	  (cond ((member arg simple-options))
