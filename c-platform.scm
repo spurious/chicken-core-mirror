@@ -238,6 +238,7 @@
 
     chicken.locative#locative-ref chicken.locative#locative-set!
     chicken.locative#locative->object chicken.locative#locative?
+    chicken.locative#locative-index
 
     chicken.memory#pointer+ chicken.memory#pointer=?
     chicken.memory#address->pointer chicken.memory#pointer->address

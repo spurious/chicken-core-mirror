@@ -554,7 +554,7 @@ EOF
 
 (module chicken.locative
   (locative? make-locative make-weak-locative
-   locative-ref locative-set! locative->object)
+   locative-ref locative-set! locative->object locative-index)
 
 (import scheme chicken.base)
 
@@ -596,6 +596,9 @@ EOF
 
 (define (locative->object x)
   (##core#inline "C_i_locative_to_object" x))
+
+(define (locative-index x)
+  (##core#inline "C_i_locative_index" x))
 
 (define (locative? x)
   (and (##core#inline "C_blockp" x) (##core#inline "C_locativep" x))))

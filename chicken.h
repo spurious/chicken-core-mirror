@@ -2059,6 +2059,7 @@ C_fctexport C_word C_fcall C_i_char_less_or_equal_p(C_word x, C_word y) C_regpar
 C_fctexport C_word C_fcall C_a_i_locative_ref(C_word **a, int c, C_word loc) C_regparm;
 C_fctexport C_word C_fcall C_i_locative_set(C_word loc, C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_locative_to_object(C_word loc) C_regparm;
+C_fctexport C_word C_fcall C_i_locative_index(C_word loc) C_regparm;
 C_fctexport C_word C_fcall C_a_i_make_locative(C_word **a, int c, C_word type, C_word object, C_word index, C_word weak) C_regparm;
 C_fctexport C_word C_fcall C_i_bit_to_bool(C_word n, C_word i) C_regparm; /* DEPRECATED */
 C_fctexport C_word C_fcall C_i_integer_length(C_word x) C_regparm;

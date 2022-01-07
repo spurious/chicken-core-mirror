@@ -1814,6 +1814,7 @@
 
 ;; locative
 
+(chicken.locative#locative-index (#(procedure #:clean #:enforce) chicken.locative#locative-index (locative) fixnum))
 (chicken.locative#locative->object (#(procedure #:clean #:enforce) chicken.locative#locative->object (locative) *))
 (chicken.locative#locative-ref (#(procedure #:clean #:enforce) chicken.locative#locative-ref (locative) *)
 		((locative) (##core#inline_allocate ("C_a_i_locative_ref" 6) #(1))))

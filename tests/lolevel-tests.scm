@@ -201,6 +201,40 @@
 
 ; locative->object
 
+; locative-index
+
+;; Default index (0)
+(assert (= 0 (locative-index (make-locative '(0 . 1)))))
+(assert (= 0 (locative-index (make-locative #(a b c d e)))))
+(assert (= 0 (locative-index (make-locative "abcde"))))
+(assert (= 0 (locative-index (make-locative #${012345}))))
+(assert (= 0 (locative-index (make-locative #u8(0 1 2 3 4)))))
+(assert (= 0 (locative-index (make-locative #s8(0 1 2 3 4)))))
+(assert (= 0 (locative-index (make-locative #u16(0 1 2 3 4)))))
+(assert (= 0 (locative-index (make-locative #s16(0 1 2 3 4)))))
+(assert (= 0 (locative-index (make-locative #u32(0 1 2 3 4)))))
+(assert (= 0 (locative-index (make-locative #s32(0 1 2 3 4)))))
+(assert (= 0 (locative-index (make-locative #u64(0 1 2 3 4)))))
+(assert (= 0 (locative-index (make-locative #s64(0 1 2 3 4)))))
+(assert (= 0 (locative-index (make-locative #f32(0 1 2 3 4)))))
+(assert (= 0 (locative-index (make-locative #f64(0 1 2 3 4)))))
+
+;; Given index argument
+(assert (= 1 (locative-index (make-locative '(0 . 1) 1))))
+(assert (= 2 (locative-index (make-locative #(a b c d e) 2))))
+(assert (= 3 (locative-index (make-locative "abcde" 3))))
+(assert (= 2 (locative-index (make-locative #${01234} 2))))
+(assert (= 1 (locative-index (make-locative #u8(0 1 2 3 4) 1))))
+(assert (= 2 (locative-index (make-locative #s8(0 1 2 3 4) 2))))
+(assert (= 3 (locative-index (make-locative #u16(0 1 2 3 4) 3))))
+(assert (= 2 (locative-index (make-locative #s16(0 1 2 3 4) 2))))
+(assert (= 1 (locative-index (make-locative #u32(0 1 2 3 4) 1))))
+(assert (= 2 (locative-index (make-locative #s32(0 1 2 3 4) 2))))
+(assert (= 3 (locative-index (make-locative #u64(0 1 2 3 4) 3))))
+(assert (= 2 (locative-index (make-locative #s64(0 1 2 3 4) 2))))
+(assert (= 1 (locative-index (make-locative #f32(0 1 2 3 4) 1))))
+(assert (= 2 (locative-index (make-locative #f64(0 1 2 3 4) 2))))
+
 ; extend-procedure
 
 (define (foo a b) (list a b))

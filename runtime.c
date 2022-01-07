@@ -12150,6 +12150,38 @@ C_regparm C_word C_fcall C_i_locative_to_object(C_word loc)
 }
 
 
+C_regparm C_word C_fcall C_i_locative_index(C_word loc)
+{
+  int bytes;
+
+  if(C_immediatep(loc) || C_block_header(loc) != C_LOCATIVE_TAG)
+    barf(C_BAD_ARGUMENT_TYPE_ERROR, "locative-index", loc);
+
+  bytes = C_unfix(C_block_item(loc, 1)) - sizeof(C_header);
+
+  switch(C_unfix(C_block_item(loc, 2))) {
+  case C_SLOT_LOCATIVE: return C_fix(bytes/sizeof(C_word)); break;
+
+  case C_CHAR_LOCATIVE:
+  case C_U8_LOCATIVE:
+  case C_S8_LOCATIVE: return C_fix(bytes); break;
+
+  case C_U16_LOCATIVE:
+  case C_S16_LOCATIVE: return C_fix(bytes/2); break;
+
+  case C_U32_LOCATIVE:
+  case C_S32_LOCATIVE:
+  case C_F32_LOCATIVE: return C_fix(bytes/4); break;
+
+  case C_U64_LOCATIVE:
+  case C_S64_LOCATIVE:
+  case C_F64_LOCATIVE: return C_fix(bytes/8); break;
+
+  default: panic(C_text("bad locative type"));
+  }
+}
+
+
 /* GC protection of user-variables: */
 
 C_regparm void C_fcall C_gc_protect(C_word **addr, int n)
