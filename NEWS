@@ -1,5 +1,8 @@
 5.3.1
 
+- Core libraries
+  - Added "locative-index", kindly contributed by John Croisant.
+
 - Build system
   - Default "cc" on BSD systems for building CHICKEN to avoid ABI problems
     when linking with C++ code.
