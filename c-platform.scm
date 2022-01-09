@@ -1058,6 +1058,8 @@
 (rewrite '##sys#null-pointer? 17 1 "C_null_pointerp" "C_null_pointerp")
 (rewrite '##sys#immediate? 17 1 "C_immp")
 (rewrite 'chicken.locative#locative->object 17 1 "C_i_locative_to_object")
+(rewrite 'chicken.locative#locative->object 17 1 "C_i_locative_to_object")
+(rewrite 'chicken.locative#locative-index 17 1 "C_i_locative_index")
 (rewrite 'chicken.locative#locative-set! 17 2 "C_i_locative_set")
 (rewrite '##sys#foreign-fixnum-argument 17 1 "C_i_foreign_fixnum_argumentp")
 (rewrite '##sys#foreign-char-argument 17 1 "C_i_foreign_char_argumentp")
