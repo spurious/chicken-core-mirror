@@ -133,7 +133,7 @@
 
 (define-constant value-types
   '(string symbol keyword char null boolean true false blob eof
-    fixnum float number integer bignum ratnum cplxnum
+    fixnum float number integer bignum ratnum cplxnum bytevector
     pointer-vector port pointer locative))
 
 (define-constant basic-types
