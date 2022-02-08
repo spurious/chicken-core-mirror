@@ -623,8 +623,7 @@
 		    ((fixnum char) (##sys#make-string #(1) #(2)))
 		    ((fixnum) (##sys#make-string #(1) '#\space)))
 
-(scheme#string-length (#(procedure #:clean #:enforce #:foldable) scheme#string-length (string) fixnum)
-	       ((string) (##sys#size #(1))))
+(scheme#string-length (#(procedure #:clean #:enforce #:foldable) scheme#string-length (string) fixnum))
 
 (scheme#string-ref (#(procedure #:clean #:enforce #:foldable) scheme#string-ref (string fixnum) char)
 		   ((string fixnum) (##core#inline "C_i_string_ref" #(1) #(2))))
