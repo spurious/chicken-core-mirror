@@ -90,17 +90,6 @@
 (assert (not (get-environment-variable "FOO")))
 
 ;; file creation and umask interaction
-(define (permission-expectation original-expectation)
-  (cond-expand
-    ;; In Windows, all files are always readable.  You cannot give
-    ;; write-only permissions or no permissions.  Also, there's no
-    ;; concept of "group" and "other", so we must take the user
-    ;; permissions and extend those over the rest.  Finally, it
-    ;; doesn't have an "execute" bit, so ignore that too.
-    (windows (case (arithmetic-shift original-expectation -6)
-	       ((6 7 3 2) #o666)
-	       (else #o444)))
-    (else original-expectation)))
 
 ;; For windows, the file must be writable before it can be deleted!
 (define (delete-maybe-readonly-file filename)
@@ -110,18 +99,18 @@
     (else))
   (delete-file* filename))
 
+#+(not windows)
 (letrec-syntax ((test (syntax-rules ()
                         ((test umask expected)
                          (test umask "expected" expected "given"))
                         ((test umask given expected)
                          (test umask "expected" expected "given" given))
                         ((test umask "expected" expected "given" given ...)
-                         (let ((mode (file-creation-mode))
-			       (exp-perm (permission-expectation expected)))
+                         (let ((mode (file-creation-mode)))
                            (set! (file-creation-mode) umask)
-                           (delete-maybe-readonly-file "posix-tests.out")
+                           (delete-file* "posix-tests.out")
                            (file-close (file-open "posix-tests.out" open/creat given ...))
-                           (assert (equal? (file-permissions "posix-tests.out") exp-perm))
+                           (assert (equal? (file-permissions "posix-tests.out") expected))
                            (set! (file-creation-mode) mode))))))
   ;; default file mode
   (test #o000 #o666)
