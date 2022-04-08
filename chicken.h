@@ -388,6 +388,29 @@ void *alloca ();
 #define C_MOST_POSITIVE_32_BIT_FIXNUM  0x3fffffff
 #define C_MOST_NEGATIVE_FIXNUM    (-C_MOST_POSITIVE_FIXNUM - 1)
 
+/* Block object layout:
+
+    Bits:   B = BYTEBLOC_BIT
+            S = SPECIALBLOCK_BIT
+            A = 8ALIGN_BIT
+
+    Symbol  = [  1|3, Value, Name, Plist]   Name = bytevector, 0-terminated
+    String  = [  2|4, Name, Count, Offset, Index]  Name = bytevector, 0-terminated
+    Pair    = [  3|2, Car, Cdr]
+    Closure = [ S4|1+N, Ptr, Slot, ...]
+    Flonum  = [AB5|8, IEEEDouble]
+    Bignum  = [  6|1, Bits]                 Bits = bytevector
+    Port    = [ S7|15, Slots, ...]
+    Structure = [  8|1+N, Tag, Slots, ...]
+    Pointer = [ S9|1, Ptr]
+    Locative = [ S0a|4*N, Slots, ...]
+    Taggedpointer = [ S0b|2, Ptr, Tag]
+    Ratnum  = [  0c|2, Num, Den]
+    Lambdainfo = [ B0d|N, Bytes, ...]
+    Cplxnum = [  0e|2, Imag, Real]
+
+*/
+
 #ifdef C_SIXTY_FOUR
 # define C_INT_SIGN_BIT           0x8000000000000000L
 # define C_INT_TOP_BIT            0x4000000000000000L
