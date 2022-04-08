@@ -218,25 +218,6 @@
     (cond ((or (zero? n) (null? vars)) (or rest '()))
           (else (cons (car vars) (loop (cdr vars) (sub1 n)))) ) ) )
 
-;; XXX: Put this too in c-platform or c-backend?
-(define (c-ify-string str)
-  (list->string
-   (cons 
-    #\"
-    (let loop ((chars (string->list str)))
-      (if (null? chars)
-	  '(#\")
-	  (let* ((c (car chars))
-		 (code (char->integer c)) )
-	    (if (or (< code 32) (>= code 127) (memq c '(#\" #\' #\\ #\? #\*)))
-		(append '(#\\)
-			(cond ((< code 8) '(#\0 #\0))
-			      ((< code 64) '(#\0))
-			      (else '()) )
-			(string->list (number->string code 8))
-			(loop (cdr chars)) )
-		(cons c (loop (cdr chars))) ) ) ) ) ) ) )
-
 ;; XXX: This too, but it's used only in core.scm, WTF?
 (define (valid-c-identifier? name)
   (let ([str (string->list (->string name))])
