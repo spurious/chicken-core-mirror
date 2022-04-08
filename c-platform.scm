@@ -62,11 +62,12 @@
      ##sys#for-each ##sys#map ##sys#print ##sys#setter
      ##sys#setslot ##sys#dynamic-wind ##sys#call-with-values
      ##sys#start-timer ##sys#stop-timer ##sys#gcd ##sys#lcm ##sys#structure? ##sys#slot
-     ##sys#allocate-vector ##sys#list->vector ##sys#block-ref ##sys#block-set!
+     ##sys#allocate-vector ##sys#allocate-bytevector ##sys#list->vector ##sys#block-ref ##sys#block-set!
      ##sys#list ##sys#cons ##sys#append ##sys#vector ##sys#foreign-char-argument ##sys#foreign-fixnum-argument
      ##sys#foreign-flonum-argument ##sys#error ##sys#peek-c-string ##sys#peek-nonnull-c-string 
      ##sys#peek-and-free-c-string ##sys#peek-and-free-nonnull-c-string
      ##sys#foreign-block-argument ##sys#foreign-string-argument
+     ##sys#foreign-symbol-argument
      ##sys#foreign-pointer-argument ##sys#call-with-current-continuation)))
 
 (define default-profiling-declarations
@@ -265,12 +266,12 @@
 
 (set! internal-bindings
   '(##sys#slot ##sys#setslot ##sys#block-ref ##sys#block-set! ##sys#/-2
-    ##sys#call-with-current-continuation ##sys#size ##sys#byte ##sys#setbyte
+    ##sys#call-with-current-continuation ##sys#size ##sys#byte
     ##sys#pointer? ##sys#generic-structure? ##sys#structure? ##sys#check-structure
     ##sys#check-number ##sys#check-list ##sys#check-pair ##sys#check-string
     ##sys#check-symbol ##sys#check-boolean ##sys#check-locative
     ##sys#check-port ##sys#check-input-port ##sys#check-output-port
-    ##sys#check-open-port
+    ##sys#check-open-port ##sys#check-bytevector ##sys#signal-hook
     ##sys#check-char ##sys#check-vector ##sys#check-byte-vector ##sys#list ##sys#cons
     ##sys#call-with-values ##sys#flonum-in-fixnum-range? 
     ##sys#immediate? ##sys#context-switch
@@ -283,7 +284,8 @@
     ##sys#foreign-string-argument ##sys#foreign-pointer-argument ##sys#void
     ##sys#foreign-ranged-integer-argument ##sys#foreign-unsigned-ranged-integer-argument
     ##sys#peek-fixnum ##sys#setislot ##sys#poke-integer ##sys#permanent? ##sys#values ##sys#poke-double
-    ##sys#intern-symbol ##sys#null-pointer? ##sys#peek-byte
+    ##sys#intern-symbol ##sys#intern-keyword ##sys#null-pointer? ##sys#peek-byte
+    ##sys#foreign-symbol-argument
     ##sys#file-exists? ##sys#substring-index ##sys#substring-index-ci ##sys#lcm ##sys#gcd))
 
 (for-each
