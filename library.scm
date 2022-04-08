@@ -3605,10 +3605,11 @@ EOF
 ;;; Create lambda-info object
 
 (define (##sys#make-lambda-info str)
-  (let* ((sz (##sys#size str))
-	 (info (##sys#make-string sz)) )
+  (let* ((bv (##sys#slot str 0))
+         (sz (fx- (##sys#size bv) 1))
+	 (info (##sys#make-bytevector sz)))
     (##core#inline "C_copy_memory" info str sz)
-    (##core#inline "C_string_to_lambdainfo" info)
+    (##core#inline "C_bytevector_to_lambdainfo" info)
     info) )
 
 
@@ -4267,10 +4268,10 @@ EOF
 	      (info 'list-info (list q (readrec)) ln)))
 
 	  (define (build-symbol tok)
-	    (##sys#intern-symbol tok) )
+	    (##sys#string->symbol tok) )
 
 	  (define (build-keyword tok)
-	    (##sys#intern-keyword tok))
+	    (##sys#intern-keyword (##sys#string->symbol-name tok)))
 
           ;; now have the state to make a decision.
           (set! reserved-characters
@@ -4746,7 +4747,7 @@ EOF
 		 (outstr port (##sys#slot x 3))
 		 (outstr port "\">") )
 		((##core#inline "C_vectorp" x)
-		 (let ((n (##core#inline "C_block_size" x)))
+		 (let ((n (##sys#size x)))
 		   (cond ((eq? 0 n)
 			  (outstr port "#()") )
 			 (else
@@ -5938,8 +5939,7 @@ EOF
 			   (cond [(or (eof-object? c) (string=? end s))
 				  (when (eof-object? c)
 				    (##sys#read-warning
-				     port (##sys#format-here-doc-warning end))
-				     )
+				     port (##sys#format-here-doc-warning end)))
 				  `(##sys#print-to-string
 				    ;;Can't just use `(list ,@lst) because of 126 argument apply limit
 				    ,(let loop2 ((lst (cdr lst)) (next-string '()) (acc ''())) ; drop last newline

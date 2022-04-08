@@ -360,9 +360,9 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
   (lambda (fd size . buffer)
     (##sys#check-fixnum fd 'file-read)
     (##sys#check-fixnum size 'file-read)
-    (let ([buf (if (pair? buffer) (car buffer) (make-string size))])
-      (unless (and (##core#inline "C_blockp" buf) (##core#inline "C_byteblockp" buf))
-	(##sys#signal-hook #:type-error 'file-read "bad argument type - not a string or blob" buf) )
+    (let ([buf (if (pair? buffer) (car buffer) (##sys#make-bytevector size))])
+      (unless (##core#inline "C_byteblockp" buf)
+	(##sys#signal-hook #:type-error 'file-read "bad argument type - not a bytevector" buf) )
       (let ([n (##core#inline "C_read" fd buf size)])
 	(when (eq? -1 n)
 	  (posix-error #:file-error 'file-read "cannot read from file" fd size) )
@@ -371,8 +371,8 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 (set! chicken.file.posix#file-write
   (lambda (fd buffer . size)
     (##sys#check-fixnum fd 'file-write)
-    (unless (and (##core#inline "C_blockp" buffer) (##core#inline "C_byteblockp" buffer))
-      (##sys#signal-hook #:type-error 'file-write "bad argument type - not a string or blob" buffer) )
+    (unless (##core#inline "C_byteblockp" buffer)
+      (##sys#signal-hook #:type-error 'file-write "bad argument type - not a bytevector" buffer) )
     (let ([size (if (pair? size) (car size) (##sys#size buffer))])
       (##sys#check-fixnum size 'file-write)
       (let ([n (##core#inline "C_write" fd buffer size)])
@@ -407,7 +407,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 	   (nfdsr (##sys#length fdsrl))
 	   (nfdsw (##sys#length fdswl))
 	   (nfds (fx+ nfdsr nfdsw))
-	   (fds-blob (##sys#make-blob
+	   (fds-blob (##sys#make-bytevector
 		      (fx* nfds (foreign-value "sizeof(struct pollfd)" int)))))
       (when tm (##sys#check-exact-integer tm))
       (do ((i 0 (fx+ i 1))
@@ -778,7 +778,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
   (lambda (loc nam fd #!optional (nonblocking? #f) (bufi 1) (on-close void) (more? #f))
     (when nonblocking? (##sys#file-nonblocking! fd) )
     (let ([bufsiz (if (fixnum? bufi) bufi (##sys#size bufi))]
-	  [buf (if (fixnum? bufi) (##sys#make-string bufi) bufi)]
+	  [buf (if (fixnum? bufi) (##sys#make-bytevector bufi) bufi)]
 	  [buflen 0]
 	  [bufpos 0] )
       (let ([ready?
@@ -846,13 +846,16 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 		     (when (fx>= bufpos buflen)
 		       (fetch))
 		     (peek) )
-		   (lambda (port n dest start) ; read-string!
-		     (let loop ([n (or n (fx- (##sys#size dest) start))] [m 0] [start start])
+		   (lambda (port n dest start) ; read-bytevector!
+		     (let loop ([n (or n (fx- (##sys#size dest) start))] 
+                                [m 0] 
+                                [start start])
 		       (cond [(eq? 0 n) m]
 			     [(fx< bufpos buflen)
 			      (let* ([rest (fx- buflen bufpos)]
 				     [n2 (if (fx< n rest) n rest)])
-				(##core#inline "C_substring_copy" buf dest bufpos (fx+ bufpos n2) start)
+				(##core#inline "C_copy_memory_with_offset" 
+                                  dest buf start bufpos n2)
 				(set! bufpos (fx+ bufpos n2))
 				(loop (fx- n n2) (fx+ m n2) (fx+ start n2)) ) ]
 			     [else
@@ -926,27 +929,28 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 		(if (fx= 0 bufsiz)
 		    (lambda (str)
 		      (when str
-			(poke str (##sys#size str)) ) )
-		    (let ([buf (if (fixnum? bufi) (##sys#make-string bufi) bufi)]
+			(poke str (string-length str)) ) )
+		    (let ([buf (if (fixnum? bufi) (##sys#make-bytevector bufi) bufi)]
 			  [bufpos 0])
 		      (lambda (str)
 			(if str
-			    (let loop ([rem (fx- bufsiz bufpos)] [start 0] [len (##sys#size str)])
+			    (let loop ([rem (fx- bufsiz bufpos)] [start 0] 
+                                       [len (string-length str)])
 			      (cond [(fx= 0 rem)
 				     (poke buf bufsiz)
 				     (set! bufpos 0)
 				     (loop bufsiz 0 len)]
 				    [(fx< rem len)
-				     (##core#inline "C_substring_copy" str buf start rem bufpos)
+				     (##core#inline "C_utf_copy" str buf start rem bufpos)
 				     (loop 0 rem (fx- len rem))]
 				    [else
-				     (##core#inline "C_substring_copy" str buf start len bufpos)
+				     (##core#inline "C_utf_copy" str buf start len bufpos)
 				     (set! bufpos (fx+ bufpos len))] ) )
 			    (when (fx< 0 bufpos)
 			      (poke buf bufpos) ) ) ) ) ) )])
       (letrec ([this-port
 		(make-output-port
-		 (lambda (str)		; write-string
+		 (lambda (str)
 		   (store str) )
 		 (lambda ()		; close
 		   (when (fx< (##core#inline "C_close" fd) 0)

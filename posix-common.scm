@@ -594,7 +594,7 @@ EOF
       (##sys#check-exact-integer secs 'seconds->string)
       (let ([str (ctime secs)])
         (if str
-            (##sys#substring str 0 (fx- (##sys#size str) 1))
+            (##sys#substring str 0 (fx- (string-length str) 1))
             (##sys#error 'seconds->string "cannot convert seconds to string" secs) ) ) ) ) )
 
 (set! chicken.time.posix#local-time->seconds
@@ -619,7 +619,7 @@ EOF
                 (##sys#error 'time->string "time formatting overflows buffer" tm)) )
           (let ([str (asctime tm (##sys#make-string tm-size #\nul))])
             (if str
-                (##sys#substring str 0 (fx- (##sys#size str) 1))
+                (##sys#substring str 0 (fx- (string-length str) 1))
                 (##sys#error 'time->string "cannot convert time vector to string" tm) ) ) ) ) ) )
 
 
