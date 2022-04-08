@@ -187,7 +187,7 @@ char *ttyname(int fd) {
     (define (write-buf buf n port writer)
       (do ((i 0 (fx+ i 1)))
 	  ((fx>= i n))
-	(writer (integer->char (##sys#byte buf i)) port)))
+	(writer (string-ref buf i) port)))
     (define (read-and-write reader writer)
       (let loop ()
 	(let ((x (reader)))
@@ -205,7 +205,7 @@ char *ttyname(int fd) {
 		   (when (fx>= n 0)
 		     (write-string buf n dest)))
 		  (else
-		   (##sys#setbyte buf n (char->integer c))
+		   (string-set! buf n c)
 		   (loop (fx+ n 1))))))))
     (lambda (src dest #!optional (read read-char) (write write-char))
       ;; does not check port args intentionally

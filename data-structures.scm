@@ -87,8 +87,8 @@
   (define (traverse which where start test loc)
     (##sys#check-string which loc)
     (##sys#check-string where loc)
-    (let* ((wherelen (##sys#size where))
-	   (whichlen (##sys#size which))
+    (let* ((wherelen (string-length where))
+	   (whichlen (string-length which))
 	   (end (fx- wherelen whichlen)))
       (##sys#check-fixnum start loc)
       (if (and (fx>= start 0)
@@ -187,9 +187,9 @@
     (##sys#check-string str 'string-split)
     (let* ([del (if (null? delstr-and-flag) "\t\n " (car delstr-and-flag))]
 	   [flag (if (fx= (length delstr-and-flag) 2) (cadr delstr-and-flag) #f)]
-	   [strlen (##sys#size str)] )
+	   [strlen (string-length str)] )
       (##sys#check-string del 'string-split)
-      (let ([dellen (##sys#size del)] 
+      (let ([dellen (string-length del)] 
 	    [first #f] )
 	(define (add from to last)
 	  (let ([node (cons (##sys#substring str from to) '())])
@@ -202,10 +202,10 @@
 		 (when (or (fx> i from) flag) (add from i last))
 		 (or first '()) ]
 		[else
-		 (let ([c (##core#inline "C_subchar" str i)])
+		 (let ([c (string-ref str i)])
 		   (let scan ([j 0])
 		     (cond [(fx>= j dellen) (loop (fx+ i 1) last from)]
-			   [(eq? c (##core#inline "C_subchar" del j))
+			   [(eq? c (string-ref del j))
 			    (let ([i2 (fx+ i 1)])
 			      (if (or (fx> i from) flag)
 				  (loop i2 (add from i last) i2)
@@ -249,11 +249,11 @@
   (lambda (str from . to)
 
     (define (instring s)
-      (let ([len (##sys#size s)])
+      (let ([len (string-length s)])
 	(lambda (c)
 	  (let loop ([i 0])
 	    (cond [(fx>= i len) #f]
-		  [(eq? c (##core#inline "C_subchar" s i)) i]
+		  [(eq? c (string-ref s i)) i]
 		  [else (loop (fx+ i 1))] ) ) ) ) )
 
     (let* ([from
@@ -270,37 +270,47 @@
 			 [else
 			  (##sys#check-string tx 'string-translate)
 			  tx] ) ) ) ] 
-	   [tlen (and (string? to) (##sys#size to))] )
+	   [tlen (and (string? to) (string-length to))] )
       (##sys#check-string str 'string-translate)
-      (let* ([slen (##sys#size str)]
+      (let* ([slen (string-length str)]
 	     [str2 (make-string slen)] )
 	(let loop ([i 0] [j 0])
 	  (if (fx>= i slen)
 	      (if (fx< j i)
 		  (##sys#substring str2 0 j)
 		  str2)
-	      (let* ([ci (##core#inline "C_subchar" str i)]
+	      (let* ([ci (string-ref str i)]
 		     [found (from ci)] )
 		(cond [(not found)
-		       (##core#inline "C_setsubchar" str2 j ci)
+		       (string-set! str2 j ci)
 		       (loop (fx+ i 1) (fx+ j 1)) ]
 		      [(not to) (loop (fx+ i 1) j)]
 		      [(char? to)
-		       (##core#inline "C_setsubchar" str2 j to)
+		       (string-set! str2 j to)
 		       (loop (fx+ i 1) (fx+ j 1)) ]
 		      [(fx>= found tlen)
 		       (##sys#error 'string-translate "invalid translation destination" i to) ]
 		      [else 
-		       (##core#inline "C_setsubchar" str2 j (##core#inline "C_subchar" to found))
+		       (string-set! str2 j (string-ref to found))
 		       (loop (fx+ i 1) (fx+ j 1)) ] ) ) ) ) ) ) ) )
+
+(define (fragments->string total fs)
+  (let ([dest (##sys#make-string total)])
+    (let loop ([fs fs] [pos 0])
+      (if (null? fs)
+	  dest
+	  (let* ([f (##sys#slot fs 0)]
+		 [flen (string-length f)] )
+	    (##core#inline "C_utf_copy" f dest 0 flen pos)
+	    (loop (##sys#slot fs 1) (fx+ pos flen)) ) ) ) ) )
 
 (define (string-translate* str smap)
   (##sys#check-string str 'string-translate*)
   (##sys#check-list smap 'string-translate*)
-  (let ((len (##sys#size str)))
+  (let ((len (string-length str)))
     (define (collect i from total fs)
       (if (fx>= i len)
-	  (##sys#fragments->string
+	  (fragments->string
 	   total
 	   (##sys#fast-reverse 
 	    (if (fx> i from) 
@@ -331,7 +341,7 @@
 (define (string-chop str len)
   (##sys#check-string str 'string-chop)
   (##sys#check-fixnum len 'string-chop)
-  (let ([total (##sys#size str)])
+  (let ([total (string-length str)])
     (let loop ([total total] [pos 0])
       (cond [(fx<= total 0) '()]
 	    [(fx<= total len) (list (##sys#substring str pos (fx+ pos total)))]

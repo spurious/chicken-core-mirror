@@ -86,7 +86,7 @@
 				  (set! buffer
 				    (##sys#string-append buffer (make-string buffer-len)))
 				  (set! buffer-len (fx+ buffer-len buffer-len)) )
-				(##core#inline "C_setsubchar" buffer i c)
+				(string-set! buffer i c)
 				(loop (fx+ i 1)) ] ) ) ) ) ) ) ) ) ) ) ) )
 
 (define read-lines
@@ -574,9 +574,9 @@
       (let rec ([msg msg] [args args])
 	(##sys#check-string msg loc)
 	(let ((index 0)
-	      (len (##sys#size msg)) )
+	      (len (string-length msg)) )
 	  (define (fetch)
-	    (let ((c (##core#inline "C_subchar" msg index)))
+	    (let ((c (string-ref msg index)))
 	      (set! index (fx+ index 1))
 	      c) )
 	  (define (next)

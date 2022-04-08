@@ -962,15 +962,15 @@
   (if ##sys#windows-platform '(#\\ #\/) '(#\/)))
 
 (define (path-separator-index/right s)
-  (let loop ((i (fx- (##sys#size s) 1)))
-    (if (memq (##core#inline "C_subchar" s i) path-separators)
+  (let loop ((i (fx- (string-length s) 1)))
+    (if (memq (string-ref s i) path-separators)
 	i
 	(and (fx< 0 i) (loop (fx- i 1))))))
 
 (define (make-relative-pathname from file)
   (let ((i (and (string? from)
-		(positive? (##sys#size file)) ; XXX probably an error?
-		(not (memq (##core#inline "C_subchar" file 0) path-separators))
+		(positive? (string-length file)) ; XXX probably an error?
+		(not (memq (string-ref file 0) path-separators))
 		(path-separator-index/right from))))
     (if (not i) file (string-append (##sys#substring from 0 i) "/" file))))
 
@@ -1350,7 +1350,7 @@
 <#
 
 (define (store-string str bufsize buf)
-  (let ((len (##sys#size str)))
+  (let ((len (string-length str)))
     (cond ((fx>= len bufsize)
 	   (set! last-error "Error: not enough room for result string")
 	   #f)

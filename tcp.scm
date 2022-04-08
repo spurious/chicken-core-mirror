@@ -276,11 +276,11 @@ EOF
 (define parse-host
   (let ((substring substring))
     (lambda (host proto)
-      (let ((len (##sys#size host)))
+      (let ((len (string-length host)))
 	(let loop ((i 0))
 	  (if (fx>= i len)
 	      (values host #f)
-	      (let ((c (##core#inline "C_subchar" host i)))
+	      (let ((c (string-ref host i)))
 		(if (char=? c #\:)		    
 		    (values
 		     (substring host (fx+ i 1) len)
@@ -404,7 +404,7 @@ EOF
 		   (read-input))
 		 (if (fx>= bufindex buflen)
 		     #!eof
-		     (let ((c (##core#inline "C_subchar" buf bufindex)))
+		     (let ((c (string-ref buf bufindex)))
 		       (set! bufindex (fx+ bufindex 1))
 		       c) ) )
 	       (lambda ()
@@ -469,7 +469,7 @@ EOF
 			       (##sys#setislot p 4 (fx+ (##sys#slot p 4) 1))
 			       (##sys#setislot p 5 0))
 			     (##sys#setislot p 5 (fx+ (##sys#slot p 5)
-						      (##sys#size line))))
+						      (string-length line))))
 			 (set! bufindex next)
 			 line) )) )
 	       (lambda (p)		; read-buffered
@@ -482,7 +482,7 @@ EOF
 	     (output
 	      (lambda (s)
 		(let ((tmw (tcp-write-timeout)))
-		  (let loop ((len (##sys#size s))
+		  (let loop ((len (string-length s))
 			     (offset 0)
 			     (dlw (and tmw (+ (current-process-milliseconds) tmw))))
 		    (let* ((count (fxmin +output-chunk-size+ len))
@@ -515,16 +515,16 @@ EOF
 	       (if outbuf
 		   (lambda (s)
 		     (set! outbuf (##sys#string-append outbuf s))
-		     (when (fx>= (##sys#size outbuf) outbufsize)
+		     (when (fx>= (string-length outbuf) outbufsize)
 		       (output outbuf)
 		       (set! outbuf "") ) )
 		   (lambda (s) 
-		     (when (fx> (##sys#size s) 0)
+		     (when (fx> (string-length s) 0)
 		       (output s)) ) )
 	       (lambda ()
 		 (unless oclosed
 		   (set! oclosed #t)
-		   (when (and outbuf (fx> (##sys#size outbuf) 0))
+		   (when (and outbuf (fx> (string-length outbuf) 0))
 		     (output outbuf)
 		     (set! outbuf "") )
 		   (unless (##sys#slot data 2) (shutdown fd _shut_wr))
@@ -532,7 +532,7 @@ EOF
 		     (network-error #f "cannot close socket output port" fd) ) ) )
 	       (and outbuf
 		    (lambda ()
-		      (when (fx> (##sys#size outbuf) 0)
+		      (when (fx> (string-length outbuf) 0)
 			(output outbuf)
 			(set! outbuf "") ) ) ) ) ) )
 	(##sys#setslot in 3 "(tcp)")

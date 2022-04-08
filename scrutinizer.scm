@@ -2061,8 +2061,8 @@
 	 (n (string-length s)))
     (let loop ((i 0))
       (cond ((eq? i n) sym)
-	    ((eq? (##core#inline "C_subchar" s i) #\#)
-	     (##sys#intern-symbol (##sys#substring s (fx+ i 1) n)))
+	    ((eq? (string-ref s i) #\#)
+	     (##sys#string->symbol (##sys#substring s (fx+ i 1) n)))
 	    (else (loop (fx+ i 1)))))))
 
 

@@ -385,7 +385,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
     (##sys#check-string template 'file-mkstemp)
     (let* ([buf (##sys#make-c-string template 'file-mkstemp)]
 	   [fd (##core#inline "C_mkstemp" buf)]
-	   [path-length (##sys#size buf)])
+	   [path-length (string-length buf)])
       (when (eq? -1 fd)
 	(posix-error #:file-error 'file-mkstemp "cannot create temporary file" template) )
       (values fd (##sys#substring buf 0 (fx- path-length 1) ) ) ) ) )
@@ -794,7 +794,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 	     (lambda ()
 	       (if (fx>= bufpos buflen)
 		   #!eof
-		   (##core#inline "C_subchar" buf bufpos)) )]
+		   (string-ref buf bufpos)) )]
             [fetch
 	     (lambda ()
 	       (let loop ()
@@ -889,16 +889,16 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 				   (##sys#setislot p 4 (fx+ (##sys#slot p 4) 1))
 				   (##sys#setislot p 5 0))
 				 (##sys#setislot p 5 (fx+ (##sys#slot p 5)
-							  (##sys#size line))))
+							  (string-length line))))
 			     (set! bufpos next)
 			     line)) ) )
 		   (lambda (port)		; read-buffered
 		     (if (fx>= bufpos buflen)
 			 ""
-			 (let ((str (##sys#substring buf bufpos buflen)))
+			 (let* ((len (fx- buflen bufpos))
+                                (str (##sys#buffer->string buf bufpos len)))
 			   (set! bufpos buflen)
-			   str)))
-		   ) ] )
+                           str))))])
 	  (##sys#setslot this-port 3 nam)
 	  this-port ) ) ) ) )
 

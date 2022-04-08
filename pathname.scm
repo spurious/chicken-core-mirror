@@ -88,11 +88,11 @@
 
 (define (chop-pds str)
   (and str
-       (let lp ((len (##sys#size str)))
+       (let lp ((len (string-length str)))
 	 (cond ((and (fx>= len 1)
-		     (*char-pds? (##core#inline "C_subchar" str (fx- len 1))))
+		     (*char-pds? (string-ref str (fx- len 1))))
 		(lp (fx- len 1)))
-	       ((fx< len (##sys#size str))
+	       ((fx< len (string-length str))
 		(##sys#substring str 0 len))
 	       (else str)))))
 
@@ -127,13 +127,13 @@
       (##sys#check-string ext loc)
       (string-append
        dir
-       (if (and (fx>= (##sys#size dir) 1)
-		(fx>= (##sys#size file) 1)
-		(*char-pds? (##core#inline "C_subchar" file 0)))
-	   (##sys#substring file 1 (##sys#size file))
+       (if (and (fx>= (string-length dir) 1)
+		(fx>= (string-length file) 1)
+		(*char-pds? (string-ref file 0)))
+	   (##sys#substring file 1 (string-length file))
 	   file)
-       (if (and (fx> (##sys#size ext) 0)
-		(not (char=? (##core#inline "C_subchar" ext 0) #\.)))
+       (if (and (fx> (string-length ext) 0)
+		(not (char=? (string-ref ext 0) #\.)))
 	   "."
 	   "")
        ext)))
@@ -165,12 +165,12 @@
           (lambda (dir)
             (and dir
                  (let ((chopped (chop-pds dir)))
-                   (if (fx> (##sys#size chopped) 0)
+                   (if (fx> (string-length chopped) 0)
                        chopped
                        (##sys#substring dir 0 1)))))))
     (lambda (pn)
       (##sys#check-string pn 'decompose-pathname)
-      (if (fx= 0 (##sys#size pn))
+      (if (fx= 0 (string-length pn))
 	  (values #f #f #f)
 	  (let ((ms (irregex-search rx1 pn)))
 	    (if ms
@@ -245,7 +245,7 @@
               (memq c '(#\/ #\\))
               (eq? c #\/)))
 	(##sys#check-string path 'normalize-pathname)
-	(let ((len (##sys#size path))
+	(let ((len (string-length path))
 	      (type #f)
 	      (drive #f))
 	  (let loop ((i 0) (prev 0) (parts '()))
@@ -311,13 +311,13 @@
     (if (not org)
         decomp
         (let ((1st (car decomp)))
-          (let ((olen (##sys#size org)))
-            (if (not (##core#inline "C_substring_compare" org 1st 0 0 olen))
+          (let ((olen (string-length org)))
+            (if (not (##core#inline "C_u_i_substring_equal_p" org 1st 0 0 olen))
                 ; then origin is not a prefix (really shouldn't happen)
                 decomp
                 ; else is a prefix
                 (let ((rst (cdr decomp))
-                      (elen (##sys#size 1st)))
+                      (elen (string-length 1st)))
                   (if (fx= olen elen)
                       ; then origin is a list prefix
                       rst
