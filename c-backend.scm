@@ -780,9 +780,9 @@
 	    ((char? lit)
 	     (gen #t to "=C_make_character(" (char->integer lit) ");") )
 	    ((or (keyword? lit) (symbol? lit)) ; handled slightly specially (see C_h_intern_in)
-	     (let* ((str (##sys#slot lit 1))
+	     (let* ((str (##sys#symbol->string lit))
 		    (cstr (c-ify-string str))
-		    (len (##sys#size str))
+		    (len (string-length str)))
 		    (intern (if (keyword? lit)
 				"C_h_intern_kw"
 				"C_h_intern")))
@@ -793,28 +793,22 @@
 	    ((and (not (##sys#immediate? lit)) ; nop
 		  (##core#inline "C_lambdainfop" lit)))
 	    ((or (fixnum? lit) (not (##sys#immediate? lit)))
-	     (gen #t to "=C_decode_literal(C_heaptop,C_text(")
-	     (gen-string-constant (encode-literal lit))
-	     (gen "));"))
+	     (gen #t to "=C_decode_literal(C_heaptop,C_text(\"")
+	     (gen (encode-literal lit))
+	     (gen "\"));"))
 	    (else (bad-literal lit))))
 
     (define (gen-string-constant str)
-      (let* ([len (##sys#size str)]
+      (let* ([len (string-length str)]
 	     [ns (fx/ len 80)]
 	     [srest (modulo len 80)] )
 	(do ([i ns (sub1 i)]
 	     [offset 0 (+ offset 80)] )
 	    ((zero? i)
 	     (when (or (zero? len) (not (zero? srest)))
-	       (gen (c-ify-string (string-like-substring str offset len))) ) )
-	  (gen (c-ify-string (string-like-substring str offset (+ offset 80))) #t) ) ) )
+	       (gen (c-ify-string (substring str offset len))) ) )
+	  (gen (c-ify-string (substring str offset (+ offset 80))) #t) ) ) )
  
-    (define (string-like-substring s start end)
-      (let* ([len (- end start)]
-	     [s2 (make-string len)] )
-	(##sys#copy-bytes s s2 start 0 len)
-	s2) )
-
     (define (procedures)
       (for-each
        (lambda (p)
@@ -1472,6 +1466,11 @@
 ;; 
 ;; - everything hardcoded, using the FFI would be the ugly, but safer method.
 
+(define (hex n)
+  (if (< n 16) 
+      (string-append "\\x0" (number->string n 16))
+      (number->string n 16)))
+
 (define (encode-literal lit)
   (define getbits
     (foreign-lambda* int ((scheme-object lit))
@@ -1492,27 +1491,27 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	;; and we have no line number information here.
 	(quit-compiling
 	 "Encoded literal size of ~S is too large (must fit in 24 bits)" n)
-	(string
-	 (integer->char (bitwise-and #xff (arithmetic-shift n -16)))
-	 (integer->char (bitwise-and #xff (arithmetic-shift n -8)))
-	 (integer->char (bitwise-and #xff n)))))
+	(string-append 
+          (hex (bitwise-and #xff (arithmetic-shift n -16)))
+	  (hex (bitwise-and #xff (arithmetic-shift n -8)))
+          (hex (bitwise-and #xff n)))))
   (define (finish str)		   ; can be taken out at a later stage
-    (string-append (string #\xfe) str))
+    (string-append "\\xfe" str))
   (finish
-   (cond ((eq? #t lit) "\xff\x06\x01")
-	 ((eq? #f lit) "\xff\x06\x00")
-	 ((char? lit) (string-append "\xff\x0a" (encode-size (char->integer lit))))
-	 ((null? lit) "\xff\x0e")
-	 ((eof-object? lit) "\xff\x3e")
-	 ((eq? (void) lit) "\xff\x1e")
+   (cond ((eq? #t lit) "\\xff\\x06\\x01")
+	 ((eq? #f lit) "\\xff\\x06\\x00")
+	 ((char? lit) (string-append "\\xff\\x0a" (encode-size (char->integer lit))))
+	 ((null? lit) "\\xff\\x0e")
+	 ((eof-object? lit) "\\xff\\x3e")
+	 ((eq? (void) lit) "\\xff\\x1e")
 	 ;; The big-fixnum? check can probably be simplified
 	 ((and (fixnum? lit) (not (big-fixnum? lit)))
 	  (string-append
-	   "\xff\x01"
-	   (string (integer->char (bitwise-and #xff (arithmetic-shift lit -24)))
-		   (integer->char (bitwise-and #xff (arithmetic-shift lit -16)))
-		   (integer->char (bitwise-and #xff (arithmetic-shift lit -8)))
-		   (integer->char (bitwise-and #xff lit)) ) ) )
+	   "\\xff\\x01"
+	   (hex (bitwise-and #xff (arithmetic-shift lit -24)))
+           (hex (bitwise-and #xff (arithmetic-shift lit -16)))
+	   (hex (bitwise-and #xff (arithmetic-shift lit -8)))
+	   (hex (bitwise-and #xff lit)) ) )
 	 ((exact-integer? lit)
 	  ;; Encode as hex to save space and get exact size
 	  ;; calculation.  We could encode as base 32 to save more
@@ -1521,30 +1520,55 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	  ;; get a unique new type, as bignums don't have their own
 	  ;; type tag (they're encoded as structures).
 	  (let ((str (number->string lit 16)))
-	    (string-append "\xc2" (encode-size (string-length str)) str)))
+	    (string-append "\\xc2" (encode-size (string-length str)) str)))
 	 ((flonum? lit)
-	  (string-append "\x55" (number->string lit) "\x00") )
+	  (string-append "\\x55" (number->string lit) "\\x00") )
 	 ((or (keyword? lit) (symbol? lit))
-	  (let ((str (##sys#slot lit 1)))
+	  (let ((str (symbol->string lit)))
 	    (string-append 
-	     "\x01"
+	     "\\x01"
 	     (encode-size (string-length str))
-	     (if (keyword? lit) "\x02" "\x01")
+	     (if (keyword? lit) "\\x02" "\\x01")
 	     str) ) )
 	 ((##sys#immediate? lit)
 	  (bomb "invalid literal - cannot encode" lit))
 	 ((##core#inline "C_byteblockp" lit)
-	  (##sys#string-append ; relies on the fact that ##sys#string-append doesn't check
 	   (string-append
 	    (string (integer->char (getbits lit)))
 	    (encode-size (getsize lit)) )
-	   lit) )
+	   (byteblock->string lit) )
 	 (else
 	  (let ((len (getsize lit)))
 	    (string-intersperse
 	     (cons*
-	      (string (integer->char (getbits lit)))
+	      (hex (getbits lit))
 	      (encode-size len)
 	      (list-tabulate len (lambda (i) (encode-literal (##sys#slot lit i)))))
 	     ""))))) )
+   
+(define (byteblock->string bb)
+  (let ((out (open-output-string))
+        (len (##sys#size bb)))
+    (do ((i 0 (fx+ i 1)))
+        ((fx>= i len) (get-output-string out))
+      (display (hex (##core#inline "C_subbyte" bb i)) out))))
+
+(define (c-ify-string str)
+  (list->string
+   (cons 
+    #\"
+    (let loop ((chars (string->list str)))
+      (if (null? chars)
+	  '(#\")
+	  (let* ((c (car chars))
+		 (code (char->integer c)) )
+	    (if (or (< code 32) (>= code 127) (memq c '(#\" #\' #\\ #\? #\*)))
+		(append '(#\\)
+			(cond ((< code 8) '(#\0 #\0))
+			      ((< code 64) '(#\0))
+			      (else '()) )
+			(string->list (number->string code 8))
+			(loop (cdr chars)) )
+		(cons c (loop (cdr chars))) ) ) ) ) ) ) )
+
 )
