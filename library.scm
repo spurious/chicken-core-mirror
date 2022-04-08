@@ -5565,15 +5565,8 @@ EOF
   ;;XXX '6' is platform dependent!
   (##core#inline_allocate ("C_a_unsigned_int_to_num" 6) (##sys#slot ptr 0)) )
 
-(define (##sys#make-c-string str #!optional (loc '##sys#make-c-string))
-  (let* ([len (##sys#size str)]
-         [buf (##sys#make-string (fx+ len 1))] )
-    (##core#inline "C_substring_copy" str buf 0 len 0)
-    (##core#inline "C_setsubchar" buf len #\nul)
-    (if (fx= (##core#inline "C_asciiz_strlen" buf) len)
-        buf
-        (##sys#error-hook (foreign-value "C_ASCIIZ_REPRESENTATION_ERROR" int)
-                          loc str))) )
+(define (##sys#make-c-string str #!optional loc)
+  (##sys#slot str 0))
 
 (define ##sys#peek-signed-integer (##core#primitive "C_peek_signed_integer"))
 (define ##sys#peek-unsigned-integer (##core#primitive "C_peek_unsigned_integer"))

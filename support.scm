@@ -1137,8 +1137,8 @@
 		  `(##sys#make-c-string (##sys#foreign-string-argument ,param)) ) )
 	     ((symbol)
 	      (if unsafe 
-		  `(##sys#make-c-string (##sys#symbol->string ,param))
-		  `(##sys#make-c-string (##sys#foreign-string-argument (##sys#symbol->string ,param))) ) )
+		  `(##sys#slot ,param 1)
+		  `(##sys#slot (##sys#foreign-symbol-argument ,param) 1)) )
 	     (else
 	      (cond ((and (symbol? t) (lookup-foreign-type t))
 		     => (lambda (t) (next (vector-ref t 0)) ) )
