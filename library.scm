@@ -4484,7 +4484,7 @@ EOF
 
 	(define (outstr port str)
 	  (if length-limit
-	      (let* ((len (##sys#size str))
+	      (let* ((len (string-length str))
 		     (cpp0 (current-print-length))
 		     (cpl (fx+ cpp0 len)) )
 		(if (fx> cpl length-limit)
@@ -4520,12 +4520,12 @@ EOF
 		(outreadablesym port str))))
 
 	(define (outreadablesym port str)
-	  (let ((len (##sys#size str)))
+	  (let ((len (string-length str)))
 	    (outchr port #\|)
 	    (let loop ((i 0))
 	      (if (fx>= i len)
 		  (outchr port #\|)
-		  (let ((c (##core#inline "C_subchar" str i)))
+		  (let ((c (string-ref str i)))
 		    (cond ((or (char<? c #\space) (char>? c #\~))
 			   (outstr port "\\x")
 			   (let ((n (char->integer c)))
@@ -4538,10 +4538,10 @@ EOF
 			   (loop (fx+ i 1)) ) ) ) ) )))
 
 	(define (sym-is-readable? str)
-	  (let ((len (##sys#size str)))
+	  (let ((len (string-length str)))
 	    (cond ((eq? len 0) #f)
 		  ((eq? len 1)
-		   (let ((c (##core#inline "C_subchar" str 0)))
+		   (let ((c (string-ref str 0)))
 		     (cond ((or (eq? #\# c) (eq? #\. c)) #f)
 			   ((specialchar? c) #f)
 			   ((char-numeric? c) #f)
@@ -4549,7 +4549,7 @@ EOF
 		  (else
 		   (let loop ((i (fx- len 1)))
 		     (if (eq? i 0)
-			 (let ((c (##core#inline "C_subchar" str 0)))
+			 (let ((c (string-ref str 0)))
 			   (cond ((or (char-numeric? c)
 				      (eq? c #\+)
 				      (eq? c #\.)
@@ -4559,12 +4559,12 @@ EOF
 				 ((and (eq? c #\#)
 				       ;; Not a qualified symbol?
 				       (not (and (fx> len 2)
-						 (eq? (##core#inline "C_subchar" str 1) #\#)
-						 (not (eq? (##core#inline "C_subchar" str 2) #\#)))))
+						 (eq? (string-ref str 1) #\#)
+						 (not (eq? (string-ref str 2) #\#)))))
 				  (member str '("#!rest" "#!key" "#!optional")))
 				 ((specialchar? c) #f)
 				 (else #t) ) )
-			 (let ((c (##core#inline "C_subchar" str i)))
+			 (let ((c (string-ref str i)))
 			   (and (or csp (not (char-upper-case? c)))
 				(not (specialchar? c))
 				(or (not (eq? c #\:))
@@ -4584,7 +4584,7 @@ EOF
 			  (cond [(char-name x) 
 				 => (lambda (cn) 
 				      (outstr port (##sys#slot cn 1)) ) ]
-				[(or (fx< code 32) (fx> code 255))
+				[(or (fx< code 32) (fx> code #x1ffff))
 				 (outchr port #\x)
 				 (outstr port (##sys#number->string code 16)) ]
 				[else (outchr port x)] ) ) ] 
@@ -4612,16 +4612,16 @@ EOF
 		 (cond (readable
 			(outchr port #\")
 			(do ((i 0 (fx+ i 1))
-			     (c (##core#inline "C_block_size" x) (fx- c 1)) )
+			     (c (string-length x) (fx- c 1)) )
 			    ((eq? c 0)
 			     (outchr port #\") )
-			  (let ((chr (##core#inline "C_subbyte" x i)))
+			  (let ((chr (char->integer (string-ref x i))))
 			    (case chr
 			      ((34) (outstr port "\\\""))
 			      ((92) (outstr port "\\\\"))
 			      (else
 			       (cond ((or (fx< chr 32)
-					  (fx= chr 127))
+					  (fx= chr #x1ffff))
 				      (outchr port #\\)
 				      (case chr
                                         ((7) (outchr port #\a))
@@ -5989,9 +5989,9 @@ static C_word C_fcall C_setenv(C_word x, C_word y) {
         (let ((entry (get i)))
           (if entry
               (let scan ((j 0))
-                (if (char=? #\= (##core#inline "C_subchar" entry j))
+                (if (char=? #\= (string-ref entry j))
                     (cons (cons (##sys#substring entry 0 j)
-                                (##sys#substring entry (fx+ j 1) (##sys#size entry)))
+                                (##sys#substring entry (fx+ j 1) (string-length entry)))
                           (loop (fx+ i 1)))
                     (scan (fx+ j 1))))
               '()))))))
