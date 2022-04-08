@@ -1522,39 +1522,34 @@ EOF
 				     (fx> cmp 0) ) ) ) ) ) )
 
 (define (##sys#string-append x y)
-  (let* ([s1 (##sys#size x)]
-	 [s2 (##sys#size y)] 
-	 [z (##sys#make-string (fx+ s1 s2))] )
-    (##core#inline "C_substring_copy" x z 0 s1 0)
-    (##core#inline "C_substring_copy" y z 0 s2 s1)
-    z) )
+  (let* ((bv1 (##sys#slot x 0))
+         (bv2 (##sys#slot y 0))
+         (s1 (fx- (##sys#size bv1) 1))
+	 (s2 (fx- (##sys#size bv2) 1))
+	 (z (##sys#make-bytevector (fx+ s1 (fx+ s2 1)) 0)))
+    (##core#inline "C_copy_memory_with_offset" z bv1 0 0 s1)
+    (##core#inline "C_copy_memory_with_offset" z bv2 s1 0 s2)
+    (##core#inline_allocate ("C_a_ustring" 5) z
+                            (fx+ (##sys#slot x 2) (##sys#slot y 2)))))
 
 (set! scheme#string-append
   (lambda all
-    (let ([snew #f])
-      (let loop ([strs all] [n 0])
+    (let ((snew #f))
+      (let loop ((strs all) (n 0))
 	(if (eq? strs '())
-	    (set! snew (##sys#make-string n))
-	    (let ([s (##sys#slot strs 0)])
-	      (##sys#check-string s 'string-append)
-	      (let ([len (##sys#size s)])
-		(loop (##sys#slot strs 1) (fx+ n len))
-		(##core#inline "C_substring_copy" s snew 0 len n) ) ) ) )
-      snew ) ))
+            (set! snew (##sys#make-bytevector (fx+ n 1) 0))
+            (let ((s (##sys#slot strs 0)))
+              (##sys#check-string s 'string-append)
+              (let* ((bv (##sys#slot s 0))
+                     (len (fx- (##sys#size bv) 1)))
+                (loop (##sys#slot strs 1) (fx+ n len))
+                (##core#inline "C_copy_memory_with_offset" snew bv n 0 len) ) ) ) )
+      (##core#inline_allocate ("C_a_ustring" 5) snew 
+                              (##core#inline "C_utf_length" snew)))))
 
 (set! scheme#string
   (let ([list->string list->string])
     (lambda chars (list->string chars)) ) )
-
-(define (##sys#fragments->string total fs)
-  (let ([dest (##sys#make-string total)])
-    (let loop ([fs fs] [pos 0])
-      (if (null? fs)
-	  dest
-	  (let* ([f (##sys#slot fs 0)]
-		 [flen (##sys#size f)] )
-	    (##core#inline "C_substring_copy" f dest 0 flen pos)
-	    (loop (##sys#slot fs 1) (fx+ pos flen)) ) ) ) ) )
 
 (set! chicken.base#chop
   (lambda (lst n)
@@ -2432,8 +2427,6 @@ EOF
         (+ q (if (eqv? (negative? n) (negative? d)) 1 -1))
         q)))
 
-;; Shorthand for readability.  TODO: Replace other C_subchar calls with this
-(define-inline (%subchar s i) (##core#inline "C_subchar" s i))
 (define (##sys#string->compnum radix str offset exactness)
   ;; Flipped when a sign is encountered (for inexact numbers only)
   (define negative #f)
@@ -2716,38 +2709,50 @@ EOF
 (define ##sys#snafu '##sys#fnord)
 (define ##sys#intern-symbol (##core#primitive "C_string_to_symbol"))
 (define ##sys#intern-keyword (##core#primitive "C_string_to_keyword"))
+(define ##sys#make-symbol (##core#primitive "C_make_symbol"))
 (define (##sys#interned-symbol? x) (##core#inline "C_lookup_symbol" x))
 
-(define (##sys#string->symbol str)
-  (##sys#check-string str)
-  (##sys#intern-symbol str) )
+(define (##sys#string->symbol-name s)
+  (let* ((bv (##sys#slot s 0))
+         (len (##sys#size bv))
+         (s2 (##sys#make-bytevector len)))
+    (##core#inline "C_copy_bytevector" bv s2 len)))
 
 (define (##sys#symbol->string s)
-  (##sys#slot s 1))
+  (let* ((bv (##sys#slot s 1))
+         (len (##sys#size bv))
+         (s2 (##sys#make-bytevector len))
+         (count (##core#inline "C_utf_length" bv)))
+    (##core#inline_allocate ("C_a_ustring" 5) 
+                            (##core#inline "C_copy_bytevector" bv s2 len)
+                            count)))
+
+(define (##sys#string->symbol str)
+  (##sys#intern-symbol (##sys#string->symbol-name str) ))
 
 (set! scheme#symbol->string
   (lambda (s)
     (##sys#check-symbol s 'symbol->string)
-    (string-copy (##sys#symbol->string s) ) ))
+    (##sys#symbol->string s) ) )
 
 (set! scheme#string->symbol
-  (let ((string-copy string-copy))
-    (lambda (str)
-      (##sys#check-string str 'string->symbol)
-      (##sys#intern-symbol (string-copy str)) ) ) )
+  (lambda (str)
+    (##sys#check-string str 'string->symbol)
+    (##sys#string->symbol str)))
 
 (set! chicken.base#string->uninterned-symbol
   (let ((string-copy string-copy))
     (lambda (str)
       (##sys#check-string str 'string->uninterned-symbol)
-      ((##core#primitive "C_make_symbol") (string-copy str)))))
+      (##sys#make-symbol (##sys#string->symbol-name str)))))
 
 (set! chicken.base#gensym
   (let ((counter -1))
     (lambda str-or-sym
       (let ((err (lambda (prefix) (##sys#signal-hook #:type-error 'gensym "argument is not a string or symbol" prefix))))
 	(set! counter (fx+ counter 1))
-	((##core#primitive "C_make_symbol")
+	(##sys#make-symbol
+         (##sys#string->symbol-name
 	 (##sys#string-append
 	  (if (eq? str-or-sym '())
 	      "g"
@@ -2757,12 +2762,12 @@ EOF
 			       ((##core#inline "C_symbolp" prefix) (##sys#symbol->string prefix))
 			       (else (err prefix))))
 		    (err prefix) ) ) )
-	  (##sys#number->string counter) ) ) ) ) ) )
+	  (##sys#number->string counter) ) ) ) ) ) ) )
 
 (set! chicken.base#symbol-append
   (let ((string-append string-append))
     (lambda ss
-      (##sys#intern-symbol
+      (##sys#string->symbol
        (apply
 	string-append 
 	(map (lambda (s)
@@ -2784,7 +2789,7 @@ EOF
   (let ([string string] )
     (lambda (s)
       (##sys#check-string s 'string->keyword)
-      (##sys#intern-keyword s) ) ) )
+      (##sys#intern-keyword (##sys#string->symbol-name s) ) ) ))
 
 (define keyword->string
   (let ([keyword? keyword?])
@@ -5564,31 +5569,24 @@ EOF
 
 (define (##sys#peek-c-string b i)
   (and (not (##sys#null-pointer? b))
-       (let* ([len (##core#inline "C_fetch_c_strlen" b i)]
-	      [str2 (##sys#make-string len)] )
-	 (##core#inline "C_peek_c_string" b i str2 len)
-	 str2 ) ) )
+       (##sys#peek-nonnull-c-string b i)))
 
 (define (##sys#peek-nonnull-c-string b i)
   (let* ([len (##core#inline "C_fetch_c_strlen" b i)]
-	 [str2 (##sys#make-string len)] )
-    (##core#inline "C_peek_c_string" b i str2 len)
-    str2 ) )
+	 [bv (##sys#make-bytevector (fx+ len 1) 0)] )
+    (##core#inline "C_peek_c_string" b i bv len)
+    (##core#inline_allocate ("C_a_ustring" 5) bv
+                            (##core#inline "C_utf_length" bv))))
 
 (define (##sys#peek-and-free-c-string b i)
-  (and (not (##sys#null-pointer? b))
-       (let* ([len (##core#inline "C_fetch_c_strlen" b i)]
-	      [str2 (##sys#make-string len)] )
-	 (##core#inline "C_peek_c_string" b i str2 len)
-	 (##core#inline "C_free_mptr" b i)
-	 str2 ) ) )
+  (let ((str (##sys#peek-c-string b i)))
+    (##core#inline "C_free_mptr" b i)
+    str))
 
 (define (##sys#peek-and-free-nonnull-c-string b i)
-  (let* ([len (##core#inline "C_fetch_c_strlen" b i)]
-	 [str2 (##sys#make-string len)] )
-    (##core#inline "C_peek_c_string" b i str2 len)
+  (let ((str (##sys#peek-nonnull-c-string b i)))
     (##core#inline "C_free_mptr" b i)
-    str2 ) )
+    str))
 
 (define (##sys#poke-c-string b i s) 
   (##core#inline "C_poke_c_string" b i (##sys#make-c-string s) s) )
@@ -6282,9 +6280,10 @@ static C_word C_fcall C_setenv(C_word x, C_word y) {
 	   (else 
 	    (##sys#check-range index 0 (fx- (##sys#size obj) 1) loc)
 	    (##core#inline_allocate ("C_a_i_make_locative" 5) 0 obj (fx+ index 1) weak?) ) ) ]
-	[(string? obj)
-	 (##sys#check-range index 0 (##sys#size obj) loc)
-	 (##core#inline_allocate ("C_a_i_make_locative" 5) 1 obj index weak?) ] 
+	((string? obj)
+	 (let ((obj (##sys#slot obj 0)))
+           (##sys#check-range index 0 (##sys#size obj) loc)
+  	   (##core#inline_allocate ("C_a_i_make_locative" 5) 1 obj index weak?) ) )
 	[else
 	 (##sys#signal-hook
 	  #:type-error loc

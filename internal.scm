@@ -104,14 +104,14 @@
     ((null? lib) (fail))
     ((not (list? lib)) (fail))
     ((srfi? lib)
-     (##sys#intern-symbol
+     (##sys#string->symbol
       (##sys#string-append "srfi-" (##sys#number->string (cadr lib)))))
     (else
      (do ((lst (cdr lib) (cdr lst))
 	  (str (library-part->string (car lib))
 	       (string-append str "." (library-part->string (car lst)))))
 	 ((null? lst)
-	  (##sys#intern-symbol str))))))
+	  (##sys#string->symbol str))))))
 
 
 ;;; Requirement identifier for modules:
@@ -171,21 +171,21 @@
 	  (##core#inline "C_fixnum_modulo" cache-h n)
 	  (begin
 	    (set! cache-s s)
-	    (set! cache-h (##core#inline "C_u_i_string_hash" (##sys#slot s 1) rand))
+	    (set! cache-h (##core#inline "C_u_i_bytevector_hash" (##sys#slot s 1) rand))
 	    (##core#inline "C_fixnum_modulo" cache-h n))))))
 
 (define (make-hash-table #!optional (size 301))
   (make-vector size '()))
 
 (define (hash-table-ref ht key)
-  (let loop ((bucket (##sys#slot ht (hash-symbol key (##core#inline "C_block_size" ht)))))
+  (let loop ((bucket (##sys#slot ht (hash-symbol key (##sys#size ht)))))
     (and (not (eq? '() bucket))
 	 (if (eq? key (##sys#slot (##sys#slot bucket 0) 0))
 	     (##sys#slot (##sys#slot bucket 0) 1)
 	     (loop (##sys#slot bucket 1))))))
 
 (define (hash-table-set! ht key val)
-  (let* ((k (hash-symbol key (##core#inline "C_block_size" ht)))
+  (let* ((k (hash-symbol key (##sys#size ht)))
 	 (ib (##sys#slot ht k)))
       (let loop ((bucket ib))
 	(if (eq? '() bucket)
