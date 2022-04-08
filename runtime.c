@@ -4797,50 +4797,39 @@ C_regparm C_word C_fcall C_get_print_precision(void)
 C_regparm C_word C_fcall C_read_char(C_word port)
 {
   C_FILEPTR fp = C_port_file(port);
-  int c = C_getc(fp);
+  C_char buf[ 5 ];
+  int n = 0, r, c;
 
-  if(c == EOF) {
-    if(ferror(fp)) {
-      clearerr(fp);
-      return C_fix(-1);
-    }
+  do {
+    c = C_getc(fp);
+
+    if(c == EOF) {
+        if(ferror(fp)) {
+            clearerr(fp);
+            if(n == 0) return C_fix(-1);
+        }
     /* Found here:
        http://mail.python.org/pipermail/python-bugs-list/2002-July/012579.html */
 #if defined(_WIN32) && !defined(__CYGWIN__)
-    else if(GetLastError() == ERROR_OPERATION_ABORTED) return C_fix(-1);
+        else if(GetLastError() == ERROR_OPERATION_ABORTED) {
+            if(n == 0) return C_fix(-1);
+        }
 #endif
-    else return C_SCHEME_END_OF_FILE;
-  }
-
-  return C_make_character(c);
-}
-
-
-C_regparm C_word C_fcall C_peek_char(C_word port)
-{
-  C_FILEPTR fp = C_port_file(port);
-  int c = C_getc(fp);
-
-  if(c == EOF) {
-    if(ferror(fp)) {
-      clearerr(fp);
-      return C_fix(-1);
+        else if(n == 0) return C_SCHEME_END_OF_FILE;
     }
-    /* see above */
-#if defined(_WIN32) && !defined(__CYGWIN__)
-    else if(GetLastError() == ERROR_OPERATION_ABORTED) return C_fix(-1);
-#endif
-    else return C_SCHEME_END_OF_FILE;
-  }
 
-  C_ungetc(c, fp);
-  return C_make_character(c);
+    if(n == 0) r = C_utf_expect(c);
+    buf[ n++ ] = c;
+  } while(n < r);
+  
+  return C_utf_decode_ptr(buf);
 }
 
 
 C_regparm C_word C_fcall C_execute_shell_command(C_word string)
 {
-  int n = C_header_size(string);
+  C_word bv = C_block_item(string, 0);
+  int n = C_header_size(bv);
   char *buf = buffer;
 
   /* Windows doc says to flush all output streams before calling system.
@@ -5107,45 +5096,25 @@ C_regparm C_word C_fcall C_i_f64vectorp(C_word x)
 
 C_regparm C_word C_fcall C_i_string_equal_p(C_word x, C_word y)
 {
-  C_word n;
-
   if(C_immediatep(x) || C_header_bits(x) != C_STRING_TYPE)
     barf(C_BAD_ARGUMENT_TYPE_ERROR, "string=?", x);
 
   if(C_immediatep(y) || C_header_bits(y) != C_STRING_TYPE)
     barf(C_BAD_ARGUMENT_TYPE_ERROR, "string=?", y);
 
-  n = C_header_size(x);
-
-  return C_mk_bool(n == C_header_size(y)
-                   && !C_memcmp((char *)C_data_pointer(x), (char *)C_data_pointer(y), n));
+  return C_utf_equal(x, y);
 }
 
 
 C_regparm C_word C_fcall C_i_string_ci_equal_p(C_word x, C_word y)
 {
-  C_word n;
-  char *p1, *p2;
-
   if(C_immediatep(x) || C_header_bits(x) != C_STRING_TYPE)
     barf(C_BAD_ARGUMENT_TYPE_ERROR, "string-ci=?", x);
 
   if(C_immediatep(y) || C_header_bits(y) != C_STRING_TYPE)
     barf(C_BAD_ARGUMENT_TYPE_ERROR, "string-ci=?", y);
 
-  n = C_header_size(x);
-
-  if(n != C_header_size(y)) return C_SCHEME_FALSE;
-
-  p1 = (char *)C_data_pointer(x);
-  p2 = (char *)C_data_pointer(y);
-
-  while(n--) {
-    if(C_tolower((int)(*(p1++))) != C_tolower((int)(*(p2++))))
-      return C_SCHEME_FALSE;
-  }
-
-  return C_SCHEME_TRUE;
+  return C_utf_equal_ci(x, y);
 }
 
 
@@ -5698,25 +5667,6 @@ C_regparm C_word C_fcall C_i_vector_ref(C_word v, C_word i)
 }
 
 
-C_regparm C_word C_fcall C_i_u8vector_ref(C_word v, C_word i)
-{
-  int j;
-
-  if(!C_truep(C_i_u8vectorp(v)))
-    barf(C_BAD_ARGUMENT_TYPE_ERROR, "u8vector-ref", v);
-
-  if(i & C_FIXNUM_BIT) {
-    j = C_unfix(i);
-
-    if(j < 0 || j >= C_header_size(C_block_item(v, 1))) barf(C_OUT_OF_RANGE_ERROR, "u8vector-ref", v, i);
-
-    return C_fix(((unsigned char *)C_data_pointer(C_block_item(v, 1)))[j]);
-  }
-  
-  barf(C_BAD_ARGUMENT_TYPE_ERROR, "u8vector-ref", i);
-  return C_SCHEME_UNDEFINED;
-}
-
 C_regparm C_word C_fcall C_i_s8vector_ref(C_word v, C_word i)
 {
   int j;
@@ -5925,9 +5875,10 @@ C_regparm C_word C_fcall C_i_string_set(C_word s, C_word i, C_word c)
   if(i & C_FIXNUM_BIT) {
     j = C_unfix(i);
 
-    if(j < 0 || j >= C_header_size(s)) barf(C_OUT_OF_RANGE_ERROR, "string-set!", s, i);
+    if(j < 0 || j >= C_unfix(C_block_item(s, 1)))
+        barf(C_OUT_OF_RANGE_ERROR, "string-set!", s, i);
 
-    return C_setsubchar(s, i, c);
+    return C_utf_setsubchar(s, i, c);
   }
 
   barf(C_BAD_ARGUMENT_TYPE_ERROR, "string-set!", i);
@@ -5945,9 +5896,10 @@ C_regparm C_word C_fcall C_i_string_ref(C_word s, C_word i)
   if(i & C_FIXNUM_BIT) {
     j = C_unfix(i);
 
-    if(j < 0 || j >= C_header_size(s)) barf(C_OUT_OF_RANGE_ERROR, "string-ref", s, i);
+    if(j < 0 || j >= C_unfix(C_block_item(s, 1)))
+        barf(C_OUT_OF_RANGE_ERROR, "string-ref", s, i);
 
-    return C_subchar(s, i);
+    return C_utf_subchar(s, i);
   }
   
   barf(C_BAD_ARGUMENT_TYPE_ERROR, "string-ref", i);

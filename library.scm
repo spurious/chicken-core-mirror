@@ -2695,7 +2695,7 @@ EOF
 	     (and (##core#inline "C_byteblockp" y)
 		  (let ((s1 (##sys#size x)))
 		    (and (eq? s1 (##sys#size y))
-			 (##core#inline "C_substring_compare" x y 0 0 s1)))))
+			 (##core#inline "C_u_i_substring_equal_p" x y 0 0 s1)))))
 	    (else
 	     (let ((s1 (##sys#size x)))
 	       (and (eq? s1 (##sys#size y))
@@ -2972,7 +2972,7 @@ EOF
 (set! scheme#vector->list
   (lambda (v)
     (##sys#check-vector v 'vector->list)
-    (let ((len (##core#inline "C_block_size" v)))
+    (let ((len (##sys#size v)))
       (let loop ((i 0))
 	(if (fx>= i len)
 	    '()
@@ -2984,7 +2984,7 @@ EOF
 (set! scheme#vector-fill!
   (lambda (v x)
     (##sys#check-vector v 'vector-fill!)
-    (let ((len (##core#inline "C_block_size" v)))
+    (let ((len (##sys#size v)))
       (do ((i 0 (fx+ i 1)))
 	  ((fx>= i len))
 	(##sys#setslot v i x) ) ) ))
@@ -4577,7 +4577,8 @@ EOF
 	      (outstr0 port str) ) )
 	       
 	(define (outstr0 port str)
-	  ((##sys#slot (##sys#slot port 2) 3) port str) )
+          (let ((bv (##sys#slot str 0)))
+  	    ((##sys#slot (##sys#slot port 2) 3) port bv 0 (fx- (##sys#size bv) 1)))) ; write-bytevector
 
 	(define (outchr port chr)
 	  (when length-limit
@@ -4586,7 +4587,7 @@ EOF
 	      (when (fx>= cpp0 length-limit)
 		(outstr0 port "...")
 		((##sys#print-exit) (##sys#void)))))
-	  ((##sys#slot (##sys#slot port 2) 2) port chr))
+	  ((##sys#slot (##sys#slot port 2) 2) port chr))  ; write-char
 
 	(define (specialchar? chr)
 	  (let ([c (char->integer chr)])

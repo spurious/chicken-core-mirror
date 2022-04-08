@@ -1824,6 +1824,7 @@ C_fctexport C_word C_fcall C_taggedmpointer_or_false(C_word **ptr, C_word tag, v
 C_fctexport C_word C_vector(C_word **ptr, int n, ...);
 C_fctexport C_word C_structure(C_word **ptr, int n, ...);
 C_fctexport C_word C_fcall C_mutate_slot(C_word *slot, C_word val) C_regparm;
+C_fctexport C_word C_fcall C_mutate_scratch_slot(C_word *slot, C_word val) C_regparm;
 C_fctexport C_word C_fcall C_scratch_alloc(C_uword size) C_regparm;
 C_fctexport C_word C_fcall C_migrate_buffer_object(C_word **ptr, C_word *start, C_word *end, C_word obj) C_regparm;
 C_fctexport void C_fcall C_reclaim(void *trampoline, C_word c) C_regparm C_noret;
@@ -1831,6 +1832,7 @@ C_fctexport void C_save_and_reclaim(void *trampoline, int n, C_word *av) C_noret
 C_fctexport void C_save_and_reclaim_args(void *trampoline, int n, ...) C_noret;
 C_fctexport void C_fcall C_rereclaim2(C_uword size, int relative_resize) C_regparm;
 C_fctexport void C_unbound_variable(C_word sym);
+C_fctexport void C_decoding_error(C_word str, C_word index);
 C_fctexport C_word C_fcall C_retrieve2(C_word val, char *name) C_regparm;
 C_fctexport void *C_fcall C_retrieve2_symbol_proc(C_word val, char *name) C_regparm;
 C_fctexport int C_in_stackp(C_word x) C_regparm;
@@ -1839,8 +1841,8 @@ C_fctexport int C_fcall C_in_fromspacep(C_word x) C_regparm;
 C_fctexport int C_fcall C_in_scratchspacep(C_word x) C_regparm;
 C_fctexport void C_fcall C_trace(C_char *name) C_regparm;
 C_fctexport C_word C_fcall C_emit_trace_info2(char *raw, C_word x, C_word y, C_word t) C_regparm;
-C_fctexport C_word C_fcall C_u_i_string_hash(C_word str, C_word rnd) C_regparm;
-C_fctexport C_word C_fcall C_u_i_string_ci_hash(C_word str, C_word rnd) C_regparm;
+C_fctexport C_word C_fcall C_u_i_bytevector_hash(C_word str, C_word rnd) C_regparm;
+C_fctexport C_word C_fcall C_u_i_bytevector_ci_hash(C_word str, C_word rnd) C_regparm;
 C_fctexport C_word C_halt(C_word msg);
 C_fctexport C_word C_message(C_word msg);
 C_fctexport C_word C_fcall C_equalp(C_word x, C_word y) C_regparm;
@@ -1872,6 +1874,29 @@ C_fctexport C_char *C_private_repository_path();
 C_fctexport C_char *C_executable_dirname();
 C_fctexport C_char *C_executable_pathname();
 C_fctexport C_char *C_resolve_executable_pathname(C_char *fname);
+
+/* utf.c: */
+C_fctexport C_word C_fcall C_utf_subchar(C_word s, C_word i) C_regparm;
+C_fctexport C_word C_fcall C_utf_setsubchar(C_word s, C_word i, C_word c) C_regparm;
+C_fctexport C_word C_fcall C_utf_compare(C_word s1, C_word s2, C_word start1, C_word start2, C_word len) C_regparm;
+C_fctexport C_word C_fcall C_utf_compare_ci(C_word s1, C_word s2, C_word start1, C_word start2, C_word len) C_regparm;
+C_fctexport C_word C_fcall C_utf_equal(C_word s1, C_word s2) C_regparm;
+C_fctexport C_word C_fcall C_utf_equal_ci(C_word s1, C_word s2) C_regparm;
+C_fctexport C_word C_fcall C_utf_copy(C_word from, C_word to, C_word start1, C_word end1, C_word start2) C_regparm;
+C_fctexport C_word C_fcall C_utf_position(C_word str, C_word start) C_regparm;
+C_fctexport C_word C_fcall C_utf_range(C_word str, C_word start, C_word end) C_regparm;
+C_fctexport int C_fcall C_utf_count(C_char *str, int len) C_regparm;
+C_fctexport C_char * C_fcall C_utf_encode(C_char *str, int chr) C_regparm;
+C_fctexport C_word C_fcall C_utf_decode_ptr(C_char *bv) C_regparm;
+C_fctexport C_word C_fcall C_utf_decode(C_word bv, C_word pos) C_regparm;
+C_fctexport C_word C_fcall C_utf_char_downcase(C_word c) C_regparm;
+C_fctexport C_word C_fcall C_utf_char_upcase(C_word c) C_regparm;
+C_fctexport C_word C_fcall C_utf_advance(C_word bv, C_word pos) C_regparm;
+C_fctexport C_word C_fcall C_utf_insert(C_word bv, C_word pos, C_word c) C_regparm;
+C_fctexport C_word C_fcall C_utf_bytes(C_word chr) C_regparm;
+C_fctexport C_word C_fcall C_utf_fill(C_word bv, C_word chr) C_regparm;
+C_fctexport int C_fcall C_utf_expect(int byte) C_regparm;
+C_fctexport void C_fcall C_utf_putc(int chr, C_FILEPTR fp) C_regparm;
 
 C_fctimport C_cpsproc(C_toplevel) C_noret;
 C_fctimport C_cpsproc(C_invalid_procedure) C_noret;

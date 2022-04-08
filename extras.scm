@@ -32,7 +32,7 @@
 (module chicken.io
   (read-list read-buffered read-byte read-line
    read-lines read-string read-string! read-token
-   write-byte write-line write-string)
+   write-byte write-line write-string write-bytevector read-bytevector)
 
 (import scheme chicken.base chicken.fixnum)
 

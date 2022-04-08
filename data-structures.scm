@@ -109,13 +109,14 @@
     (lambda (which where start)
       (traverse 
        which where start
-       (lambda (i l) (##core#inline "C_substring_compare" which where 0 i l))
+       (lambda (i l) 
+         (##core#inline "C_u_i_substring_equal_p" which where 0 i l))
        'substring-index) ) )
   (set! ##sys#substring-index-ci 
     (lambda (which where start)
       (traverse
        which where start
-       (lambda (i l) (##core#inline "C_substring_compare_case_insensitive" which where 0 i l)) 
+       (lambda (i l) (##core#inline "C_u_i_substring_ci_equal_p" which where 0 i l)) 
        'substring-index-ci) ) ) )
 
 (define (substring-index which where #!optional (start 0))
@@ -130,10 +131,11 @@
 (define (string-compare3 s1 s2)
   (##sys#check-string s1 'string-compare3)
   (##sys#check-string s2 'string-compare3)
-  (let ((len1 (##sys#size s1))
-	(len2 (##sys#size s2)) )
+  (let ((len1 (string-length s1))
+	(len2 (string-length s2)) )
     (let* ((len-diff (fx- len1 len2)) 
-	   (cmp (##core#inline "C_string_compare" s1 s2 (if (fx< len-diff 0) len1 len2))))
+	   (cmp (##core#inline "C_utf_compare" s1 s2 0 0 
+                        (if (fx< len-diff 0) len1 len2))))
       (if (fx= cmp 0) 
 	  len-diff 
 	  cmp))))
@@ -141,10 +143,12 @@
 (define (string-compare3-ci s1 s2)
   (##sys#check-string s1 'string-compare3-ci)
   (##sys#check-string s2 'string-compare3-ci)
-  (let ((len1 (##sys#size s1))
-	(len2 (##sys#size s2)) )
+  (let ((len1 (string-length s1))
+	(len2 (string-length s2)) )
     (let* ((len-diff (fx- len1 len2)) 
-	   (cmp (##core#inline "C_string_compare_case_insensitive" s1 s2 (if (fx< len-diff 0) len1 len2))))
+	   (cmp (##core#inline "C_utf_compare_ci" 
+                        s1 s2 0 0
+                        (if (fx< len-diff 0) len1 len2))))
       (if (fx= cmp 0) 
 	  len-diff 
 	  cmp))))
@@ -156,11 +160,11 @@
   (##sys#check-string s1 'substring=?)
   (##sys#check-string s2 'substring=?)
   (let ((len (or n
-		 (fxmin (fx- (##sys#size s1) start1)
-			(fx- (##sys#size s2) start2) ) ) ) )
+		 (fxmin (fx- (string-length s1) start1)
+			(fx- (string-length s2) start2) ) ) ) )
     (##sys#check-fixnum start1 'substring=?)
     (##sys#check-fixnum start2 'substring=?)
-    (##core#inline "C_substring_compare" s1 s2 start1 start2 len) ) )
+    (##core#inline "C_u_i_substring_equal_p" s1 s2 start1 start2 len) ) )
 
 (define (substring=? s1 s2 #!optional (start1 0) (start2 0) len)
   (##sys#substring=? s1 s2 start1 start2 len) )
@@ -169,12 +173,11 @@
   (##sys#check-string s1 'substring-ci=?)
   (##sys#check-string s2 'substring-ci=?)
   (let ((len (or n
-		 (fxmin (fx- (##sys#size s1) start1)
-			(fx- (##sys#size s2) start2) ) ) ) )
+		 (fxmin (fx- (string-length s1) start1)
+			(fx- (string-length s2) start2) ) ) ) )
     (##sys#check-fixnum start1 'substring-ci=?)
     (##sys#check-fixnum start2 'substring-ci=?)
-    (##core#inline "C_substring_compare_case_insensitive"
-		   s1 s2 start1 start2 len) ) )
+    (##core#inline "C_u_i_substring_ci_equal_p" s1 s2 start1 start2 len) ) )
 
 (define (substring-ci=? s1 s2 #!optional (start1 0) (start2 0) len)
   (##sys#substring-ci=? s1 s2 start1 start2 len) )
@@ -218,28 +221,36 @@
 (define (string-intersperse strs #!optional (ds " "))
   (##sys#check-list strs 'string-intersperse)
   (##sys#check-string ds 'string-intersperse)
-  (let ((dslen (##sys#size ds)))
+  (let* ((dsbv (##sys#slot ds 0))
+         (dslen (fx- (##sys#size dsbv) 1)))
     (let loop1 ((ss strs) (n 0))
       (cond ((##core#inline "C_eqp" ss '())
 	     (if (##core#inline "C_eqp" strs '())
 		 ""
-		 (let ((str2 (##sys#allocate-vector (fx- n dslen) #t #\space #f)))
+		 (let* ((bytes (fx- n dslen))
+                        (bv (##sys#allocate-bytevector (fx+ bytes 1) 0)))
 		   (let loop2 ((ss2 strs) (n2 0))
 		     (let* ((stri (##sys#slot ss2 0))
 			    (next (##sys#slot ss2 1)) 
-			    (strilen (##sys#size stri)) )
-		       (##core#inline "C_substring_copy" stri str2 0 strilen n2)
-		       (let ((n3 (fx+ n2 strilen)))
+                            (bvi (##sys#slot stri 0))
+			    (count (fx- (##sys#size bvi) 1)))
+		       (##core#inline "C_copy_memory_with_offset" bv bvi n2 0 count)
+		       (let ((n3 (fx+ n2 count)))
 			 (if (##core#inline "C_eqp" next '())
-			     str2
-			     (begin
-			       (##core#inline "C_substring_copy" ds str2 0 dslen n3)
+                             (##core#inline_allocate ("C_a_ustring" 5) bv
+                                                     (##core#inline "C_utf_range_length"
+                                                                    bv 0 n3))
+
+                     			     (begin
+			       (##core#inline "C_copy_memory_with_offset" 
+                                              bv dsbv n3 0 dslen)
 			       (loop2 next (fx+ n3 dslen)) ) ) ) ) ) ) ) )
 	    ((and (##core#inline "C_blockp" ss) (##core#inline "C_pairp" ss))
 	     (let ((stri (##sys#slot ss 0)))
 	       (##sys#check-string stri 'string-intersperse)
 	       (loop1 (##sys#slot ss 1)
-		      (fx+ (##sys#size stri) (fx+ dslen n)) ) ) )
+		      (fx+ (fx- (##sys#size (##sys#slot stri 0)) 1)
+                           (fx+ dslen n)) ) ) )
 	    (else (##sys#error-not-a-proper-list strs)) ) ) ) )
 
 
@@ -324,7 +335,7 @@
 		       (smlen (string-length sm))
 		       (st (cdr p)) )
 		  (if (and (fx<= (fx+ i smlen) len)
-			   (##core#inline "C_substring_compare" str sm i 0 smlen))
+			   (##core#inline "C_u_i_substring_equal_p" str sm i 0 smlen))
 		      (let ((i2 (fx+ i smlen)))
 			(when (fx> i from)
 			  (set! fs (cons (##sys#substring str from i) fs)) )
@@ -353,11 +364,11 @@
 (define (string-chomp str #!optional (suffix "\n"))
   (##sys#check-string str 'string-chomp)
   (##sys#check-string suffix 'string-chomp)
-  (let* ((len (##sys#size str))
-	 (slen (##sys#size suffix)) 
+  (let* ((len (string-length str))
+	 (slen (string-length suffix)) 
 	 (diff (fx- len slen)) )
     (if (and (fx>= len slen)
-	     (##core#inline "C_substring_compare" str suffix diff 0 slen) )
+	     (##core#inline "C_u_i_substring_equal_p" str suffix diff 0 slen) )
 	(##sys#substring str 0 diff)
 	str) ) )
 
