@@ -782,7 +782,7 @@
 	    ((or (keyword? lit) (symbol? lit)) ; handled slightly specially (see C_h_intern_in)
 	     (let* ((str (##sys#symbol->string lit))
 		    (cstr (c-ify-string str))
-		    (len (string-length str)))
+		    (len (string-length str))
 		    (intern (if (keyword? lit)
 				"C_h_intern_kw"
 				"C_h_intern")))
