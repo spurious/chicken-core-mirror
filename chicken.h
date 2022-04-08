@@ -1231,9 +1231,9 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_a_i_pointer_to_address(ptr, c, pptr)  C_unsigned_int_to_num(ptr, (unsigned int)C_c_pointer_nn(pptr))
 
 #define C_display_fixnum(p, n)          (C_fprintf(C_port_file(p), C_text("%d"), C_unfix(n)), C_SCHEME_UNDEFINED)
-#define C_display_char(p, c)            (C_fputc(C_character_code(c), C_port_file(p)), C_SCHEME_UNDEFINED)
-#define C_display_string(p, s)          (C_fwrite(C_data_pointer(s), sizeof(C_char), C_header_size(s), \
-                                         C_port_file(p)), C_SCHEME_UNDEFINED)
+#define C_display_char(p, c)            (C_utf_putc(C_character_code(c), C_port_file(p)), C_SCHEME_UNDEFINED)
+#define C_display_string(p, s, from, to)  \
+                                         (C_fwrite(C_c_string(s) + C_unfix(from), sizeof(C_char), C_unfix(to) - C_unfix(from), C_port_file(p)), C_SCHEME_UNDEFINED)
 #define C_flush_output(port)            (C_fflush(C_port_file(port)), C_SCHEME_UNDEFINED)
 
 #define C_fix_to_char(x)                (C_make_character(C_unfix(x)))
@@ -1850,7 +1850,6 @@ C_fctexport C_word C_exit_runtime(C_word code) C_noret;
 C_fctexport C_word C_fcall C_set_print_precision(C_word n) C_regparm;
 C_fctexport C_word C_fcall C_get_print_precision(void) C_regparm;
 C_fctexport C_word C_fcall C_read_char(C_word port) C_regparm;
-C_fctexport C_word C_fcall C_peek_char(C_word port) C_regparm;
 C_fctexport C_word C_fcall C_execute_shell_command(C_word string) C_regparm;
 C_fctexport int C_fcall C_check_fd_ready(int fd) C_regparm;
 C_fctexport C_word C_fcall C_char_ready_p(C_word port) C_regparm;

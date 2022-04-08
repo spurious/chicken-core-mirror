@@ -3169,7 +3169,7 @@ EOF
 ;;; Port layout:
 ;
 ; 0:  FP (special)
-; 1:  direction (fixnum)
+; 1:  direction (fixnum, 0 = input)
 ; 2:  class (vector of procedures)
 ; 3:  name (string)
 ; 4:  row (fixnum)
@@ -3185,11 +3185,11 @@ EOF
 ; 0:  (read-char PORT) -> CHAR | EOF
 ; 1:  (peek-char PORT) -> CHAR | EOF
 ; 2:  (write-char PORT CHAR)
-; 3:  (write-string PORT STRING)
+; 3:  (write-bytevector PORT BYTEVECTOR START END)
 ; 4:  (close PORT)
 ; 5:  (flush-output PORT)
 ; 6:  (char-ready? PORT) -> BOOL
-; 7:  (read-string! PORT COUNT STRING START) -> COUNT'
+; 7:  (read-bytevector! PORT COUNT STRING START) -> COUNT'
 ; 8:  (read-line PORT LIMIT) -> STRING | EOF
 ; 9:  (read-buffered PORT) -> STRING
 
@@ -3211,32 +3211,30 @@ EOF
 (define ##sys#stream-port-class
   (vector (lambda (p)			; read-char
 	    (let loop ()
-	      (let ((c (##core#inline "C_read_char" p)))
-		(cond
-		 ((eq? -1 c)
-		  (if (eq? (##sys#update-errno) (foreign-value "EINTR" int))
-		      (##sys#dispatch-interrupt loop)
-		      (##sys#signal-hook
-		       #:file-error 'read-char
-		       (##sys#string-append "cannot read from port - " strerror)
-		       p)))
-		 (else c)))))
+              (let ((peeked (##sys#slot p 10)))
+                (cond (peeked
+                       (##sys#setislot p 10 #f)
+                       peeked)
+                      (else
+                        (let ((c (##core#inline "C_read_char" p)))
+                          (if (eq? -1 c)
+                              (if (eq? (##sys#update-errno) (foreign-value "EINTR" int))
+                                  (##sys#dispatch-interrupt loop)
+                                  (##sys#signal-hook #:file-error 'read-char
+                                                     (##sys#string-append "cannot read from port - " strerror)
+                                                     p))
+                              c)))))))
 	  (lambda (p)			; peek-char
-	    (let loop ()
-	      (let ((c (##core#inline "C_peek_char" p)))
-		(cond
-		 ((eq? -1 c)
-		  (if (eq? (##sys#update-errno) (foreign-value "EINTR" int))
-		      (##sys#dispatch-interrupt loop)
-		      (##sys#signal-hook
-		       #:file-error 'peek-char
-		       (##sys#string-append "cannot read from port - " strerror)
-		       p)))
-		 (else c)))))
+            (or (##sys#slot p 10)
+                (let ((c ((##sys#slot (##sys#slot p 2) 0) p))) ; read-char
+                  (cond ((eof-object? c) c)
+                        (else
+                          (##sys#setislot p 10 c)
+                          c)))))
 	  (lambda (p c)			; write-char
 	    (##core#inline "C_display_char" p c) )
-	  (lambda (p s)			; write-string
-	    (##core#inline "C_display_string" p s) )
+	  (lambda (p s from to)			; write-bytevector
+	    (##core#inline "C_display_string" p s from to))
 	  (lambda (p d)			; close
 	    (##core#inline "C_close_file" p)
 	    (##sys#update-errno) )
@@ -3244,25 +3242,37 @@ EOF
 	    (##core#inline "C_flush_output" p) )
 	  (lambda (p)			; char-ready?
 	    (##core#inline "C_char_ready_p" p) )
-	  (lambda (p n dest start)		; read-string!
-	    (let loop ([rem (or n (fx- (##sys#size dest) start))] [act 0] [start start])
-	      (let ([len (##core#inline "fast_read_string_from_file" dest p rem start)])
+	  (lambda (p n dest start)		; read-bytevector!
+            (let ((c (##sys#slot p 10)))
+              (when c
+                (let ((nc (##core#inline "C_utf_bytes" c)))
+                  (if (fx> nc n)
+                      (let ((bv (##sys#make-bytevector nc)))
+                        (##core#inline "C_utf_insert" bv 0 c)
+                        (##core#inline "C_copy_memory_with_offset" dest bv start 0 n))
+                      (##core#inline "C_utf_insert" dest start c))
+                  (set! start (fx- start nc))
+                  (set! n (fx- n nc)))
+                (##sys#setislot p 10 #f)))
+	    (let loop ((rem (or n (fx- (##sys#size dest) start)))
+                       (act 0) 
+                       (start start))
+	      (let ((len (##core#inline "fast_read_string_from_file" dest p rem start)))
 		(cond ((eof-object? len) ; EOF returns 0 bytes read
 		       act)
 		      ((fx< len 0)
 		       (if (eq? (##sys#update-errno) (foreign-value "EINTR" int))
 			   (##sys#dispatch-interrupt
-			    (lambda ()
-			      (loop (fx- rem len) (fx+ act len) (fx+ start len))))
+			    (lambda () (loop rem act start)))
 			   (##sys#signal-hook
-			    #:file-error 'read-string!
+			    #:file-error 'read-bytevector!
 			    (##sys#string-append "cannot read from port - " strerror)
 			    p n dest start)))
 		      ((fx< len rem)
 		       (loop (fx- rem len) (fx+ act len) (fx+ start len)))
 		      (else
 		       (fx+ act len) ) ) )))
-	  (lambda (p rlimit)		; read-line
+          (lambda (p rlimit)		; read-line
 	    (if rlimit (##sys#check-fixnum rlimit 'read-line))
 	    (let ((sblen read-line-buffer-initial-size))
 	      (unless (##sys#slot p 12)
@@ -3272,8 +3282,8 @@ EOF
 			 [buffer (##sys#slot p 12)]
 			 [result ""]
 			 [f #f])
-		(let ([n (##core#inline "fast_read_line_from_file" buffer p
-					(fxmin limit len))])
+		(let ([n (##core#inline "fast_read_line_from_file" (##sys#slot buffer 0)
+                                        p (fxmin limit len))])
 		  (cond [(eof-object? n) (if f result #!eof)]
 			[(not n)
 			 (if (fx< limit len)
@@ -3290,17 +3300,27 @@ EOF
 				(lambda ()
 				  (loop len limit buffer
 					(##sys#string-append
-					 result (##sys#substring buffer 0 n))
+					 result 
+                                         (##sys#substring buffer 0
+                                            (##core#inline "C_utf_range_length"
+                                                           (##sys#slot buffer 0)
+                                                           0 n)))
 					#t))))
 			     (##sys#signal-hook
 			      #:file-error 'read-line
 			      (##sys#string-append "cannot read from port - " strerror)
 			      p rlimit)))
-			[f (##sys#setislot p 4 (fx+ (##sys#slot p 4) 1))
-			   (##sys#string-append result (##sys#substring buffer 0 n))]
-			[else
+			(f (##sys#setislot p 4 (fx+ (##sys#slot p 4) 1))
+			   (##sys#string-append result
+                             (##sys#substring buffer 0
+                                              (##core#inline "C_utf_range_length"
+                                                             (##sys#slot buffer 0)
+                                                             p (fx+ p n)))))
+			(else
 			 (##sys#setislot p 4 (fx+ (##sys#slot p 4) 1))
-			 (##sys#substring buffer 0 n)] ) ) ) ) )
+			 (##sys#substring buffer 0 
+                             (##core#inline "C_utf_range_length" (##sys#slot buffer 0)
+                                            p (fx+ p n))) ) ) ) )))
 	  #f	; read-buffered
 	  ) )
 
@@ -4736,70 +4756,71 @@ EOF
 ;
 ;   Input:
 ;
-;   10: position
+;   10: position (in bytes)
 ;   11: len
-;   12: string
+;   12: input bytevector
 ;
 ;   Output:
 ;
-;   10: position
+;   10: position (in bytes)
 ;   11: limit
-;   12: output
+;   12: output bytevector
 
 (define ##sys#string-port-class
-  (letrec ([check 
+  (letrec ((check 
 	    (lambda (p n)
-	      (let* ([position (##sys#slot p 10)]
-		     [limit (##sys#slot p 11)] 
-		     [output (##sys#slot p 12)]
-		     [limit2 (fx+ position n)] )
+	      (let* ((position (##sys#slot p 10))
+		     (limit (##sys#slot p 11))
+		     (output (##sys#slot p 12))
+		     (limit2 (fx+ position n)))
 		(when (fx>= limit2 limit)
 		  (when (fx>= limit2 maximal-string-length)
 		    (##sys#error "string buffer full" p) )
 		  (let* ([limit3 (fxmin maximal-string-length (fx+ limit limit))]
-			 [buf (##sys#make-string limit3)] )
-		    (##sys#copy-bytes output buf 0 0 position)
+			 [buf (##sys#make-bytevector limit3)] )
+		    (##core#inline "C_copy_memory_with_offset" buf output 0 0 position)
 		    (##sys#setslot p 12 buf)
 		    (##sys#setislot p 11 limit3)
-		    (check p n) ) ) ) ) ] )
+		    (check p n) ) ) ) ) ) )
     (vector
      (lambda (p)			; read-char
-       (let ([position (##sys#slot p 10)]
-	     [string (##sys#slot p 12)]
-	     [len (##sys#slot p 11)] )
-	 (if (fx>= position len)
-	     #!eof
-	     (let ((c (##core#inline "C_subchar" string position)))
-	       (##sys#setislot p 10 (fx+ position 1))
-	       c) ) ) )
+       (let ((position (##sys#slot p 10))
+             (input (##sys#slot p 12))
+             (len (##sys#slot p 11)))
+         (if (fx>= position len)
+             #!eof
+             (let ((c (##core#inline "C_utf_decode" input position)))
+               (##sys#setislot p 10
+                               (##core#inline "C_utf_advance" input position))
+               c))))
      (lambda (p)			; peek-char
-       (let ([position (##sys#slot p 10)]
-	     [string (##sys#slot p 12)]
-	     [len (##sys#slot p 11)] )
-	 (if (fx>= position len)
-	     #!eof
-	     (##core#inline "C_subchar" string position) ) ) )
+       (let ((position (##sys#slot p 10))
+             (input (##sys#slot p 12))
+             (len (##sys#slot p 11)))
+         (if (fx>= position len)
+             #!eof
+             (##core#inline "C_utf_decode" input position))))
      (lambda (p c)			; write-char
        (check p 1)	
        (let ([position (##sys#slot p 10)]
 	     [output (##sys#slot p 12)] )
-	 (##core#inline "C_setsubchar" output position c)
-	 (##sys#setislot p 10 (fx+ position 1)) ) )
-     (lambda (p str)			; write-string
-       (let ([len (##core#inline "C_block_size" str)])
+         (##sys#setislot p 10 (##core#inline "C_utf_insert" output position c))))
+     (lambda (p bv from to)			; write-bytevector
+       (let ((len (fx- to from)))
 	 (check p len)
-	 (let ([position (##sys#slot p 10)]
-	       [output (##sys#slot p 12)] )
-	   (##core#inline "C_substring_copy" str output 0 len position)
+	 (let* ((position (##sys#slot p 10))
+	        (output (##sys#slot p 12)))
+	   (##core#inline "C_copy_memory_with_offset" output bv position from len)
 	   (##sys#setislot p 10 (fx+ position len)) ) ) )
      void ; close
      (lambda (p) #f)			; flush-output
      (lambda (p) #t)			; char-ready?
-     (lambda (p n dest start)		; read-string!
+     (lambda (p n dest start)		; read-bytevector!
        (let* ((pos (##sys#slot p 10))
-	      (n2 (fx- (##sys#slot p 11) pos) ) )
+              (input (##sys#slot p 12))
+	      (n2 (fx- (##sys#slot p 11) pos)))
 	 (when (or (not n) (fx> n n2)) (set! n n2))
-	 (##core#inline "C_substring_copy" (##sys#slot p 12) dest pos (fx+ pos n) start)
+	 (##core#inline "C_copy_memory_with_offset" dest input start pos n)
 	 (##sys#setislot p 10 (fx+ pos n))
 	 n))
      (lambda (p limit)			; read-line
@@ -4818,16 +4839,17 @@ EOF
 		   (begin
 		     (##sys#setislot p 4 (fx+ (##sys#slot p 4) 1))
 		     (##sys#setislot p 5 0))
-		   (##sys#setislot p 5 (fx+ (##sys#slot p 5) (##sys#size line))))
+		   (##sys#setislot p 5 (fx+ (##sys#slot p 5) (string-length line))))
 	       (##sys#setislot p 10 next)
 	       line) ) ) )
      (lambda (p)			; read-buffered
        (let ((pos (##sys#slot p 10))
-	     (string (##sys#slot p 12))
+	     (buf (##sys#slot p 12))
 	     (len (##sys#slot p 11)) )
 	 (if (fx>= pos len)
 	     ""
-	     (let ((buffered (##sys#substring string pos len)))
+	     (let* ((rest (fx- len pos))
+                    (buffered (##sys#buffer->string buffered pos rest)))
 	       (##sys#setislot p 10 len)
 	       buffered))))
      )))
@@ -4836,53 +4858,77 @@ EOF
 ;; The eos-handler is responsible for stopping, either when EOF is hit or
 ;; a user-supplied limit is reached (ie, it's indistinguishable from EOF)
 (define (##sys#scan-buffer-line buf limit start-pos eos-handler)
-  (define (copy&append buf offset pos old-line)
-    (let* ((old-line-len (##sys#size old-line))
-	   (new-line (##sys#make-string (fx+ old-line-len (fx- pos offset)))))
-      (##core#inline "C_substring_copy" old-line new-line 0 old-line-len 0)
-      (##core#inline "C_substring_copy" buf new-line offset pos old-line-len)
-      new-line))
-  (let loop ((buf buf)
-	     (offset start-pos)
-	     (pos start-pos)
-	     (limit limit)
-	     (line ""))
-    (if (fx= pos limit)
-	(let ((line (copy&append buf offset pos line)))
-	  (receive (buf offset limit) (eos-handler pos)
-	    (if buf
-		(loop buf offset offset limit line)
-		(values offset line #f))))
-	(let ((c (##core#inline "C_subchar" buf pos)))
-	  (cond ((eq? c #\newline)
-		 (values (fx+ pos 1) (copy&append buf offset pos line) #t))
-		((and (eq? c #\return)	; \r\n -> drop \r from string
-		      (fx> limit (fx+ pos 1))
-		      (eq? (##core#inline "C_subchar" buf (fx+ pos 1)) #\newline))
-		 (values (fx+ pos 2) (copy&append buf offset pos line) #t))
-		((and (eq? c #\return)	; Edge case (#568): \r{read}[\n|xyz]
-		      (fx= limit (fx+ pos 1)))
-		 (let ((line (copy&append buf offset pos line)))
-		   (receive (buf offset limit) (eos-handler pos)
-		     (if buf
-			 (if (eq? (##core#inline "C_subchar" buf offset) #\newline)
-			     (values (fx+ offset 1) line #t)
-			     ;; "Restore" \r we didn't copy, loop w/ new string
-			     (loop buf offset offset limit
-				   (##sys#string-append line "\r")))
-			 ;; Restore \r here, too (when we reached EOF)
-			 (values offset (##sys#string-append line "\r") #t)))))
-		((eq? c #\return)
-		 (values (fx+ pos 1) (copy&append buf offset pos line) #t))
-		(else (loop buf offset (fx+ pos 1) limit line)) ) ) ) ) )
+  (let* ((hold 1024)
+         (dpos 0)
+         (line (##sys#make-bytevector hold)))
+    (define (grow)
+      (let* ((h2 (fx* hold 2))
+             (l2 (##sys#make-bytevector h2)))
+        (##core#inline "C_copy_memory" l2 line dpos)
+        (set! line l2)
+        (set! hold h2)))
+    (define (conc buf from to)
+      (let ((len (fx- to from)))
+        (when (fx>= (fx+ dpos len) hold) (grow))
+        (##core#inline "C_copy_memory_with_offset" line buf dpos from len)
+        (set! dpos (fx+ dpos len))))
+    (define (conc1 b)
+      (when (fx>= (fx+ dpos 1) hold) (grow))
+      (##core#inline "C_setsubbyte" line dpos b)
+      (set! dpos (fx+ dpos 1)))
+    (define (getline) 
+      (##sys#buffer->string line 0 dpos))
+    (let loop ((buf buf)
+               (offset start-pos)
+               (pos start-pos)
+               (limit limit))
+      (cond ((fx= pos limit)
+             (conc buf offset pos)
+             (receive (buf offset limit) (eos-handler pos)
+               (if buf
+                   (loop buf offset offset limit)
+                   (values offset (getline) #f))))
+            (else
+              (let ((c (##core#inline "C_subbyte" buf pos)))
+                (cond ((eq? c 10)
+                       (conc buf offset pos)
+                       (values (fx+ pos 1) (getline) #t))
+                      ((and (eq? c 13)	; \r\n -> drop \r from string
+                            (fx> limit (fx+ pos 1))
+                            (eq? (##core#inline "C_subbyte" buf (fx+ pos 1)) 10))
+                       (conc buf offset pos)
+                       (values (fx+ pos 2) (getine) #t))
+                      ((and (eq? c 13)	; Edge case (#568): \r{read}[\n|xyz]
+                            (fx= limit (fx+ pos 1)))
+                       (conc buf offset pos)
+                       (receive (buf offset limit) (eos-handler pos)
+                         (if buf
+                             (if (eq? (##core#inline "C_subbyte" buf offset) 10)
+                                 (values (fx+ offset 1) line #t)
+                                 ;; "Restore" \r we didn't copy, loop w/ new string
+                                 (begin
+                                   (conc1 13)
+                                   (loop buf offset offset limit)))
+                             ;; Restore \r here, too (when we reached EOF)
+                             (begin
+                               (conc1 13)
+                               (values offset (getline) #t)))))
+                      ((eq? c 13)
+                       (conc buf offset pos)
+                       (values (fx+ pos 1) (getline) #t))
+                      (else (loop buf offset (fx+ pos 1) limit)) ) ) ) ) )))
 
 (set! chicken.base#open-input-string
   (lambda (string)
     (##sys#check-string string 'open-input-string)
-    (let ((port (##sys#make-port 1 ##sys#string-port-class "(string)" 'string)))
-      (##sys#setislot port 11 (##core#inline "C_block_size" string))
+    (let* ((port (##sys#make-port 1 ##sys#string-port-class "(string)" 'string))
+           (bv (##sys#slot string 0))
+           (len (fx- (##sys#size bv) 1))
+           (bv2 (##sys#make-bytevector len)))
+      (##core#inline "C_copy_memory" bv2 bv len)
+      (##sys#setislot port 11 len)
       (##sys#setislot port 10 0)
-      (##sys#setslot port 12 string)
+      (##sys#setslot port 12 bv2)
       port)))
 
 (set! chicken.base#open-output-string
@@ -4890,7 +4936,7 @@ EOF
     (let ((port (##sys#make-port 2 ##sys#string-port-class "(string)" 'string)))
       (##sys#setislot port 10 0)
       (##sys#setislot port 11 output-string-initial-size)
-      (##sys#setslot port 12 (##sys#make-string output-string-initial-size))
+      (##sys#setslot port 12 (##sys#make-bytevector output-string-initial-size))
       port)))
 
 (set! chicken.base#get-output-string
@@ -4899,7 +4945,7 @@ EOF
     (if (not (eq? 'string (##sys#slot port 7)))
         (##sys#signal-hook
          #:type-error 'get-output-string "argument is not a string-output-port" port)
-        (##sys#substring (##sys#slot port 12) 0 (##sys#slot port 10)))))
+        (##sys#buffer->string (##sys#slot port 12) 0 (##sys#slot port 10)))))
 
 (define ##sys#print-to-string
   (let ([get-output-string get-output-string]

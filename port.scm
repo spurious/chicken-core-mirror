@@ -322,7 +322,7 @@ char *ttyname(int fd) {
 ;   10: last
 
 (define make-input-port
-  (lambda (read ready? close #!optional peek read-string read-line read-buffered)
+  (lambda (read ready? close #!optional peek read-bytevector read-line read-buffered)
     (let* ((class
 	    (vector 
 	     (lambda (p)		; read-char
@@ -341,13 +341,13 @@ char *ttyname(int fd) {
 			  (##sys#setslot p 10 last)
 			  last) ] ) ) )
 	     #f				; write-char
-	     #f				; write-string
+	     #f				; write-bytevector
 	     (lambda (p d)		; close
 	       (close))
 	     #f				; flush-output
 	     (lambda (p)		; char-ready?
 	       (ready?) )
-	     read-string		; read-string!
+	     read-bytevector		; read-string!
 	     read-line			; read-line
 	     read-buffered))
 	   (data (vector #f))
@@ -363,15 +363,16 @@ char *ttyname(int fd) {
 	     #f				; peek-char
 	     (lambda (p c)		; write-char
 	       (write (string c)) )
-	     (lambda (p s)		; write-string
-	       (write s) )
+	     (lambda (p bv from to)   		; write-bytevector
+               (write (substring bv from to)))
 	     (lambda (p d)		; close
 	       (close))
 	     (lambda (p)		; flush-output
 	       (when flush (flush)) )
 	     #f				; char-ready?
-	     #f				; read-string!
-	     #f) )			; read-line
+	     #f				; read-bytevector!
+             #f                         ; read-line
+             #f))                         ; read-buffered
 	   (data (vector #f))
 	   (port (##sys#make-port 2 class "(custom)" 'custom)))
       (##sys#set-port-data! port data) 
@@ -385,8 +386,13 @@ char *ttyname(int fd) {
 		   (peek-char i))
 		 (lambda (_ c)           ; write-char
 		   (write-char c o))
-		 (lambda (_ s)           ; write-string
-		   (write-string s #f o))
+                 (lambda (_ bv from to)  ; write-bytevector
+                   (if (eq? from 0)
+                       (write-bytevector bv to o)
+                       (let* ((len (fx- to from))
+                              (bv2 (##sys#make-bytevector len)))
+                         (##core#inline "C_copy_memory" bv2 bv len)
+                         (write-bytevector bv2 len o))))
 		 (lambda (_ d)           ; close
 		   (case d
 		     ((1) (close-input-port i))
@@ -395,8 +401,8 @@ char *ttyname(int fd) {
 		   (flush-output o))
 		 (lambda (_)             ; char-ready?
 		   (char-ready? i))
-		 (lambda (_ n d s)       ; read-string!
-		   (read-string! n d i s))
+		 (lambda (_ n d s)       ; read-bytevector!
+		   (chicken.io#read-bytevector! n d i s))
 		 (lambda (_ l)           ; read-line
 		   (read-line i l))
 		 (lambda ()              ; read-buffered
