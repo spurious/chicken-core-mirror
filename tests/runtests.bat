@@ -243,6 +243,13 @@ if errorlevel 1 exit /b 1
 a.out
 if errorlevel 1 exit /b 1
 
+echo ======================================== unicode tests ...
+%interpret% -s unicode-tests.scm
+if errorlevel 1 exit /b 1
+%compile% -specialize unicode-tests.scm
+if errorlevel 1 exit /b 1
+a.out
+
 echo ======================================== reader tests ...
 %interpret% -s reader-tests.scm
 if errorlevel 1 exit /b 1

@@ -256,6 +256,7 @@ tests/version-tests.scm
 tests/messages-test.scm
 tests/messages.expected
 tests/types-db-consistency.scm
+tests/unicode-tests.scm
 tweaks.scm
 Makefile
 Makefile.android
@@ -288,8 +289,8 @@ chicken.base.import.scm
 chicken.base.import.c
 chicken.bitwise.import.scm
 chicken.bitwise.import.c
-chicken.blob.import.scm
-chicken.blob.import.c
+chicken.bytevector.import.scm
+chicken.bytevector.import.c
 chicken.compiler.user-pass.import.scm
 chicken.compiler.user-pass.import.c
 chicken.condition.import.scm
@@ -421,7 +422,7 @@ manual-html/Interface to external functions and variables.html
 manual-html/manual.css
 manual-html/Module (chicken base).html
 manual-html/Module (chicken bitwise).html
-manual-html/Module (chicken blob).html
+manual-html/Module (chicken bytevector).html
 manual-html/Module (chicken condition).html
 manual-html/Module (chicken continuation).html
 manual-html/Module (chicken csi).html

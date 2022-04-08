@@ -207,6 +207,11 @@ $interpret -s record-printer-test.scm
 $compile record-printer-test.scm
 ./a.out
 
+echo "======================================== unicode tests ..."
+$interpret -s unicode-tests.scm
+$compile -specialize unicode-tests.scm
+./a.out
+
 echo "======================================== reader tests ..."
 $interpret -s reader-tests.scm
 
