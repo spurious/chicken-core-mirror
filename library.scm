@@ -5627,26 +5627,6 @@ EOF
 (define (##sys#symbol-has-toplevel-binding? s)
   (##core#inline "C_boundp" s))
 
-(define (##sys#copy-bytes from to offset1 offset2 bytes)
-  (##core#inline 
-   "C_substring_copy"
-   from to
-   offset1 (fx+ offset1 bytes)
-   offset2) )
-
-(define (##sys#copy-words from to offset1 offset2 words)
-  (##core#inline 
-   "C_subvector_copy"
-   from to
-   offset1 (fx+ offset1 words)
-   offset2) )
-
-(define (##sys#compare-bytes from to offset1 offset2 bytes)
-  (##core#inline 
-   "C_substring_compare"
-   from to
-   offset1 offset2 bytes) )
-
 (define (##sys#block-pointer x)
   (let ([ptr (##sys#make-pointer)])
     (##core#inline "C_pointer_to_block" ptr x)
