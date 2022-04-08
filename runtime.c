@@ -5962,10 +5962,10 @@ C_regparm C_word C_fcall C_i_vector_length(C_word v)
   return C_fix(C_header_size(v));
 }
 
-C_regparm C_word C_fcall C_i_u8vector_length(C_word v)
+C_regparm C_word C_fcall C_i_bytevector_length(C_word v)
 {
-  if(!C_truep(C_i_u8vectorp(v)))
-    barf(C_BAD_ARGUMENT_TYPE_ERROR, "u8vector-length", v);
+  if(!C_truep(C_bytevectorp(v)))
+    barf(C_BAD_ARGUMENT_TYPE_ERROR, "bytevector-length", v);
 
   return C_fix(C_header_size(C_block_item(v, 1)));
 }
@@ -6137,31 +6137,6 @@ C_regparm C_word C_fcall C_i_vector_set(C_word v, C_word i, C_word x)
   return C_SCHEME_UNDEFINED;
 }
 
-
-C_regparm C_word C_fcall C_i_u8vector_set(C_word v, C_word i, C_word x)
-{
-  int j;
-  C_word n;
-
-  if(!C_truep(C_i_u8vectorp(v)))
-    barf(C_BAD_ARGUMENT_TYPE_ERROR, "u8vector-set!", v);
-
-  if(i & C_FIXNUM_BIT) {
-    j = C_unfix(i);
-
-    if(j < 0 || j >= C_header_size(C_block_item(v, 1))) barf(C_OUT_OF_RANGE_ERROR, "u8vector-set!", v, i);
-
-    if(x & C_FIXNUM_BIT) {
-      if (!(x & C_INT_SIGN_BIT) && C_ilen(C_unfix(x)) <= 8) n = C_unfix(x);
-      else barf(C_OUT_OF_RANGE_ERROR, "u8vector-set!", x);
-    }
-    else barf(C_BAD_ARGUMENT_TYPE_ERROR, "u8vector-set!", x);
-  }
-  else barf(C_BAD_ARGUMENT_TYPE_ERROR, "u8vector-set!", i);
-
-  ((unsigned char *)C_data_pointer(C_block_item(v, 1)))[j] = n;
-  return C_SCHEME_UNDEFINED;
-}
 
 C_regparm C_word C_fcall C_i_s8vector_set(C_word v, C_word i, C_word x)
 {
@@ -12575,13 +12550,25 @@ static C_regparm C_word C_fcall decode_literal2(C_word **ptr, C_char **str,
   size = decode_size(str);
 
   switch(bits) {
-  /* This cannot be encoded as a blob due to endianness differences */
-  case (C_STRING_TYPE | C_GC_FORWARDING_BIT): /* This represents "exact int" */
+  /* This cannot be encoded as a bytevector due to endianness differences */
+
+  /* XXX legacy bignum encoding: */
+  case (C_STRING_TYPE | C_BYTEBLOCK_BIT | C_GC_FORWARDING_BIT): /* This represents "exact int" */
+  /* XXX */
+  case (C_BYTEVECTOR_TYPE | C_GC_FORWARDING_BIT): /* This represents "exact int" */
     /* bignums are also allocated statically */
     val = C_static_bignum(ptr, size, *str);
     *str += size;
     break;
 
+  /* XXX legacy encoding: */
+  case (C_STRING_TYPE | C_BYTEBLOCK_BIT):
+    /* strings are always allocated statically */
+    val = C_static_string(ptr, size, *str);
+    *str += size;
+    break;
+  /* XXX */
+    
   case C_STRING_TYPE:
     /* strings are always allocated statically */
     val = C_static_string(ptr, size, *str);
@@ -12589,7 +12576,7 @@ static C_regparm C_word C_fcall decode_literal2(C_word **ptr, C_char **str,
     break;
     
   case C_BYTEVECTOR_TYPE:
-    /* ... as are bytevectors (blobs) */
+    /* ... as are bytevectors */
     val = C_static_bytevector(ptr, size, *str);
     *str += size;
     break;
