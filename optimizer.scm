@@ -1128,7 +1128,7 @@
 
     ;; (<op> ...) -> (##core#inline <iop> ...)
     ((2) ; classargs = (<argc> <iop> <safe>)
-     ;; - <safe> by be 'specialized (see rule #16 below)
+     ;; - <safe> may be 'specialized (see rule #16 below)
      (and may-rewrite
 	  (= (length callargs) (first classargs))
 	  (intrinsic? name)
