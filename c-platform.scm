@@ -182,7 +182,7 @@
     chicken.bitwise#bitwise-ior chicken.bitwise#bitwise-xor
     chicken.bitwise#arithmetic-shift chicken.bitwise#bit->boolean
 
-    chicken.blob#blob-size chicken.blob#blob=?
+    chicken.bytevector#bytevector-length chicken.bytevector#bytevector=?
 
     chicken.keyword#get-keyword
 
@@ -210,16 +210,16 @@
     srfi-4#s32vector-set! srfi-4#s64vector-set!
     srfi-4#f32vector-set! srfi-4#f64vector-set!
 
-    srfi-4#u8vector->blob/shared srfi-4#s8vector->blob/shared
-    srfi-4#u16vector->blob/shared srfi-4#s16vector->blob/shared
-    srfi-4#u32vector->blob/shared srfi-4#s32vector->blob/shared
-    srfi-4#u64vector->blob/shared srfi-4#s64vector->blob/shared
-    srfi-4#f32vector->blob/shared srfi-4#f64vector->blob/shared
-    srfi-4#blob->u8vector/shared srfi-4#blob->s8vector/shared
-    srfi-4#blob->u16vector/shared srfi-4#blob->s16vector/shared
-    srfi-4#blob->u32vector/shared srfi-4#blob->s32vector/shared
-    srfi-4#blob->u64vector/shared srfi-4#blob->s64vector/shared
-    srfi-4#blob->f32vector/shared srfi-4#blob->f64vector/shared
+    srfi-4#u8vector->bytevector/shared srfi-4#s8vector->bytevector/shared
+    srfi-4#u16vector->bytevector/shared srfi-4#s16vector->bytevector/shared
+    srfi-4#u32vector->bytevector/shared srfi-4#s32vector->bytevector/shared
+    srfi-4#u64vector->bytevector/shared srfi-4#s64vector->bytevector/shared
+    srfi-4#f32vector->bytevector/shared srfi-4#f64vector->bytevector/shared
+    srfi-4#bytevector->u8vector/shared srfi-4#bytevector->s8vector/shared
+    srfi-4#bytevector->u16vector/shared srfi-4#bytevector->s16vector/shared
+    srfi-4#bytevector->u32vector/shared srfi-4#bytevector->s32vector/shared
+    srfi-4#bytevector->u64vector/shared srfi-4#bytevector->s64vector/shared
+    srfi-4#bytevector->f32vector/shared srfi-4#bytevector->f64vector/shared
 
     chicken.memory#u8vector-ref chicken.memory#s8vector-ref
     chicken.memory#u16vector-ref chicken.memory#s16vector-ref
@@ -1067,17 +1067,16 @@
 (rewrite '##sys#foreign-char-argument 17 1 "C_i_foreign_char_argumentp")
 (rewrite '##sys#foreign-flonum-argument 17 1 "C_i_foreign_flonum_argumentp")
 (rewrite '##sys#foreign-block-argument 17 1 "C_i_foreign_block_argumentp")
+(rewrite '##sys#foreign-symbol-argument 17 1 "C_i_foreign_symbol_argumentp")
 (rewrite '##sys#foreign-struct-wrapper-argument 17 2 "C_i_foreign_struct_wrapper_argumentp")
 (rewrite '##sys#foreign-string-argument 17 1 "C_i_foreign_string_argumentp")
 (rewrite '##sys#foreign-pointer-argument 17 1 "C_i_foreign_pointer_argumentp")
 (rewrite '##sys#foreign-ranged-integer-argument 17 2 "C_i_foreign_ranged_integer_argumentp")
 (rewrite '##sys#foreign-unsigned-ranged-integer-argument 17 2 "C_i_foreign_unsigned_ranged_integer_argumentp")
 
-(rewrite 'chicken.blob#blob-size 2 1 "C_block_size" #f)
+(rewrite 'chicken.bytevector#bytevector-length 2 1 "C_block_size" #f)
 
 ;; TODO: Move this stuff to types.db
-(rewrite 'srfi-4#u8vector-ref 2 2 "C_u_i_u8vector_ref" #f)
-(rewrite 'srfi-4#u8vector-ref 2 2 "C_i_u8vector_ref" #t)
 (rewrite 'srfi-4#s8vector-ref 2 2 "C_u_i_s8vector_ref" #f)
 (rewrite 'srfi-4#s8vector-ref 2 2 "C_i_s8vector_ref" #t)
 (rewrite 'srfi-4#u16vector-ref 2 2 "C_u_i_u16vector_ref" #f)
@@ -1137,16 +1136,16 @@
 
 (rewrite 'chicken.base#atom? 17 1 "C_i_not_pair_p")
 
-(rewrite 'srfi-4#u8vector->blob/shared 7 1 "C_slot" 1 #f)
-(rewrite 'srfi-4#s8vector->blob/shared 7 1 "C_slot" 1 #f)
-(rewrite 'srfi-4#u16vector->blob/shared 7 1 "C_slot" 1 #f)
-(rewrite 'srfi-4#s16vector->blob/shared 7 1 "C_slot" 1 #f)
-(rewrite 'srfi-4#u32vector->blob/shared 7 1 "C_slot" 1 #f)
-(rewrite 'srfi-4#s32vector->blob/shared 7 1 "C_slot" 1 #f)
-(rewrite 'srfi-4#u64vector->blob/shared 7 1 "C_slot" 1 #f)
-(rewrite 'srfi-4#s64vector->blob/shared 7 1 "C_slot" 1 #f)
-(rewrite 'srfi-4#f32vector->blob/shared 7 1 "C_slot" 1 #f)
-(rewrite 'srfi-4#f64vector->blob/shared 7 1 "C_slot" 1 #f)
+(rewrite 'srfi-4#u8vector->bytevector/shared 7 1 "C_slot" 1 #f)
+(rewrite 'srfi-4#s8vector->bytevector/shared 7 1 "C_slot" 1 #f)
+(rewrite 'srfi-4#u16vector->bytevector/shared 7 1 "C_slot" 1 #f)
+(rewrite 'srfi-4#s16vector->bytevector/shared 7 1 "C_slot" 1 #f)
+(rewrite 'srfi-4#u32vector->bytevector/shared 7 1 "C_slot" 1 #f)
+(rewrite 'srfi-4#s32vector->bytevector/shared 7 1 "C_slot" 1 #f)
+(rewrite 'srfi-4#u64vector->bytevector/shared 7 1 "C_slot" 1 #f)
+(rewrite 'srfi-4#s64vector->bytevector/shared 7 1 "C_slot" 1 #f)
+(rewrite 'srfi-4#f32vector->bytevector/shared 7 1 "C_slot" 1 #f)
+(rewrite 'srfi-4#f64vector->bytevector/shared 7 1 "C_slot" 1 #f)
 
 (let ()
   (define (rewrite-make-vector db classargs cont callargs)
