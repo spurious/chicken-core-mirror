@@ -55,7 +55,7 @@
                                               ".import.scm"))))))))
 
 (defmod chicken.bitwise)
-(defmod chicken.blob)
+(defmod chicken.bytevector)
 (defmod chicken.foreign)
 (defmod chicken.fixnum)
 (defmod chicken.keyword)

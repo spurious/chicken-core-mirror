@@ -19,7 +19,7 @@ module.
 <procedure>(make-locative OBJ [INDEX])</procedure>
 
 Creates a locative that refers to the element of the non-immediate object
-{{OBJ}} at position {{INDEX}}. {{OBJ}} may be a vector, pair, string, blob,
+{{OBJ}} at position {{INDEX}}. {{OBJ}} may be a vector, pair, string, bytevector,
 SRFI-4 number-vector, or record structure. {{INDEX}} should be a fixnum.
 {{INDEX}} defaults to 0.
 

@@ -49,7 +49,7 @@
 
 (import scheme
 	chicken.base
-	chicken.blob
+	chicken.bytevector
 	chicken.fixnum
 	chicken.internal
 	chicken.keyword
@@ -183,7 +183,7 @@
 	      ((or (char? x)
 		   (eof-object? x)
 		   (string? x)
-		   (blob? x)
+		   (bytevector? x)
 		   (vector? x)
 		   (##sys#srfi-4-vector? x))
 	       (lambda v x) )

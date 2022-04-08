@@ -1042,6 +1042,7 @@ EOF
 (define (##sys#setslot x i y) (##core#inline "C_i_setslot" x i y))
 (define (##sys#setislot x i y) (##core#inline "C_i_set_i_slot" x i y))
 (define ##sys#allocate-vector (##core#primitive "C_allocate_vector"))
+(define ##sys#allocate-bytevector (##core#primitive "C_allocate_bytevector"))
 (define ##sys#make-structure (##core#primitive "C_make_structure"))
 (define ##sys#ensure-heap-reserve (##core#primitive "C_ensure_heap_reserve"))
 (define ##sys#symbol-table-info (##core#primitive "C_get_symbol_table_info"))
@@ -1118,6 +1119,7 @@ EOF
       (##core#inline "C_i_check_structure_2" x y (car loc))
       (##core#inline "C_i_check_structure" x y) ) )
 
+;; DEPRECATED
 (define (##sys#check-blob x . loc) 
   (if (pair? loc)
       (##core#inline "C_i_check_bytevector_2" x (car loc))
@@ -1310,18 +1312,28 @@ EOF
 
 ;;; Strings:
 
-(define-inline (%make-string size fill)
-  (##sys#allocate-vector size #t fill #f) )
+(define (##sys#make-bytevector size #!optional (fill 0))
+  (##sys#allocate-bytevector size fill))
 
 (define (##sys#make-string size #!optional (fill #\space))
-  (%make-string size fill))
+  (let* ((count (##core#inline "C_utf_bytes" fill))
+         (n (fx* count size))
+         (bv (##sys#allocate-bytevector (fx+ n 1) 0)))
+    (##core#inline "C_utf_fill" bv fill)
+    (##core#inline_allocate ("C_a_ustring" 5) bv size)))
+
+(define (##sys#buffer->string buf start len)
+  (let ((bv (##sys#make-bytevector (fx+ len 1))))
+    (##core#inline "C_copy_memory_with_offset" bv buf 0 start len)
+    (##core#inline_allocate ("C_a_ustring" 5) bv
+                            (##core#inline "C_utf_range_length" bv 0 len))))
 
 (set! scheme#make-string
   (lambda (size . fill)
     (##sys#check-fixnum size 'make-string)
     (when (fx< size 0)
       (##sys#signal-hook #:bounds-error 'make-string "size is negative" size))
-    (%make-string
+    (##sys#make-string
      size
      (if (null? fill)
 	 #\space

@@ -10,70 +10,70 @@ When loaded, the feature identifier {{srfi-4}} is defined.
 
 === CHICKEN implementation specifics and extensions
 
-* Procedures for [[Module (chicken blob)|blob]] conversion, subvectors and vector I/O are provided.
+* Procedures for [[Module (chicken bytevector)|bytevector]] conversion, subvectors and vector I/O are provided.
 * SRFI-17 setters for {{XXXvector-ref}} are defined.
 * Constructors allow allocating the storage in non garbage collected memory.
 
 === Blob conversions
 
-As a SRFI-4 vector is basically just a [[Module (chicken blob)|blob]]
+As a SRFI-4 vector is basically just a [[Module (chicken bytevector)|bytevector]]
 wrapped by a SRFI-4 type "header object" to structure its contents,
-there are several procedures which can convert between blobs and
+there are several procedures which can convert between bytevectors and
 SRFI-4 vectors.
 
-<procedure>(u8vector->blob U8VECTOR)</procedure><br>
-<procedure>(s8vector->blob S8VECTOR)</procedure><br>
-<procedure>(u16vector->blob U16VECTOR)</procedure><br>
-<procedure>(s16vector->blob S16VECTOR)</procedure><br>
-<procedure>(u32vector->blob U32VECTOR)</procedure><br>
-<procedure>(s32vector->blob S32VECTOR)</procedure><br>
-<procedure>(u64vector->blob U64VECTOR)</procedure><br>
-<procedure>(s64vector->blob S64VECTOR)</procedure><br>
-<procedure>(f32vector->blob F32VECTOR)</procedure><br>
-<procedure>(f64vector->blob F64VECTOR)</procedure><br>
-<procedure>(u8vector->blob/shared U8VECTOR)</procedure><br>
-<procedure>(s8vector->blob/shared S8VECTOR)</procedure><br>
-<procedure>(u16vector->blob/shared U16VECTOR)</procedure><br>
-<procedure>(s16vector->blob/shared S16VECTOR)</procedure><br>
-<procedure>(u32vector->blob/shared U32VECTOR)</procedure><br>
-<procedure>(s32vector->blob/shared S32VECTOR)</procedure><br>
-<procedure>(u64vector->blob/shared U64VECTOR)</procedure><br>
-<procedure>(s64vector->blob/shared S64VECTOR)</procedure><br>
-<procedure>(f32vector->blob/shared F32VECTOR)</procedure><br>
-<procedure>(f64vector->blob/shared F64VECTOR)</procedure><br>
+<procedure>(u8vector->bytevector U8VECTOR)</procedure><br>
+<procedure>(s8vector->bytevector S8VECTOR)</procedure><br>
+<procedure>(u16vector->bytevector U16VECTOR)</procedure><br>
+<procedure>(s16vector->bytevector S16VECTOR)</procedure><br>
+<procedure>(u32vector->bytevector U32VECTOR)</procedure><br>
+<procedure>(s32vector->bytevector S32VECTOR)</procedure><br>
+<procedure>(u64vector->bytevector U64VECTOR)</procedure><br>
+<procedure>(s64vector->bytevector S64VECTOR)</procedure><br>
+<procedure>(f32vector->bytevector F32VECTOR)</procedure><br>
+<procedure>(f64vector->bytevector F64VECTOR)</procedure><br>
+<procedure>(u8vector->bytevector/shared U8VECTOR)</procedure><br>
+<procedure>(s8vector->bytevector/shared S8VECTOR)</procedure><br>
+<procedure>(u16vector->bytevector/shared U16VECTOR)</procedure><br>
+<procedure>(s16vector->bytevector/shared S16VECTOR)</procedure><br>
+<procedure>(u32vector->bytevector/shared U32VECTOR)</procedure><br>
+<procedure>(s32vector->bytevector/shared S32VECTOR)</procedure><br>
+<procedure>(u64vector->bytevector/shared U64VECTOR)</procedure><br>
+<procedure>(s64vector->bytevector/shared S64VECTOR)</procedure><br>
+<procedure>(f32vector->bytevector/shared F32VECTOR)</procedure><br>
+<procedure>(f64vector->bytevector/shared F64VECTOR)</procedure><br>
 
 Each of these procedures return the contents of the given vector as a
-'packed' blob. The byte order in that vector is platform-dependent
+'packed' bytevector. The byte order in that vector is platform-dependent
 (for example little-endian on an '''Intel''' processor). The
-{{/shared}} variants return a blob that shares memory with the
+{{/shared}} variants return a bytevector that shares memory with the
 contents of the vector, the others will copy the contents of the
-SRFI-4 vector's internal blob object.
+SRFI-4 vector's internal bytevector object.
 
-<procedure>(blob->u8vector BLOB)</procedure><br>
-<procedure>(blob->s8vector BLOB)</procedure><br>
-<procedure>(blob->u16vector BLOB)</procedure><br>
-<procedure>(blob->s16vector BLOB)</procedure><br>
-<procedure>(blob->u32vector BLOB)</procedure><br>
-<procedure>(blob->s32vector BLOB)</procedure><br>
-<procedure>(blob->u64vector BLOB)</procedure><br>
-<procedure>(blob->s64vector BLOB)</procedure><br>
-<procedure>(blob->f32vector BLOB)</procedure><br>
-<procedure>(blob->f64vector BLOB)</procedure><br>
-<procedure>(blob->u8vector/shared BLOB)</procedure><br>
-<procedure>(blob->s8vector/shared BLOB)</procedure><br>
-<procedure>(blob->u16vector/shared BLOB)</procedure><br>
-<procedure>(blob->s16vector/shared BLOB)</procedure><br>
-<procedure>(blob->u32vector/shared BLOB)</procedure><br>
-<procedure>(blob->s32vector/shared BLOB)</procedure><br>
-<procedure>(blob->u64vector/shared BLOB)</procedure><br>
-<procedure>(blob->s64vector/shared BLOB)</procedure><br>
-<procedure>(blob->f32vector/shared BLOB)</procedure><br>
-<procedure>(blob->f64vector/shared BLOB)</procedure><br>
+<procedure>(bytevector->u8vector BLOB)</procedure><br>
+<procedure>(bytevector->s8vector BLOB)</procedure><br>
+<procedure>(bytevector->u16vector BLOB)</procedure><br>
+<procedure>(bytevector->s16vector BLOB)</procedure><br>
+<procedure>(bytevector->u32vector BLOB)</procedure><br>
+<procedure>(bytevector->s32vector BLOB)</procedure><br>
+<procedure>(bytevector->u64vector BLOB)</procedure><br>
+<procedure>(bytevector->s64vector BLOB)</procedure><br>
+<procedure>(bytevector->f32vector BLOB)</procedure><br>
+<procedure>(bytevector->f64vector BLOB)</procedure><br>
+<procedure>(bytevector->u8vector/shared BLOB)</procedure><br>
+<procedure>(bytevector->s8vector/shared BLOB)</procedure><br>
+<procedure>(bytevector->u16vector/shared BLOB)</procedure><br>
+<procedure>(bytevector->s16vector/shared BLOB)</procedure><br>
+<procedure>(bytevector->u32vector/shared BLOB)</procedure><br>
+<procedure>(bytevector->s32vector/shared BLOB)</procedure><br>
+<procedure>(bytevector->u64vector/shared BLOB)</procedure><br>
+<procedure>(bytevector->s64vector/shared BLOB)</procedure><br>
+<procedure>(bytevector->f32vector/shared BLOB)</procedure><br>
+<procedure>(bytevector->f64vector/shared BLOB)</procedure><br>
 
 Each of these procedures return a vector where the argument {{BLOB}}
 is taken as a 'packed' representation of the contents of the
 vector. The {{/shared}} variants return a vector that shares memory
-with the contents of the blob, the others will copy the blob.
+with the contents of the bytevector, the others will copy the bytevector.
 
 === Subvectors
 
@@ -363,3 +363,4 @@ garbage collected memory is undefined.
 Previous: [[Module r4rs]]
 
 Next: [[Module (chicken base)]]
+

@@ -38,35 +38,34 @@ EOF
 ) )
 
 (module srfi-4
-  (blob->f32vector blob->f32vector/shared
-   blob->f64vector blob->f64vector/shared
-   blob->s16vector blob->s16vector/shared
-   blob->s32vector blob->s32vector/shared
-   blob->s64vector blob->s64vector/shared
-   blob->s8vector blob->s8vector/shared
-   blob->u16vector blob->u16vector/shared
-   blob->u32vector blob->u32vector/shared
-   blob->u64vector blob->u64vector/shared
-   blob->u8vector blob->u8vector/shared
-   f32vector f32vector->blob f32vector->blob/shared f32vector->list
+  (bytevector->f32vector bytevector->f32vector/shared
+   bytevector->f64vector bytevector->f64vector/shared
+   bytevector->s16vector bytevector->s16vector/shared
+   bytevector->s32vector bytevector->s32vector/shared
+   bytevector->s64vector bytevector->s64vector/shared
+   bytevector->s8vector bytevector->s8vector/shared
+   bytevector->u16vector bytevector->u16vector/shared
+   bytevector->u32vector bytevector->u32vector/shared
+   bytevector->u64vector bytevector->u64vector/shared
+   f32vector f32vector->bytevector f32vector->bytevector/shared f32vector->list
    f32vector-length f32vector-ref f32vector-set! f32vector?
-   f64vector f64vector->blob f64vector->blob/shared f64vector->list
+   f64vector f64vector->bytevector f64vector->bytevector/shared f64vector->list
    f64vector-length f64vector-ref f64vector-set! f64vector?
-   s8vector s8vector->blob s8vector->blob/shared s8vector->list
+   s8vector s8vector->bytevector s8vector->bytevector/shared s8vector->list
    s8vector-length s8vector-ref s8vector-set! s8vector?
-   s16vector s16vector->blob s16vector->blob/shared s16vector->list
+   s16vector s16vector->bytevector s16vector->bytevector/shared s16vector->list
    s16vector-length s16vector-ref s16vector-set! s16vector?
-   s32vector s32vector->blob s32vector->blob/shared s32vector->list
+   s32vector s32vector->bytevector s32vector->bytevector/shared s32vector->list
    s32vector-length s32vector-ref s32vector-set! s32vector?
-   s64vector s64vector->blob s64vector->blob/shared s64vector->list
+   s64vector s64vector->bytevector s64vector->bytevector/shared s64vector->list
    s64vector-length s64vector-ref s64vector-set! s64vector?
-   u8vector u8vector->blob u8vector->blob/shared u8vector->list
+   u8vector u8vector->list
    u8vector-length u8vector-ref u8vector-set! u8vector?
-   u16vector u16vector->blob u16vector->blob/shared u16vector->list
+   u16vector u16vector->bytevector u16vector->bytevector/shared u16vector->list
    u16vector-length u16vector-ref u16vector-set! u16vector?
-   u32vector u32vector->blob u32vector->blob/shared u32vector->list
+   u32vector u32vector->bytevector u32vector->bytevector/shared u32vector->list
    u32vector-length u32vector-ref u32vector-set! u32vector?
-   u64vector u64vector->blob u64vector->blob/shared u64vector->list
+   u64vector u64vector->bytevector u64vector->bytevector/shared u64vector->list
    u64vector-length u64vector-ref u64vector-set! u64vector?
    list->f32vector list->f64vector list->s16vector list->s32vector
    list->s64vector list->s8vector list->u16vector list->u32vector
@@ -82,6 +81,7 @@ EOF
 (import scheme
 	chicken.base
 	chicken.bitwise
+        chicken.bytevector
 	chicken.fixnum
 	chicken.foreign
 	chicken.gc
@@ -97,13 +97,6 @@ EOF
   (unless (or (##core#inline "C_i_exact_integerp" x)
 	      (##core#inline "C_i_flonump" x))
     (##sys#error-hook (foreign-value "C_BAD_ARGUMENT_TYPE_NO_FLONUM_ERROR" int) loc x) ) )
-
-(define-inline (check-range i from to loc)
-  (##sys#check-fixnum i loc)
-  (unless (and (fx<= from i) (fx< i to))
-    (##sys#error-hook
-     (foreign-value "C_OUT_OF_RANGE_ERROR" int)
-     loc i from to) ) )
 
 (define-inline (check-uint-length obj len loc)
   (##sys#check-exact-uinteger obj loc)
@@ -121,7 +114,7 @@ EOF
 ;;; Get vector length:
 
 (define (u8vector-length x)
-  (##core#inline "C_i_u8vector_length" x))
+  (##core#inline "C_i_bytevector_length" x))
 
 (define (s8vector-length x)
   (##core#inline "C_i_s8vector_length" x))
@@ -153,8 +146,7 @@ EOF
 
 ;;; Safe accessors:
 
-(define (u8vector-set! x i y)
-  (##core#inline "C_i_u8vector_set" x i y))
+(define u8vector-set! bytevector-u8-set!)
 
 (define (s8vector-set! x i y)
   (##core#inline "C_i_s8vector_set" x i y))
@@ -183,11 +175,7 @@ EOF
 (define (f64vector-set! x i y)
   (##core#inline "C_i_f64vector_set" x i y))
 
-(define u8vector-ref
-  (getter-with-setter
-   (lambda (x i) (##core#inline "C_i_u8vector_ref" x i))
-   u8vector-set!
-   "(chicken.srfi-4#u8vector-ref v i)"))
+(define u8vector-ref bytevector-u8-ref)
 
 (define s8vector-ref
   (getter-with-setter
@@ -278,9 +266,7 @@ EOF
 		(let ((bv (ext-alloc len)))
 		  (or bv
 		      (##sys#error loc "not enough memory - cannot allocate external number vector" len)) )
-		(let ((bv (##sys#allocate-vector len #t #f #t))) ; this could be made better...
-		  (##core#inline "C_string_to_bytevector" bv)
-		  bv) ) ) ) ))
+		(##sys#allocate-bytevector len #f))))))
 
   (set! release-number-vector
     (lambda (v)
@@ -290,7 +276,7 @@ EOF
 
   (set! make-u8vector
     (lambda (len #!optional (init #f)  (ext? #f) (fin? #t))
-      (let ((v (##sys#make-structure 'u8vector (alloc 'make-u8vector 1 len ext?))))
+      (let ((v (alloc 'make-u8vector 1 len ext?)))
 	(when (and ext? fin?) (set-finalizer! v ext-free))
 	(if (not init)
 	    v
@@ -298,7 +284,7 @@ EOF
 	      (check-uint-length init 8 'make-u8vector)
 	      (do ((i 0 (##core#inline "C_fixnum_plus" i 1)))
 		  ((##core#inline "C_fixnum_greater_or_equal_p" i len) v)
-		(##core#inline "C_u_i_u8vector_set" v i init) ) ) ) ) ) )
+		(##core#inline "C_setsubbyte" v i init) ) ) ) ) ) )
 
   (set! make-s8vector
     (lambda (len #!optional (init #f)  (ext? #f) (fin? #t))
@@ -436,7 +422,9 @@ EOF
 		      (,set v i (##core#inline "C_slot" p 0))
 		      (##sys#error-not-a-proper-list lst) ) ) ) )))))))
 
-(list->NNNvector u8vector)
+(define (list->u8vector lst)
+  (##sys#list->bytevector lst 'list->u8vector))
+
 (list->NNNvector s8vector)
 (list->NNNvector u16vector)
 (list->NNNvector s16vector)
@@ -501,7 +489,9 @@ EOF
 			`(##core#inline ,(string-append "C_u_i_" tag "_ref") v i))
 		   (loop (fx+ i 1)) ) ) ) ) ) ) )))
 
-(NNNvector->list u8vector)
+(define (u8vector->list v)
+  (##sys#bytevector->list v 'u8vector->list))
+  
 (NNNvector->list s8vector)
 (NNNvector->list u16vector)
 (NNNvector->list s16vector)
@@ -516,7 +506,7 @@ EOF
 
 ;;; Predicates:
 
-(define (u8vector? x) (##core#inline "C_i_u8vectorp" x))
+(define (u8vector? x) (##core#inline "C_bytevectorp" x))
 (define (s8vector? x) (##core#inline "C_i_s8vectorp" x))
 (define (u16vector? x) (##core#inline "C_i_u16vectorp" x))
 (define (s16vector? x) (##core#inline "C_i_s16vectorp" x))
@@ -528,7 +518,8 @@ EOF
 (define (f64vector? x) (##core#inline "C_i_f64vectorp" x))
 
 ;; Catch-all predicate
-(define number-vector? ##sys#srfi-4-vector?)
+(define (number-vector? x)
+  (or (bytevector? x) (##sys#srfi-4-vector? x)))
 
 ;;; Accessing the packed bytevector:
 
@@ -541,7 +532,7 @@ EOF
   (lambda (v)
     (##sys#check-structure v tag loc)
     (let* ((old (##sys#slot v 1))
-	   (new (##sys#make-blob (##sys#size old))))
+	   (new (##sys#make-bytevector (##sys#size old))))
       (##core#inline "C_copy_block" old new) ) ) )
 
 (define (unpack tag sz loc)
@@ -551,63 +542,59 @@ EOF
       (if (or (eq? #t sz)
 	      (eq? 0 (##core#inline "C_fixnum_modulo" len sz)))
 	  (##sys#make-structure tag str)
-	  (##sys#error loc "blob does not have correct size for packing" tag len sz) ) ) ) )
+	  (##sys#error loc "bytevector does not have correct size for packing" tag len sz) ) ) ) )
 
 (define (unpack-copy tag sz loc)
   (lambda (str)
     (##sys#check-byte-vector str loc)
     (let* ((len (##sys#size str))
-	   (new (##sys#make-blob len)))
+	   (new (##sys#make-bytevector len)))
       (if (or (eq? #t sz)
 	      (eq? 0 (##core#inline "C_fixnum_modulo" len sz)))
 	  (##sys#make-structure
 	   tag
 	   (##core#inline "C_copy_block" str new) )
-	  (##sys#error loc "blob does not have correct size for packing" tag len sz) ) ) ) )
+	  (##sys#error loc "bytevector does not have correct size for packing" tag len sz) ) ) ) )
 
-(define u8vector->blob/shared (pack 'u8vector 'u8vector->blob/shared))
-(define s8vector->blob/shared (pack 's8vector 's8vector->blob/shared))
-(define u16vector->blob/shared (pack 'u16vector 'u16vector->blob/shared))
-(define s16vector->blob/shared (pack 's16vector 's16vector->blob/shared))
-(define u32vector->blob/shared (pack 'u32vector 'u32vector->blob/shared))
-(define s32vector->blob/shared (pack 's32vector 's32vector->blob/shared))
-(define u64vector->blob/shared (pack 'u64vector 'u64vector->blob/shared))
-(define s64vector->blob/shared (pack 's64vector 's64vector->blob/shared))
-(define f32vector->blob/shared (pack 'f32vector 'f32vector->blob/shared))
-(define f64vector->blob/shared (pack 'f64vector 'f64vector->blob/shared))
+(define s8vector->bytevector/shared (pack 's8vector 's8vector->bytevector/shared))
+(define u16vector->bytevector/shared (pack 'u16vector 'u16vector->bytevector/shared))
+(define s16vector->bytevector/shared (pack 's16vector 's16vector->bytevector/shared))
+(define u32vector->bytevector/shared (pack 'u32vector 'u32vector->bytevector/shared))
+(define s32vector->bytevector/shared (pack 's32vector 's32vector->bytevector/shared))
+(define u64vector->bytevector/shared (pack 'u64vector 'u64vector->bytevector/shared))
+(define s64vector->bytevector/shared (pack 's64vector 's64vector->bytevector/shared))
+(define f32vector->bytevector/shared (pack 'f32vector 'f32vector->bytevector/shared))
+(define f64vector->bytevector/shared (pack 'f64vector 'f64vector->bytevector/shared))
 
-(define u8vector->blob (pack-copy 'u8vector 'u8vector->blob))
-(define s8vector->blob (pack-copy 's8vector 's8vector->blob))
-(define u16vector->blob (pack-copy 'u16vector 'u16vector->blob))
-(define s16vector->blob (pack-copy 's16vector 's16vector->blob))
-(define u32vector->blob (pack-copy 'u32vector 'u32vector->blob))
-(define s32vector->blob (pack-copy 's32vector 's32vector->blob))
-(define u64vector->blob (pack-copy 'u64vector 'u64vector->blob))
-(define s64vector->blob (pack-copy 's64vector 's64vector->blob))
-(define f32vector->blob (pack-copy 'f32vector 'f32vector->blob))
-(define f64vector->blob (pack-copy 'f64vector 'f64vector->blob))
+(define s8vector->bytevector (pack-copy 's8vector 's8vector->bytevector))
+(define u16vector->bytevector (pack-copy 'u16vector 'u16vector->bytevector))
+(define s16vector->bytevector (pack-copy 's16vector 's16vector->bytevector))
+(define u32vector->bytevector (pack-copy 'u32vector 'u32vector->bytevector))
+(define s32vector->bytevector (pack-copy 's32vector 's32vector->bytevector))
+(define u64vector->bytevector (pack-copy 'u64vector 'u64vector->bytevector))
+(define s64vector->bytevector (pack-copy 's64vector 's64vector->bytevector))
+(define f32vector->bytevector (pack-copy 'f32vector 'f32vector->bytevector))
+(define f64vector->bytevector (pack-copy 'f64vector 'f64vector->bytevector))
 
-(define blob->u8vector/shared (unpack 'u8vector #t 'blob->u8vector/shared))
-(define blob->s8vector/shared (unpack 's8vector #t 'blob->s8vector/shared))
-(define blob->u16vector/shared (unpack 'u16vector 2 'blob->u16vector/shared))
-(define blob->s16vector/shared (unpack 's16vector 2 'blob->s16vector/shared))
-(define blob->u32vector/shared (unpack 'u32vector 4 'blob->u32vector/shared))
-(define blob->s32vector/shared (unpack 's32vector 4 'blob->s32vector/shared))
-(define blob->u64vector/shared (unpack 'u64vector 4 'blob->u64vector/shared))
-(define blob->s64vector/shared (unpack 's64vector 4 'blob->s64vector/shared))
-(define blob->f32vector/shared (unpack 'f32vector 4 'blob->f32vector/shared))
-(define blob->f64vector/shared (unpack 'f64vector 8 'blob->f64vector/shared))
+(define bytevector->s8vector/shared (unpack 's8vector #t 'bytevector->s8vector/shared))
+(define bytevector->u16vector/shared (unpack 'u16vector 2 'bytevector->u16vector/shared))
+(define bytevector->s16vector/shared (unpack 's16vector 2 'bytevector->s16vector/shared))
+(define bytevector->u32vector/shared (unpack 'u32vector 4 'bytevector->u32vector/shared))
+(define bytevector->s32vector/shared (unpack 's32vector 4 'bytevector->s32vector/shared))
+(define bytevector->u64vector/shared (unpack 'u64vector 4 'bytevector->u64vector/shared))
+(define bytevector->s64vector/shared (unpack 's64vector 4 'bytevector->s64vector/shared))
+(define bytevector->f32vector/shared (unpack 'f32vector 4 'bytevector->f32vector/shared))
+(define bytevector->f64vector/shared (unpack 'f64vector 8 'bytevector->f64vector/shared))
 
-(define blob->u8vector (unpack-copy 'u8vector #t 'blob->u8vector))
-(define blob->s8vector (unpack-copy 's8vector #t 'blob->s8vector))
-(define blob->u16vector (unpack-copy 'u16vector 2 'blob->u16vector))
-(define blob->s16vector (unpack-copy 's16vector 2 'blob->s16vector))
-(define blob->u32vector (unpack-copy 'u32vector 4 'blob->u32vector))
-(define blob->s32vector (unpack-copy 's32vector 4 'blob->s32vector))
-(define blob->u64vector (unpack-copy 'u64vector 4 'blob->u64vector))
-(define blob->s64vector (unpack-copy 's64vector 4 'blob->s64vector))
-(define blob->f32vector (unpack-copy 'f32vector 4 'blob->f32vector))
-(define blob->f64vector (unpack-copy 'f64vector 8 'blob->f64vector))
+(define bytevector->s8vector (unpack-copy 's8vector #t 'bytevector->s8vector))
+(define bytevector->u16vector (unpack-copy 'u16vector 2 'bytevector->u16vector))
+(define bytevector->s16vector (unpack-copy 's16vector 2 'bytevector->s16vector))
+(define bytevector->u32vector (unpack-copy 'u32vector 4 'bytevector->u32vector))
+(define bytevector->s32vector (unpack-copy 's32vector 4 'bytevector->s32vector))
+(define bytevector->u64vector (unpack-copy 'u64vector 4 'bytevector->u64vector))
+(define bytevector->s64vector (unpack-copy 's64vector 4 'bytevector->s64vector))
+(define bytevector->f32vector (unpack-copy 'f32vector 4 'bytevector->f32vector))
+(define bytevector->f64vector (unpack-copy 'f64vector 8 'bytevector->f64vector))
 
 
 ;;; Read syntax:
@@ -615,7 +602,7 @@ EOF
 (set! ##sys#user-read-hook
   (let ([old-hook ##sys#user-read-hook]
 	[read read]
-	[consers (list 'u8 list->u8vector
+	[consers (list 'u8 ##sys#list->bytevector
 		       's8 list->s8vector
 		       'u16 list->u16vector
 		       's16 list->s16vector
@@ -629,9 +616,17 @@ EOF
       (if (memq char '(#\u #\s #\f #\U #\S #\F))
 	  (let* ([x (read port)]
 		 [tag (and (symbol? x) x)] )
-	    (cond [(or (eq? tag 'f) (eq? tag 'F)) #f]
-		  [(memq tag consers) => (lambda (c) ((##sys#slot (##sys#slot c 1) 0) (read port)))]
-		  [else (##sys#read-error port "illegal bytevector syntax" tag)] ) )
+	    (cond ((or (eq? tag 'f) (eq? tag 'F)) #f)
+		  ((memq tag consers) => 
+                    (lambda (c) 
+                      (let ((d (##sys#read-numvector-data port)))
+                        (cond ((pair? d)
+                               ((##sys#slot (##sys#slot c 1) 0) d))
+                              ((eq? tag 'u8) (##sys#slot d 0))
+                              (else 
+                               ((##sys#slot (##sys#slot c 1) 0) 
+                                (##sys#string->list d)))))))
+		  (else (##sys#read-error port "illegal number vector syntax" tag)) ) )
 	  (old-hook char port) ) ) ) )
 
 
@@ -665,16 +660,21 @@ EOF
   (let* ([bv (##sys#slot v 1)]
 	 [len (##sys#size bv)]
 	 [ilen (##core#inline "C_u_fixnum_divide" len es)] )
-    (check-range from 0 (fx+ ilen 1) loc)
-    (check-range to 0 (fx+ ilen 1) loc)
+    (##sys#check-range from 0 (fx+ ilen 1) loc)
+    (##sys#check-range to 0 (fx+ ilen 1) loc)
     (let* ([size2 (fx* es (fx- to from))]
-	   [bv2 (##sys#allocate-vector size2 #t #f #t)] )
-      (##core#inline "C_string_to_bytevector" bv2)
+	   [bv2 (##sys#allocate-bytevector size2 #f)] )
       (let ([v (##sys#make-structure t bv2)])
 	(##core#inline "C_copy_subvector" bv2 bv 0 (fx* from es) size2)
 	v) ) ) )
 
-(define (subu8vector v from to) (subnvector v 'u8vector 1 from to 'subu8vector))
+(define (subu8vector v from to)
+  (##sys#check-bytevector v 'subu8vector)
+  (let ((n (##sys#size v)))
+    (##sys#check-range from 0 (fx+ n 1) 'subu8vector)
+    (##sys#check-range to 0 (fx+ n 1) 'subu8vector)
+    (bytevector-copy v from to)))
+  
 (define (subu16vector v from to) (subnvector v 'u16vector 2 from to 'subu16vector))
 (define (subu32vector v from to) (subnvector v 'u32vector 4 from to 'subu32vector))
 (define (subu64vector v from to) (subnvector v 'u64vector 8 from to 'subu64vector))
@@ -688,35 +688,27 @@ EOF
 (define (write-u8vector v #!optional (port ##sys#standard-output) (from 0) to)
   (##sys#check-structure v 'u8vector 'write-u8vector)
   (##sys#check-output-port port #t 'write-u8vector)
-  (let ((len (##core#inline "C_u_i_8vector_length" v)))
-    (check-range from 0 (fx+ (or to len) 1) 'write-u8vector)
-    (when to (check-range to from (fx+ len 1) 'write-u8vector))
-    ; using (write-string) since the "data" slot of a u8vector is
-    ; represented the same as a string
-    ((##sys#slot (##sys#slot port 2) 3) ; write-string
-     port
-     (if (and (fx= from 0) (or (not to) (fx= to len)))
-	 (##sys#slot v 1)
-	 (##sys#slot (subu8vector v from (or to len)) 1)))))
+  (let ((len (##sys#size v)))
+    (##sys#check-range from 0 (fx+ (or to len) 1) 'write-u8vector)
+    (when to (##sys#check-range to from (fx+ len 1) 'write-u8vector))
+    ((##sys#slot (##sys#slot port 2) 3) ; write-bytevector
+     port v from to)))
 
 (define (read-u8vector! n dest #!optional (port ##sys#standard-input) (start 0))
   (##sys#check-input-port port #t 'read-u8vector!)
   (##sys#check-fixnum start 'read-u8vector!)
   (##sys#check-structure dest 'u8vector 'read-u8vector!)
-  (when n (##sys#check-fixnum n 'read-u8vector!))
+  (##sys#check-fixnum n 'read-u8vector!)
   (let* ((dest (##sys#slot dest 1))
 	 (size (##sys#size dest)))
-    (unless (and n (fx<= (fx+ start n) size))
+    (unless (fx<= (fx+ start n) size)
       (set! n (fx- size start)))
-    (chicken.io#read-string!/port n dest port start)))
+    (chicken.io#read-bytevector!/port n dest port start)))
 
 (define (read-u8vector #!optional n (p ##sys#standard-input))
   (##sys#check-input-port p #t 'read-u8vector)
-  (when n (##sys#check-fixnum n 'read-u8vector))
-  (let ((str (chicken.io#read-string/port n p)))
-    (cond ((eof-object? str) str)
-	  (else
-	   (##core#inline "C_string_to_bytevector" str)
-	   (##sys#make-structure 'u8vector str)))))
+  (##sys#check-fixnum n 'read-u8vector)
+  (chicken.io#read-bytevector/port n p))
 
 (register-feature! 'srfi-4))
+

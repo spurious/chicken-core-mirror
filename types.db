@@ -1092,16 +1092,22 @@
 (chicken.bitwise#bitwise-not
  (#(procedure #:clean #:enforce #:foldable) chicken.bitwise#bitwise-not (integer) integer))
 
-;; blob
+;; bytevector
 
-(chicken.blob#blob? (#(procedure #:pure #:predicate blob) chicken.blob#blob? (*) boolean))
-(chicken.blob#blob=? (#(procedure #:clean #:enforce #:foldable) chicken.blob#blob=? (blob blob) boolean))
-(chicken.blob#blob-size (#(procedure #:clean #:enforce #:foldable) chicken.blob#blob-size (blob) fixnum)
-	   ((blob) (##sys#size #(1))))
-(chicken.blob#blob->string (#(procedure #:clean #:enforce) chicken.blob#blob->string (blob) string))
-(chicken.blob#make-blob (#(procedure #:clean #:enforce) chicken.blob#make-blob (fixnum) blob)
-	   ((fixnum) (##sys#make-blob #(1))))
-(chicken.blob#string->blob (#(procedure #:clean #:enforce) chicken.blob#string->blob (string) blob))
+(chicken.bytevector#bytevector (#(procedure #:clean) chicken.bytevector#bytevector (#!rest fixnum) bytevector))
+(chicken.bytevector#bytevector? (#(procedure #:pure #:predicate bytevector) chicken.bytevector#bytevector? (*) boolean))
+(chicken.bytevector#bytevector=? (#(procedure #:clean #:enforce #:foldable) chicken.bytevector#bytevector=? (bytevector bytevector) boolean))
+(chicken.bytevector#bytevector-length (#(procedure #:clean #:enforce #:foldable) chicken.bytevector#bytevector-size (bytevector) fixnum)
+	   ((bytevector) (##sys#size #(1))))
+(chicken.bytevector#utf8->string (#(procedure #:clean #:enforce) chicken.bytevector#utf8->string (bytevector) string))
+(chicken.bytevector#make-bytevector (#(procedure #:clean #:enforce) chicken.bytevector#make-bytevector (fixnum) bytevector)
+	   ((fixnum) (##sys#make-bytevector #(1))))
+(chicken.bytevector#string->utf8 (#(procedure #:clean #:enforce) chicken.bytevector#string->utf8 (string) bytevector))
+(chicken.bytevectorbytevector-u8-ref (#(procedure #:clean #:pure #:enforce) chicken.bytevector#bytevector-u8-ref (bytevector fixnum) fixnum))
+(chicken.bytevectorbytevector-u8-set! (#(procedure #:clean #:enforce) chicken.bytevector#bytevector-u8-set! (bytevector fixnum fixnum) undefined))
+(chicken.bytevector#bytevector-copy (#(procedure #:clean #:enforce) chicken.bytevector#bytevector-copy (bytevector #!optional fixnum fixnum) bytevector))
+(chicken.bytevector#bytevector-copy! (#(procedure #:clean #:enforce) chicken.bytevector#bytevector-copy! (bytevector fixnum bytevector #!optional fixnum fixnum) undefined))
+(chicken.bytevector#bytevector-append (#(procedure #:clean #:enforce) chicken.bytevector#bytevector-append (#!rest bytevector) bytevector))
 
 ;; condition
 
@@ -1397,9 +1403,9 @@
 				((pointer) (pointer) #(1))
 				((locative) (locative) #(1)))
 
-(##sys#check-blob (#(procedure #:clean #:enforce) ##sys#check-blob (blob #!optional *) *)
-		  ((blob) (let ((#(tmp) #(1))) '#t))
-		  ((blob *) (let ((#(tmp) #(1))) '#t)))
+(##sys#check-bytevector (#(procedure #:clean #:enforce) ##sys#check-bytevector (bytevector #!optional *) *)
+		  ((bytevector) (let ((#(tmp) #(1))) '#t))
+		  ((bytevector *) (let ((#(tmp) #(1))) '#t)))
 (##sys#check-pair (#(procedure #:clean #:enforce) ##sys#check-pair (pair #!optional *) *)
 		  ((pair) (let ((#(tmp) #(1))) '#t))
 		  ((pair *) (let ((#(tmp) #(1))) '#t)))
@@ -1547,7 +1553,7 @@
 (chicken.random#pseudo-random-integer (#(procedure #:clean #:enforce) chicken.random#pseudo-random-integer (integer) integer)
                                       ((fixnum) (##core#inline "C_random_fixnum" #(1))))
 (chicken.random#pseudo-random-real (#(procedure #:clean #:enforce) chicken.random#pseudo-random-real () float))
-(chicken.random#set-pseudo-random-seed! (#(procedure #:clean #:enforce) chicken.random#set-pseudo-random-seed! ((or blob string) #!optional fixnum) undefined))
+(chicken.random#set-pseudo-random-seed! (#(procedure #:clean #:enforce) chicken.random#set-pseudo-random-seed! (bytevector #!optional fixnum) undefined))
 (chicken.random#random-bytes (#(procedure #:clean #:enforce) chicken.random#random-bytes (#!optional * fixnum) *))
 
 ;; file
@@ -1784,7 +1790,7 @@
  (#(procedure #:enforce) chicken.memory.representation#mutate-procedure! (procedure (procedure (procedure) . *)) procedure))
 
 (chicken.memory.representation#number-of-bytes (#(procedure #:clean) chicken.memory.representation#number-of-bytes (*) fixnum)
-		 (((or blob string)) (##sys#size #(1)))
+		 ((bytevector) (##sys#size #(1)))
 		 (((or port procedure symbol keyword pair vector locative float pointer-vector))
 		  ;; would be applicable to all structure types, but we can't specify
 		  ;; "(struct *)" (yet)
@@ -2150,27 +2156,27 @@
 
 ;; srfi-4
 
-(srfi-4#blob->f32vector (#(procedure #:clean #:enforce) srfi-4#blob->f32vector (blob) (struct f32vector)))
-(srfi-4#blob->f32vector/shared (#(procedure #:clean #:enforce) srfi-4#blob->f32vector/shared (blob) (struct f32vector)))
-(srfi-4#blob->f64vector (#(procedure #:clean #:enforce) srfi-4#blob->f64vector (blob) (struct f64vector)))
-(srfi-4#blob->f64vector/shared (#(procedure #:clean #:enforce) srfi-4#blob->f64vector/shared (blob) (struct f64vector)))
-(srfi-4#blob->s16vector (#(procedure #:clean #:enforce) srfi-4#blob->s16vector (blob) (struct s16vector)))
-(srfi-4#blob->s16vector/shared (#(procedure #:clean #:enforce) srfi-4#blob->s16vector/shared (blob) (struct s16vector)))
-(srfi-4#blob->s32vector (#(procedure #:clean #:enforce) srfi-4#blob->s32vector (blob) (struct s32vector)))
-(srfi-4#blob->s32vector/shared (#(procedure #:clean #:enforce) srfi-4#blob->s32vector/shared (blob) (struct s32vector)))
-(srfi-4#blob->s8vector (#(procedure #:clean #:enforce) srfi-4#blob->s8vector (blob) (struct s8vector)))
-(srfi-4#blob->s8vector/shared (#(procedure #:clean #:enforce) srfi-4#blob->s8vector/shared (blob) (struct s8vector)))
-(srfi-4#blob->u16vector (#(procedure #:clean #:enforce) srfi-4#blob->u16vector (blob) (struct u16vector)))
-(srfi-4#blob->u16vector/shared (#(procedure #:clean #:enforce) srfi-4#blob->u16vector/shared (blob) (struct u16vector)))
-(srfi-4#blob->u32vector (#(procedure #:clean #:enforce) srfi-4#blob->u32vector (blob) (struct u32vector)))
-(srfi-4#blob->u32vector/shared (#(procedure #:clean #:enforce) srfi-4#blob->u32vector/shared (blob) (struct u32vector)))
-(srfi-4#blob->u64vector (#(procedure #:clean #:enforce) srfi-4#blob->u64vector (blob) (struct u64vector)))
-(srfi-4#blob->u64vector/shared (#(procedure #:clean #:enforce) srfi-4#blob->u64vector/shared (blob) (struct u64vector)))
-(srfi-4#blob->u8vector (#(procedure #:clean #:enforce) blob->u8vector (blob) (struct u8vector)))
-(srfi-4#blob->u8vector/shared (#(procedure #:clean #:enforce) srfi-4#blob->u8vector/shared (blob) (struct u8vector)))
+(srfi-4#bytevector->f32vector (#(procedure #:clean #:enforce) srfi-4#bytevector->f32vector (bytevector) (struct f32vector)))
+(srfi-4#bytevector->f32vector/shared (#(procedure #:clean #:enforce) srfi-4#bytevector->f32vector/shared (bytevector) (struct f32vector)))
+(srfi-4#bytevector->f64vector (#(procedure #:clean #:enforce) srfi-4#bytevector->f64vector (bytevector) (struct f64vector)))
+(srfi-4#bytevector->f64vector/shared (#(procedure #:clean #:enforce) srfi-4#bytevector->f64vector/shared (bytevector) (struct f64vector)))
+(srfi-4#bytevector->s16vector (#(procedure #:clean #:enforce) srfi-4#bytevector->s16vector (bytevector) (struct s16vector)))
+(srfi-4#bytevector->s16vector/shared (#(procedure #:clean #:enforce) srfi-4#bytevector->s16vector/shared (bytevector) (struct s16vector)))
+(srfi-4#bytevector->s32vector (#(procedure #:clean #:enforce) srfi-4#bytevector->s32vector (bytevector) (struct s32vector)))
+(srfi-4#bytevector->s32vector/shared (#(procedure #:clean #:enforce) srfi-4#bytevector->s32vector/shared (bytevector) (struct s32vector)))
+(srfi-4#bytevector->s8vector (#(procedure #:clean #:enforce) srfi-4#bytevector->s8vector (bytevector) (struct s8vector)))
+(srfi-4#bytevector->s8vector/shared (#(procedure #:clean #:enforce) srfi-4#bytevector->s8vector/shared (bytevector) (struct s8vector)))
+(srfi-4#bytevector->u16vector (#(procedure #:clean #:enforce) srfi-4#bytevector->u16vector (bytevector) (struct u16vector)))
+(srfi-4#bytevector->u16vector/shared (#(procedure #:clean #:enforce) srfi-4#bytevector->u16vector/shared (bytevector) (struct u16vector)))
+(srfi-4#bytevector->u32vector (#(procedure #:clean #:enforce) srfi-4#bytevector->u32vector (bytevector) (struct u32vector)))
+(srfi-4#bytevector->u32vector/shared (#(procedure #:clean #:enforce) srfi-4#bytevector->u32vector/shared (bytevector) (struct u32vector)))
+(srfi-4#bytevector->u64vector (#(procedure #:clean #:enforce) srfi-4#bytevector->u64vector (bytevector) (struct u64vector)))
+(srfi-4#bytevector->u64vector/shared (#(procedure #:clean #:enforce) srfi-4#bytevector->u64vector/shared (bytevector) (struct u64vector)))
+(srfi-4#bytevector->u8vector (#(procedure #:clean #:enforce) bytevector->u8vector (bytevector) bytevector))
+(srfi-4#bytevector->u8vector/shared (#(procedure #:clean #:enforce) srfi-4#bytevector->u8vector/shared (bytevector) bytevector))
 (srfi-4#f32vector (#(procedure #:clean #:enforce) srfi-4#f32vector (#!rest (or integer float)) (struct f32vector)))
-(srfi-4#f32vector->blob (#(procedure #:clean #:enforce) srfi-4#f32vector->blob ((struct f32vector)) blob))
-(srfi-4#f32vector->blob/shared (#(procedure #:clean #:enforce) srfi-4#f32vector->blob/shared ((struct f32vector)) blob))
+(srfi-4#f32vector->bytevector (#(procedure #:clean #:enforce) srfi-4#f32vector->bytevector ((struct f32vector)) bytevector))
+(srfi-4#f32vector->bytevector/shared (#(procedure #:clean #:enforce) srfi-4#f32vector->bytevector/shared ((struct f32vector)) bytevector))
 (srfi-4#f32vector->list (#(procedure #:clean #:enforce) srfi-4#f32vector->list ((struct f32vector)) (list-of float)))
 
 (srfi-4#f32vector-length (#(procedure #:clean #:enforce) srfi-4#f32vector-length ((struct f32vector)) fixnum)
@@ -2182,8 +2188,8 @@
 (srfi-4#f32vector? (#(procedure #:pure #:predicate (struct f32vector)) srfi-4#f32vector? (*) boolean))
 
 (srfi-4#f64vector (#(procedure #:clean #:enforce) srfi-4#f64vector (#!rest (or integer float)) (struct f64vector)))
-(srfi-4#f64vector->blob (#(procedure #:clean #:enforce) srfi-4#f64vector->blob ((struct f64vector)) blob))
-(srfi-4#f64vector->blob/shared (#(procedure #:clean #:enforce) srfi-4#f64vector->blob/shared ((struct f64vector)) blob))
+(srfi-4#f64vector->bytevector (#(procedure #:clean #:enforce) srfi-4#f64vector->bytevector ((struct f64vector)) bytevector))
+(srfi-4#f64vector->bytevector/shared (#(procedure #:clean #:enforce) srfi-4#f64vector->bytevector/shared ((struct f64vector)) bytevector))
 (srfi-4#f64vector->list (#(procedure #:clean #:enforce) srfi-4#f64vector->list ((struct f64vector)) (list-of float)))
 
 (srfi-4#f64vector-length (#(procedure #:clean #:enforce) srfi-4#f64vector-length ((struct f64vector)) fixnum)
@@ -2202,7 +2208,7 @@
 (srfi-4#list->u16vector (#(procedure #:clean #:enforce) srfi-4#list->u16vector ((list-of fixnum)) (struct u16vector)))
 (srfi-4#list->u32vector (#(procedure #:clean #:enforce) srfi-4#list->u32vector ((list-of integer)) (struct u32vector)))
 (srfi-4#list->u64vector (#(procedure #:clean #:enforce) srfi-4#list->u64vector ((list-of integer)) (struct u64vector)))
-(srfi-4#list->u8vector (#(procedure #:clean #:enforce) srfi-4#list->u8vector ((list-of fixnum)) (struct u8vector)))
+(srfi-4#list->u8vector (#(procedure #:clean #:enforce) srfi-4#list->u8vector ((list-of fixnum)) bytevector))
 (srfi-4#make-f32vector (#(procedure #:clean #:enforce) srfi-4#make-f32vector (fixnum #!optional (or integer float false) boolean boolean) (struct f32vector)))
 (srfi-4#make-f64vector (#(procedure #:clean #:enforce) srfi-4#make-f64vector (fixnum #!optional (or integer float false) boolean) (struct f64vector)))
 (srfi-4#make-s16vector (#(procedure #:clean #:enforce) srfi-4#make-s16vector (fixnum #!optional (or fixnum false) boolean boolean) (struct s16vector)))
@@ -2211,13 +2217,13 @@
 (srfi-4#make-u16vector (#(procedure #:clean #:enforce) srfi-4#make-u16vector (fixnum #!optional (or fixnum false) boolean boolean) (struct u16vector)))
 (srfi-4#make-u32vector (#(procedure #:clean #:enforce) srfi-4#make-u32vector (fixnum #!optional (or integer false) boolean boolean) (struct u32vector)))
 (srfi-4#make-u64vector (#(procedure #:clean #:enforce) srfi-4#make-u64vector (fixnum #!optional (or integer false) boolean boolean) (struct u64vector)))
-(srfi-4#make-u8vector (#(procedure #:clean #:enforce) srfi-4#make-u8vector (fixnum #!optional (or fixnum false) boolean boolean) (struct u8vector)))
-(srfi-4#read-u8vector (#(procedure #:enforce) srfi-4#read-u8vector (#!optional (or fixnum false) input-port) (or (struct u8vector) eof)))
-(srfi-4#read-u8vector! (#(procedure #:enforce) srfi-4#read-u8vector! ((or fixnum false) (struct u8vector) #!optional input-port fixnum) integer))
+(srfi-4#make-u8vector (#(procedure #:clean #:enforce) srfi-4#make-u8vector (fixnum #!optional (or fixnum false) boolean boolean) bytevector))
+(srfi-4#read-u8vector (#(procedure #:enforce) srfi-4#read-u8vector (#!optional (or fixnum false) input-port) (or bytevector eof)))
+(srfi-4#read-u8vector! (#(procedure #:enforce) srfi-4#read-u8vector! ((or fixnum false) bytevector #!optional input-port fixnum) integer))
 (srfi-4#release-number-vector (procedure srfi-4#release-number-vector (*) undefined))
 (srfi-4#s16vector (#(procedure #:clean #:enforce) srfi-4#s16vector (#!rest fixnum) (struct s16vector)))
-(srfi-4#s16vector->blob (#(procedure #:clean #:enforce) srfi-4#s16vector->blob ((struct s16vector)) blob))
-(srfi-4#s16vector->blob/shared (#(procedure #:clean #:enforce) srfi-4#s16vector->blob/shared ((struct s16vector)) blob))
+(srfi-4#s16vector->bytevector (#(procedure #:clean #:enforce) srfi-4#s16vector->bytevector ((struct s16vector)) bytevector))
+(srfi-4#s16vector->bytevector/shared (#(procedure #:clean #:enforce) srfi-4#s16vector->bytevector/shared ((struct s16vector)) bytevector))
 (srfi-4#s16vector->list (#(procedure #:clean #:enforce) srfi-4#s16vector->list ((struct s16vector)) (list-of fixnum)))
 
 (srfi-4#s16vector-length (#(procedure #:clean #:enforce) srfi-4#s16vector-length ((struct s16vector)) fixnum)
@@ -2229,8 +2235,8 @@
 (srfi-4#s16vector? (#(procedure #:pure #:predicate (struct s16vector)) srfi-4#s16vector? (*) boolean))
 
 (srfi-4#s32vector (#(procedure #:clean #:enforce) srfi-4#s32vector (#!rest integer) (struct s32vector)))
-(srfi-4#s32vector->blob (#(procedure #:clean #:enforce) srfi-4#s32vector->blob ((struct s32vector)) blob))
-(srfi-4#s32vector->blob/shared (#(procedure #:clean #:enforce) srfi-4#s32vector->blob/shared ((struct s32vector)) blob))
+(srfi-4#s32vector->bytevector (#(procedure #:clean #:enforce) srfi-4#s32vector->bytevector ((struct s32vector)) bytevector))
+(srfi-4#s32vector->bytevector/shared (#(procedure #:clean #:enforce) srfi-4#s32vector->bytevector/shared ((struct s32vector)) bytevector))
 (srfi-4#s32vector->list (#(procedure #:clean #:enforce) srfi-4#s32vector->list ((struct s32vector)) (list-of integer)))
 
 (srfi-4#s32vector-length (#(procedure #:clean #:enforce) srfi-4#s32vector-length ((struct s32vector)) fixnum)
@@ -2242,8 +2248,8 @@
 (srfi-4#s32vector? (#(procedure #:pure #:predicate (struct s32vector)) srfi-4#s32vector? (*) boolean))
 
 (srfi-4#s8vector (#(procedure #:clean #:enforce) srfi-4#s8vector (#!rest fixnum) (struct s8vector)))
-(srfi-4#s8vector->blob (#(procedure #:clean #:enforce) srfi-4#s8vector->blob ((struct s8vector)) blob))
-(srfi-4#s8vector->blob/shared (#(procedure #:clean #:enforce) srfi-4#s8vector->blob/shared ((struct s8vector)) blob))
+(srfi-4#s8vector->bytevector (#(procedure #:clean #:enforce) srfi-4#s8vector->bytevector ((struct s8vector)) bytevector))
+(srfi-4#s8vector->bytevector/shared (#(procedure #:clean #:enforce) srfi-4#s8vector->bytevector/shared ((struct s8vector)) bytevector))
 (srfi-4#s8vector->list (#(procedure #:clean #:enforce) srfi-4#s8vector->list ((struct s8vector)) (list-of fixnum)))
 
 (srfi-4#s8vector-length (#(procedure #:clean #:enforce) srfi-4#s8vector-length ((struct s8vector)) fixnum)
@@ -2262,10 +2268,10 @@
 (srfi-4#subu16vector (#(procedure #:clean #:enforce) srfi-4#subu16vector ((struct u16vector) fixnum fixnum) (struct u16vector)))
 (srfi-4#subu32vector (#(procedure #:clean #:enforce) srfi-4#subu32vector ((struct u32vector) fixnum fixnum) (struct u32vector)))
 (srfi-4#subu64vector (#(procedure #:clean #:enforce) srfi-4#subu64vector ((struct u64vector) fixnum fixnum) (struct u64vector)))
-(srfi-4#subu8vector (#(procedure #:clean #:enforce) srfi-4#subu8vector ((struct u8vector) fixnum fixnum) (struct u8vector)))
+(srfi-4#subu8vector (#(procedure #:clean #:enforce) srfi-4#subu8vector (bytevector fixnum fixnum) bytevector))
 (srfi-4#u16vector (#(procedure #:clean #:enforce) srfi-4#u16vector (#!rest fixnum) (struct u16vector)))
-(srfi-4#u16vector->blob (#(procedure #:clean #:enforce) srfi-4#u16vector->blob ((struct u16vector)) blob))
-(srfi-4#u16vector->blob/shared (#(procedure #:clean #:enforce) srfi-4#u16vector->blob/shared ((struct u16vector)) blob))
+(srfi-4#u16vector->bytevector (#(procedure #:clean #:enforce) srfi-4#u16vector->bytevector ((struct u16vector)) bytevector))
+(srfi-4#u16vector->bytevector/shared (#(procedure #:clean #:enforce) srfi-4#u16vector->bytevector/shared ((struct u16vector)) bytevector))
 (srfi-4#u16vector->list (#(procedure #:clean #:enforce) srfi-4#u16vector->list ((struct u16vector)) (list-of fixnum)))
 
 (srfi-4#u16vector-length (#(procedure #:clean #:enforce) srfi-4#u16vector-length ((struct u16vector)) fixnum)
@@ -2277,8 +2283,8 @@
 (srfi-4#u16vector? (#(procedure #:pure #:predicate (struct u16vector)) srfi-4#u16vector? (*) boolean))
 
 (srfi-4#u32vector (#(procedure #:clean #:enforce) srfi-4#u32vector (#!rest integer) (struct u32vector)))
-(srfi-4#u32vector->blob (#(procedure #:clean #:enforce) srfi-4#u32vector->blob ((struct u32vector)) blob))
-(srfi-4#u32vector->blob/shared (#(procedure #:clean #:enforce) srfi-4#u32vector->blob/shared ((struct u32vector)) blob))
+(srfi-4#u32vector->bytevector (#(procedure #:clean #:enforce) srfi-4#u32vector->bytevector ((struct u32vector)) bytevector))
+(srfi-4#u32vector->bytevector/shared (#(procedure #:clean #:enforce) srfi-4#u32vector->bytevector/shared ((struct u32vector)) bytevector))
 (srfi-4#u32vector->list (#(procedure #:clean #:enforce) srfi-4#u32vector->list ((struct u32vector)) (list-of integer)))
 
 (srfi-4#u32vector-length (#(procedure #:clean #:enforce) srfi-4#u32vector-length ((struct u32vector)) fixnum)
@@ -2290,8 +2296,8 @@
 (srfi-4#u32vector? (#(procedure #:pure #:predicate (struct u32vector)) srfi-4#u32vector? (*) boolean))
 
 (srfi-4#u64vector (#(procedure #:clean #:enforce) srfi-4#u64vector (#!rest integer) (struct u64vector)))
-(srfi-4#u64vector->blob (#(procedure #:clean #:enforce) srfi-4#u64vector->blob ((struct u64vector)) blob))
-(srfi-4#u64vector->blob/shared (#(procedure #:clean #:enforce) srfi-4#u64vector->blob/shared ((struct u64vector)) blob))
+(srfi-4#u64vector->bytevector (#(procedure #:clean #:enforce) srfi-4#u64vector->bytevector ((struct u64vector)) bytevector))
+(srfi-4#u64vector->bytevector/shared (#(procedure #:clean #:enforce) srfi-4#u64vector->bytevector/shared ((struct u64vector)) bytevector))
 (srfi-4#u64vector->list (#(procedure #:clean #:enforce) srfi-4#u64vector->list ((struct u64vector)) (list-of integer)))
 
 (srfi-4#u64vector-length (#(procedure #:clean #:enforce) srfi-4#u64vector-length ((struct u64vector)) fixnum)
@@ -2302,23 +2308,21 @@
 
 (srfi-4#u64vector? (#(procedure #:pure #:predicate (struct u64vector)) srfi-4#u64vector? (*) boolean))
 
-(srfi-4#u8vector (#(procedure #:clean #:enforce) srfi-4#u8vector (#!rest fixnum) (struct u8vector)))
-(srfi-4#u8vector->blob (#(procedure #:clean #:enforce) srfi-4#u8vector->blob ((struct u8vector)) blob))
-(srfi-4#u8vector->blob/shared (#(procedure #:clean #:enforce) srfi-4#u8vector->blob/shared ((struct u8vector)) blob))
-(srfi-4#u8vector->list (#(procedure #:clean #:enforce) srfi-4#u8vector->list ((struct u8vector)) (list-of fixnum)))
+(srfi-4#u8vector (#(procedure #:clean #:enforce) srfi-4#u8vector (#!rest fixnum) bytevector))
+(srfi-4#u8vector->list (#(procedure #:clean #:enforce) srfi-4#u8vector->list (bytevector) (list-of fixnum)))
 
-(srfi-4#u8vector-length (#(procedure #:clean #:enforce) srfi-4#u8vector-length ((struct u8vector)) fixnum)
-		 (((struct u8vector)) (##core#inline "C_u_i_8vector_length" #(1))))
+(srfi-4#u8vector-length (#(procedure #:clean #:enforce) srfi-4#u8vector-length (bytevector) fixnum)
+		 ((bytevector) (##core#inline "C_u_i_8vector_length" #(1))))
 
-(srfi-4#u8vector-ref (#(procedure #:clean #:enforce) srfi-4#u8vector-ref ((struct u8vector) fixnum) fixnum))
-(srfi-4#u8vector-set! (#(procedure #:clean #:enforce) srfi-4#u8vector-set! ((struct u8vector) fixnum fixnum) undefined))
+(srfi-4#u8vector-ref (#(procedure #:clean #:enforce) srfi-4#u8vector-ref (bytevector fixnum) fixnum))
+(srfi-4#u8vector-set! (#(procedure #:clean #:enforce) srfi-4#u8vector-set! (bytevector fixnum fixnum) undefined))
 
-(srfi-4#u8vector? (#(procedure #:pure #:predicate (struct u8vector)) srfi-4#u8vector? (*) boolean))
+(srfi-4#u8vector? (#(procedure #:pure #:predicate bytevector) srfi-4#u8vector? (*) boolean))
 
-(srfi-4#write-u8vector (#(procedure #:enforce) srfi-4#write-u8vector ((struct u8vector) #!optional output-port fixnum fixnum) undefined))
+(srfi-4#write-u8vector (#(procedure #:enforce) srfi-4#write-u8vector (bytevector #!optional output-port fixnum fixnum) undefined))
 
-(srfi-4#number-vector? (#(procedure #:pure #:predicate (or (struct u8vector) (struct u16vector) (struct s8vector) (struct s16vector) (struct u32vector) (struct s32vector) (struct u64vector) (struct s64vector) (struct f32vector) (struct f64vector))) srfi-4#number-vector? (*) boolean))
-(##sys#srfi-4-vector? (#(procedure #:pure #:predicate (or (struct u8vector) (struct u16vector) (struct s8vector) (struct s16vector) (struct u32vector) (struct s32vector) (struct u64vector) (struct s64vector) (struct f32vector) (struct f64vector))) ##sys#srfi-4-vector? (*) boolean))
+(srfi-4#number-vector? (#(procedure #:pure #:predicate (or bytevector (struct u16vector) (struct s8vector) (struct s16vector) (struct u32vector) (struct s32vector) (struct u64vector) (struct s64vector) (struct f32vector) (struct f64vector))) srfi-4#number-vector? (*) boolean))
+(##sys#srfi-4-vector? (#(procedure #:pure #:predicate (or bytevector (struct u16vector) (struct s8vector) (struct s16vector) (struct u32vector) (struct s32vector) (struct u64vector) (struct s64vector) (struct f32vector) (struct f64vector))) ##sys#srfi-4-vector? (*) boolean))
 
 ;; syntax
 

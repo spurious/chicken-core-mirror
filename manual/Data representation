@@ -56,7 +56,7 @@ collection or internal data type dispatching.
 
 ; C_GC_FORWARDING_BIT : Flag used for forwarding garbage collected object pointers.
 
-; C_BYTEBLOCK_BIT : Flag that specifies whether this data object contains raw bytes (a string or blob) or pointers to other data objects.
+; C_BYTEBLOCK_BIT : Flag that specifies whether this data object contains raw bytes (a bytevector) or pointers to other data objects.
 
 ; C_SPECIALBLOCK_BIT : Flag that specifies whether this object contains a ''special'' non-object pointer value in its first slot. An example for this kind of objects are closures, which are a vector-type object with the code-pointer as the first item.  This is also used to turn a pair's car into a weak reference in the symbol table, to allow its symbol to be collected.
 
@@ -110,10 +110,10 @@ contain housekeeping data used for this port.
 specifies the kind of structure this record is an instance of. The other
 slots contain the actual record items.
 
-'''blob''': a raw sequence of bytes with type bits {{C_BYTEVECTOR_TYPE}}.
+'''bytevector''': a raw sequence of bytes with type bits {{C_BYTEVECTOR_TYPE}}.
 
 '''pointer-vectors''': vector objects of native pointers - these are
-actually structures where the first slot holds a blob containing the 32- or 64-bit
+actually structures where the first slot holds a bytevector containing the 32- or 64-bit
 pointer values.
 
 '''locatives''': special vector objects with type bits

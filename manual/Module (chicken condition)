@@ -447,6 +447,6 @@ extracts the error message from ''exn''. Example:
 </enscript>
 
 ----
-Previous: [[Module (chicken blob)]]
+Previous: [[Module (chicken bytevector)]]
 
 Next: [[Module (chicken continuation)]]

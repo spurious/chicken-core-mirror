@@ -184,13 +184,13 @@ to the caller).  Attempting to return a NULL string will raise an exception.
 
 === Bytevectors
 
-<type>blob</type><br>
-<type>nonnull-blob</type>
+<type>bytevector</type><br>
+<type>nonnull-bytevector</type>
 
-A blob object, passed as a pointer to its contents.  Permitted only as
+A bytevector object, passed as a pointer to its contents.  Permitted only as
 argument type, not return type.  
 
-Arguments of type {{blob}} may optionally be {{#f}}, which is passed
+Arguments of type {{bytevector}} may optionally be {{#f}}, which is passed
 as a NULL pointer.  For the {{nonnull-}} variant, passing a {{#f}}
 value will raise an exception.
 
@@ -298,9 +298,9 @@ Don't confuse this type with {{(c-pointer ...)}} which means something
 different (a machine-pointer object).
 
 {{scheme-pointer}} is typically used to get a pointer to the raw byte
-content of strings and blobs.  But if you pass in a SRFI-4 vector, you
-will get a pointer to a blob object header (''not'' the blob's contents),
-which is almost certainly wrong.  Instead, convert to a blob
+content of bytevectors.  But if you pass in a SRFI-4 vector, you
+will get a pointer to a bytevector object header (''not'' the bytevectors's contents),
+which is almost certainly wrong.  Instead, convert to a bytevector
 beforehand, or use a SRFI-4 specific type.
 
 === User-defined C types
@@ -379,7 +379,7 @@ The foreign type {{TYPE}} with an additional {{const}} qualifier.
 <tr><td>{{number}}</td><td>{{double}}</td></tr>
 <tr><td>{{[nonnull-]c-pointer}}</td><td>{{void *}}</td></tr>
 <tr><td>{{[nonnull-]pointer-vector}}</td><td>{{void **}}</td></tr>
-<tr><td>{{[nonnull-]blob}}</td><td>{{unsigned char *}}</td></tr>
+<tr><td>{{[nonnull-]bytevector}}</td><td>{{unsigned char *}}</td></tr>
 <tr><td>{{[nonnull-]u8vector}}</td><td>{{unsigned char *}}</td></tr>
 <tr><td>{{[nonnull-]s8vector}}</td><td>{{char *}}</td></tr>
 <tr><td>{{[nonnull-]u16vector}}</td><td>{{unsigned short *}}</td></tr>

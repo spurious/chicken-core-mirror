@@ -939,7 +939,7 @@
 
 ) ; chicken.syntax module
 
-(import scheme chicken.base chicken.blob chicken.fixnum)
+(import scheme chicken.base chicken.bytevector chicken.fixnum)
 (import chicken.syntax chicken.internal chicken.platform)
 
 ;;; Macro definitions:
@@ -1382,7 +1382,7 @@
                          (char? (car clause))
                          (string? (car clause))
                          (eof-object? (car clause))
-                         (blob? (car clause))
+                         (bytevector? (car clause))
                          (vector? (car clause))
                          (##sys#srfi-4-vector? (car clause))
                          (and (pair? (car clause))

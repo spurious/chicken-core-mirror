@@ -79,7 +79,7 @@
 (import scheme
 	chicken.base
 	chicken.bitwise
-	chicken.blob
+	chicken.bytevector
 	chicken.condition
 	chicken.file
 	chicken.fixnum
@@ -295,7 +295,7 @@
       (string? x)
       (boolean? x)
       (eof-object? x)
-      (blob? x)
+      (bytevector? x)
       (vector? x)
       (##sys#srfi-4-vector? x)
       (and (pair? x) (eq? 'quote (car x))) ) )
@@ -1076,7 +1076,7 @@
 	     ((int unsigned-int byte unsigned-byte int32 unsigned-int32)
 	      (if unsafe param `(##sys#foreign-fixnum-argument ,param)))
 	     ((float double number) (if unsafe param `(##sys#foreign-flonum-argument ,param)))
-	     ((blob scheme-pointer)
+	     ((bytevector scheme-pointer)
 	      (let ((tmp (gensym)))
 		`(##core#let ((,tmp ,param))
 		   (##core#if ,tmp
@@ -1084,7 +1084,7 @@
 				   tmp
 				   `(##sys#foreign-block-argument ,tmp) )
 		       (##core#quote #f)) ) ) )
-	     ((nonnull-scheme-pointer nonnull-blob)
+	     ((nonnull-scheme-pointer nonnull-bytevector)
 	      (if unsafe
 		  param
 		  `(##sys#foreign-block-argument ,param) ) )
@@ -1361,11 +1361,11 @@
 	     ((arg) 'number)
 	     (else 'float)))
 	  ((scheme-pointer nonnull-scheme-pointer) '*)
-	  ((blob)
+	  ((bytevector)
 	   (case mode
-	     ((arg) '(or false blob))
-	     (else 'blob)))
-	  ((nonnull-blob) 'blob)
+	     ((arg) '(or false bytevector))
+	     (else 'bytevector)))
+	  ((nonnull-bytevector) 'bytevector)
 	  ((pointer-vector)
 	   (case mode
 	     ((arg) '(or false pointer-vector))
@@ -1375,7 +1375,7 @@
 	   (case mode
 	     ((arg) `(or false (struct ,ft)))
 	     (else `(struct ,ft))))
-	  ((nonnull-u8vector) '(struct u8vector))
+	  ((nonnull-u8vector) 'bytevector)
 	  ((nonnull-s8vector) '(struct s8vector))
 	  ((nonnull-u16vector) '(struct u16vector))
 	  ((nonnull-s16vector) '(struct s16vector))

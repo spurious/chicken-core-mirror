@@ -14,7 +14,7 @@ additional modules through the [[Extensions|eggs]] system.
 * [[Module srfi-4]] : Homogeneous numeric vector datatypes
 * [[Module (chicken base)]] : Core procedures and macros
 * [[Module (chicken bitwise)]] : Bitwise manipulation on integers
-* [[Module (chicken blob)]] : Unstructured byte data
+* [[Module (chicken bytevector)]] : Unstructured byte data
 * [[Module (chicken condition)]] : Raising and handling of exceptions, manipulation of condition objects
 * [[Module (chicken continuation)]] : Feeley's "a better API for continuations"
 * [[Module (chicken csi)]] : Features specific to {{csi}}

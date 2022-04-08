@@ -1078,15 +1078,13 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_bignum_digits(b)         C_CHECKp(b,C_bignump(C_VAL1(b)),(((C_uword *)C_data_pointer(C_internal_bignum_vector(C_VAL1(b))))+1))
 #define C_fitsinbignumhalfdigitp(n)(C_BIGNUM_DIGIT_HI_HALF(n) == 0)
 #define C_bignum_negated_fitsinfixnump(b) (C_bignum_size(b) == 1 && (C_bignum_negativep(b) ? C_ufitsinfixnump(*C_bignum_digits(b)) : !(*C_bignum_digits(b) & C_INT_SIGN_BIT) && C_fitsinfixnump(-(C_word)*C_bignum_digits(b))))
-#define C_bignum_mutate_size(b, s) (C_block_header(C_internal_bignum_vector(b)) = (C_STRING_TYPE | C_wordstobytes((s)+1)))
+#define C_bignum_mutate_size(b, s) (C_block_header(C_internal_bignum_vector(b)) = (C_BYTEVECTOR_TYPE | C_wordstobytes((s)+1)))
 #define C_fitsinfixnump(n)         (((n) & C_INT_SIGN_BIT) == (((C_uword)(n) & C_INT_TOP_BIT) << 1))
 #define C_ufitsinfixnump(n)        (((n) & (C_INT_SIGN_BIT | (C_INT_SIGN_BIT >> 1))) == 0)
 #define C_and(x, y)                (C_truep(x) ? (y) : C_SCHEME_FALSE)
 #define C_c_bytevector(x)          ((unsigned char *)C_data_pointer(x))
 #define C_c_bytevector_or_null(x)  ((unsigned char *)C_data_pointer_or_null(x))
 #define C_srfi_4_vector(x)         C_data_pointer(C_block_item(x,1))
-#define C_c_u8vector(x)            ((unsigned char *)C_srfi_4_vector(x))
-#define C_c_u8vector_or_null(x)    ((unsigned char *)C_srfi_4_vector_or_null(x))
 #define C_c_s8vector(x)            ((signed char *)C_srfi_4_vector(x))
 #define C_c_s8vector_or_null(x)    ((signed char *)C_srfi_4_vector_or_null(x))
 #define C_c_u16vector(x)           ((unsigned short *)C_srfi_4_vector(x))
@@ -1448,7 +1446,6 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_u_i_f32vector_length          C_u_i_32vector_length
 #define C_u_i_f64vector_length          C_u_i_64vector_length
 
-#define C_u_i_u8vector_ref(x, i)        C_fix(((unsigned char *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ])
 #define C_u_i_s8vector_ref(x, i)        C_fix(((signed char *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ])
 #define C_u_i_u16vector_ref(x, i)       C_fix(((unsigned short *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ])
 #define C_u_i_s16vector_ref(x, i)       C_fix(((short *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ])
@@ -1463,7 +1460,6 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_a_u_i_u64vector_ref(ptr, c, x, i)  C_uint64_to_num(ptr, ((C_u64 *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ])
 #define C_a_u_i_s64vector_ref(ptr, c, x, i)  C_int64_to_num(ptr, ((C_s64 *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ])
 
-#define C_u_i_u8vector_set(x, i, v)     ((((unsigned char *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ] = C_unfix(v)), C_SCHEME_UNDEFINED)
 #define C_u_i_s8vector_set(x, i, v)     ((((signed char *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ] = C_unfix(v)), C_SCHEME_UNDEFINED)
 #define C_u_i_u16vector_set(x, i, v)    ((((unsigned short *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ] = C_unfix(v)), C_SCHEME_UNDEFINED)
 #define C_u_i_s16vector_set(x, i, v)    ((((short *)C_data_pointer(C_block_item((x), 1)))[ C_unfix(i) ] = C_unfix(v)), C_SCHEME_UNDEFINED)
@@ -1905,6 +1901,7 @@ C_fctexport C_cpsproc(C_less_or_equal_p) C_noret;
 C_fctexport C_cpsproc(C_gc) C_noret;
 C_fctexport C_cpsproc(C_open_file_port) C_noret;
 C_fctexport C_cpsproc(C_allocate_vector) C_noret;
+C_fctexport C_cpsproc(C_allocate_bytevector) C_noret;
 C_fctexport C_cpsproc(C_string_to_symbol) C_noret;
 C_fctexport C_cpsproc(C_string_to_keyword) C_noret;
 C_fctexport C_cpsproc(C_build_symbol) C_noret;
@@ -1951,7 +1948,6 @@ C_fctexport C_word C_a_i_record(C_word **a, int c, ...);
 C_fctexport C_word C_a_i_port(C_word **a, int c);
 C_fctexport C_word C_fcall C_a_i_bytevector(C_word **a, int c, C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_listp(C_word x) C_regparm;
-C_fctexport C_word C_fcall C_i_u8vectorp(C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_s8vectorp(C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_u16vectorp(C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_s16vectorp(C_word x) C_regparm;
@@ -1966,7 +1962,7 @@ C_fctexport C_word C_fcall C_i_string_ci_equal_p(C_word x, C_word y) C_regparm;
 C_fctexport C_word C_fcall C_i_set_car(C_word p, C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_set_cdr(C_word p, C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_vector_set(C_word v, C_word i, C_word x) C_regparm;
-C_fctexport C_word C_fcall C_i_u8vector_set(C_word v, C_word i, C_word x) C_regparm;
+C_fctexport C_word C_fcall C_i_bytevector_set(C_word v, C_word i, C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_s8vector_set(C_word v, C_word i, C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_u16vector_set(C_word v, C_word i, C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_s16vector_set(C_word v, C_word i, C_word x) C_regparm;
@@ -2003,7 +1999,6 @@ C_fctexport C_word C_fcall C_i_integer_evenp(C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_oddp(C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_integer_oddp(C_word x) C_regparm;
 C_fctexport C_word C_fcall C_i_vector_ref(C_word v, C_word i) C_regparm;
-C_fctexport C_word C_fcall C_i_u8vector_ref(C_word v, C_word i) C_regparm;
 C_fctexport C_word C_fcall C_i_s8vector_ref(C_word v, C_word i) C_regparm;
 C_fctexport C_word C_fcall C_i_u16vector_ref(C_word v, C_word i) C_regparm;
 C_fctexport C_word C_fcall C_i_s16vector_ref(C_word v, C_word i) C_regparm;
@@ -2017,7 +2012,7 @@ C_fctexport C_word C_fcall C_i_block_ref(C_word x, C_word i) C_regparm;
 C_fctexport C_word C_fcall C_i_string_set(C_word s, C_word i, C_word c) C_regparm;
 C_fctexport C_word C_fcall C_i_string_ref(C_word s, C_word i) C_regparm;
 C_fctexport C_word C_fcall C_i_vector_length(C_word v) C_regparm;
-C_fctexport C_word C_fcall C_i_u8vector_length(C_word v) C_regparm;
+C_fctexport C_word C_fcall C_i_bytevector_length(C_word v) C_regparm;
 C_fctexport C_word C_fcall C_i_s8vector_length(C_word v) C_regparm;
 C_fctexport C_word C_fcall C_i_u16vector_length(C_word v) C_regparm;
 C_fctexport C_word C_fcall C_i_s16vector_length(C_word v) C_regparm;
@@ -2729,8 +2724,7 @@ inline static C_word C_i_srfi_4_vectorp(C_word x)
 {
   return C_mk_bool(!C_immediatep(x) &&
                    C_header_bits(x) == C_STRUCTURE_TYPE &&
-                   (C_truep(C_i_u8vectorp(x)) ||
-                    C_truep(C_i_s8vectorp(x)) ||
+                   (C_truep(C_i_s8vectorp(x)) ||
                     C_truep(C_i_u16vectorp(x)) ||
                     C_truep(C_i_s16vectorp(x)) ||
                     C_truep(C_i_u32vectorp(x)) ||

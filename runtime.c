@@ -411,7 +411,6 @@ static C_TLS C_word
   pending_finalizers_symbol,
   callback_continuation_stack_symbol,
   core_provided_symbol,
-  u8vector_symbol,
   s8vector_symbol,
   u16vector_symbol,
   s16vector_symbol,
@@ -1112,7 +1111,6 @@ void initialize_symbol_table(void)
   current_thread_symbol = C_intern3(C_heaptop, C_text("##sys#current-thread"), C_SCHEME_FALSE);
 
   /* SRFI-4 tags */
-  u8vector_symbol = C_intern2(C_heaptop, C_text("u8vector"));
   s8vector_symbol = C_intern2(C_heaptop, C_text("s8vector"));
   u16vector_symbol = C_intern2(C_heaptop, C_text("u16vector"));
   s16vector_symbol = C_intern2(C_heaptop, C_text("s16vector"));
@@ -1815,7 +1813,7 @@ void barf(int code, char *loc, ...)
     break;
 
   case C_BAD_ARGUMENT_TYPE_NO_BYTEVECTOR_ERROR:
-    msg = C_text("bad argument type - not a blob");
+    msg = C_text("bad argument type - not a bytevector");
     c = 1;
     break;
 
@@ -3764,7 +3762,6 @@ static C_regparm void C_fcall mark_live_heap_only_objects(C_byte *tgt_space_star
   mark(&pending_finalizers_symbol);
   mark(&current_thread_symbol);
 
-  mark(&u8vector_symbol);
   mark(&s8vector_symbol);
   mark(&u16vector_symbol);
   mark(&s16vector_symbol);
@@ -5059,11 +5056,6 @@ C_regparm C_word C_fcall C_i_listp(C_word x)
     else return C_SCHEME_FALSE;
 
   return C_SCHEME_TRUE;
-}
-
-C_regparm C_word C_fcall C_i_u8vectorp(C_word x)
-{
-  return C_i_structurep(x, u8vector_symbol);
 }
 
 C_regparm C_word C_fcall C_i_s8vectorp(C_word x)
@@ -13079,7 +13071,7 @@ static void C_ccall dump_heap_state_2(C_word c, C_word *av)
       case C_CPLXNUM_TYPE: C_fprintf(C_stderr,        C_text("cplxnum        ")); break;
       case C_RATNUM_TYPE: C_fprintf(C_stderr,         C_text("ratnum         ")); break;
 	/* XXX this is sort of funny: */
-      case C_BYTEBLOCK_BIT: C_fprintf(C_stderr,        C_text("blob           ")); break;
+      case C_BYTEBLOCK_BIT: C_fprintf(C_stderr,        C_text("bytevector           ")); break;
       default:
 	x = b->key;
 

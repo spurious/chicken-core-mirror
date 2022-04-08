@@ -170,20 +170,24 @@ EOF
 	       (if (memq (##sys#slot to 0) slot1structs)
 		   (move from (##sys#slot to 1))
 		   (typerr to) ) ]
+              ((string? from)
+                (move (##sys#slot from 0) to))
+              ((string? to)
+                (move from (##sys#slot to 0)))
 	      [(%generic-pointer? from)
 	       (cond [(%generic-pointer? to)
 		      (memmove1 to from (or n (nosizerr)) toffset foffset)]
-		     [(or (##sys#bytevector? to) (string? to))
-		      (memmove3 to from (checkn1 (or n (nosizerr)) (##sys#size to) toffset) toffset foffset) ]
+		     ((##sys#bytevector? to)
+		      (memmove3 to from (checkn1 (or n (nosizerr)) (##sys#size to) toffset) toffset foffset) )
 		     [else
 		      (typerr to)] ) ]
 	      [(or (##sys#bytevector? from) (string? from))
 	       (let ([nfrom (##sys#size from)])
 		 (cond [(%generic-pointer? to)
 			(memmove2 to from (checkn1 (or n nfrom) nfrom foffset) toffset foffset)]
-		       [(or (##sys#bytevector? to) (string? to))
+		       ((##sys#bytevector? to)
 			(memmove4 to from (checkn2 (or n nfrom) nfrom (##sys#size to) foffset toffset)
-				  toffset foffset) ]
+				  toffset foffset) )
 		       [else
 			(typerr to)] ) ) ]
 	      [else
@@ -342,7 +346,7 @@ EOF
       (##sys#check-fixnum n 'make-pointer-vector)
       (let* ((words->bytes (foreign-lambda int "C_wordstobytes" int))
 	     (size (words->bytes n))
-	     (buf (##sys#make-blob size)))
+	     (buf (##sys#make-bytevector size)))
 	(unless (eq? init unset)
 	  (when init
 	    (##sys#check-pointer init 'make-pointer-vector))
@@ -420,7 +424,7 @@ EOF
 (define (object-copy x)
   (let copy ((x x))
     (cond ((not (##core#inline "C_blockp" x)) x)
-	  ((symbol? x) (##sys#intern-symbol (##sys#slot x 1)))
+	  ((symbol? x) (##sys#string->symbol (##sys#slot x 1)))
 	  (else
 	   (let* ((n (##sys#size x))
 		  (words (if (##core#inline "C_byteblockp" x) (##core#inline "C_words" n) n))
@@ -567,7 +571,7 @@ EOF
 ; 2	Type (fixnum)
 ;	0	vector or pair		(C_SLOT_LOCATIVE)
 ;	1	string			(C_CHAR_LOCATIVE)
-;	2	u8vector or blob        (C_U8_LOCATIVE)
+;	2	u8vector or bytevector        (C_U8_LOCATIVE)
 ;	3	s8vector	        (C_S8_LOCATIVE)
 ;	4	u16vector		(C_U16_LOCATIVE)
 ;	5	s16vector		(C_S16_LOCATIVE)
