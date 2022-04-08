@@ -103,6 +103,7 @@ profiler.scm
 read-syntax.scm
 repl.scm
 runtime.c
+utf.c
 scheduler.scm
 srfi-4.scm
 stub.scm

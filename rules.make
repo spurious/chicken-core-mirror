@@ -38,7 +38,7 @@ LIBCHICKEN_SCHEME_OBJECTS_1 = \
        extras lolevel tcp srfi-4 continuation $(POSIXFILE) internal \
        irregex scheduler debugger-client profiler stub expand modules \
        chicken-syntax chicken-ffi-syntax build-version
-LIBCHICKEN_OBJECTS_1 = $(LIBCHICKEN_SCHEME_OBJECTS_1) runtime
+LIBCHICKEN_OBJECTS_1 = $(LIBCHICKEN_SCHEME_OBJECTS_1) runtime utf
 LIBCHICKEN_SHARED_OBJECTS = $(LIBCHICKEN_OBJECTS_1:=$(O))
 LIBCHICKEN_STATIC_OBJECTS = $(LIBCHICKEN_OBJECTS_1:=-static$(O)) \
 	eval-modules-static$(O)
@@ -65,7 +65,7 @@ INSTALLED_PROGRAMS = \
 
 # These generated files make up a bootstrapped distribution build.
 # They are not cleaned by the 'clean' target, but only by 'spotless'.
-DISTFILES = $(filter-out runtime.c,$(LIBCHICKEN_OBJECTS_1:=.c)) \
+DISTFILES = $(filter-out runtime.c utf.c,$(LIBCHICKEN_OBJECTS_1:=.c)) \
 	$(UTILITY_PROGRAM_OBJECTS_1:=.c) \
 	$(COMPILER_OBJECTS_1:=.c) \
 	$(IMPORT_LIBRARIES:=.import.c) \
@@ -492,7 +492,7 @@ $(eval $(call declare-emitted-import-lib-dependency,chicken.process,$(POSIXFILE)
 $(eval $(call declare-emitted-import-lib-dependency,chicken.process.signal,$(POSIXFILE)))
 $(eval $(call declare-emitted-import-lib-dependency,chicken.process-context.posix,$(POSIXFILE)))
 $(eval $(call declare-emitted-import-lib-dependency,chicken.bitwise,library))
-$(eval $(call declare-emitted-import-lib-dependency,chicken.blob,library))
+$(eval $(call declare-emitted-import-lib-dependency,chicken.bytevector,library))
 $(eval $(call declare-emitted-import-lib-dependency,chicken.fixnum,library))
 $(eval $(call declare-emitted-import-lib-dependency,chicken.flonum,library))
 $(eval $(call declare-emitted-import-lib-dependency,chicken.gc,library))
@@ -603,7 +603,7 @@ chicken-ffi-syntax.c: chicken-ffi-syntax.scm \
 		chicken.string.import.scm
 support.c: support.scm mini-srfi-1.scm \
 		chicken.bitwise.import.scm \
-		chicken.blob.import.scm \
+		chicken.bytevector.import.scm \
 		chicken.condition.import.scm \
 		chicken.file.import.scm \
 		chicken.fixnum.import.scm \
@@ -711,6 +711,7 @@ chicken-syntax.c: chicken-syntax.scm \
 		chicken.internal.import.scm
 srfi-4.c: srfi-4.scm \
 		chicken.bitwise.import.scm \
+		chicken.bytevector.import.scm \
 		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm \
 		chicken.gc.import.scm \
@@ -741,7 +742,7 @@ data-structures.c: data-structures.scm \
 		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm
 expand.c: expand.scm \
-		chicken.blob.import.scm \
+		chicken.bytevector.import.scm \
 		chicken.condition.import.scm \
 		chicken.fixnum.import.scm \
 		chicken.keyword.import.scm \
@@ -752,7 +753,7 @@ extras.c: extras.scm \
 		chicken.string.import.scm \
 		chicken.time.import.scm
 eval.c: eval.scm \
-		chicken.blob.import.scm \
+		chicken.bytevector.import.scm \
 		chicken.condition.import.scm \
 		chicken.fixnum.import.scm \
 		chicken.foreign.import.scm \
@@ -814,7 +815,7 @@ library.c: $(SRCDIR)library.scm
 	$(bootstrap-lib) \
 	-no-module-registration \
 	-emit-import-library chicken.bitwise \
-	-emit-import-library chicken.blob \
+	-emit-import-library chicken.bytevector \
 	-emit-import-library chicken.fixnum \
 	-emit-import-library chicken.flonum \
 	-emit-import-library chicken.gc \
