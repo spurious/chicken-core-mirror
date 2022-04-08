@@ -1063,7 +1063,6 @@ EOF
 (define (##sys#immediate? x) (not (##core#inline "C_blockp" x)))
 (define (##sys#message str) (##core#inline "C_message" str))
 (define (##sys#byte x i) (##core#inline "C_subbyte" x i))
-(define (##sys#setbyte x i n) (##core#inline "C_setbyte" x i n))
 (define ##sys#void void)
 (define ##sys#undefined-value (##core#undefined))
 (define (##sys#halt msg) (##core#inline "C_halt" msg))
