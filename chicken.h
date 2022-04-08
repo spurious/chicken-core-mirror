@@ -423,7 +423,7 @@ void *alloca ();
 # define C_8ALIGN_BIT             0x1000000000000000L   /* data is aligned to 8-byte boundary */
 
 # define C_SYMBOL_TYPE            (0x0100000000000000L)
-# define C_STRING_TYPE            (0x0200000000000000L | C_BYTEBLOCK_BIT)
+# define C_STRING_TYPE            (0x0200000000000000L)
 # define C_PAIR_TYPE              (0x0300000000000000L)
 # define C_CLOSURE_TYPE           (0x0400000000000000L | C_SPECIALBLOCK_BIT)
 # define C_FLONUM_TYPE            (0x0500000000000000L | C_BYTEBLOCK_BIT | C_8ALIGN_BIT)
@@ -449,7 +449,7 @@ void *alloca ();
 # define C_8ALIGN_BIT             0x10000000
 
 # define C_SYMBOL_TYPE            (0x01000000)
-# define C_STRING_TYPE            (0x02000000 | C_BYTEBLOCK_BIT)
+# define C_STRING_TYPE            (0x02000000)
 # define C_PAIR_TYPE              (0x03000000)
 # define C_CLOSURE_TYPE           (0x04000000 | C_SPECIALBLOCK_BIT)
 # ifdef C_DOUBLE_IS_32_BITS
@@ -473,7 +473,7 @@ void *alloca ();
 
 #define C_SIZEOF_LIST(n)          ((n) * 3 + 1)
 #define C_SIZEOF_PAIR             3
-#define C_SIZEOF_STRING(n)        (C_bytestowords(n) + 2)
+#define C_SIZEOF_STRING(n)        (C_SIZEOF_BYTEVECTOR((n) * 4) + 1 + 5)
 #define C_SIZEOF_SYMBOL           4
 #define C_SIZEOF_INTERNED_SYMBOL(n) (C_SIZEOF_SYMBOL + C_SIZEOF_PAIR + C_SIZEOF_STRING(n))
 #ifdef C_DOUBLE_IS_32_BITS
@@ -490,7 +490,7 @@ void *alloca ();
 #define C_SIZEOF_CPLXNUM          3
 #define C_SIZEOF_STRUCTURE(n)     ((n)+1)
 #define C_SIZEOF_CLOSURE(n)       ((n)+1)
-#define C_SIZEOF_BYTEVECTOR       C_SIZEOF_STRING
+#define C_SIZEOF_BYTEVECTOR(n)    (C_bytestowords(n) + 2)
 #define C_SIZEOF_INTERNAL_BIGNUM_VECTOR(n) (C_SIZEOF_VECTOR((n)+1))
 #define C_internal_bignum_vector(b)        (C_block_item(b,0))
 
@@ -500,6 +500,7 @@ void *alloca ();
 #define C_SIZEOF_BIGNUM(n)        (C_SIZEOF_INTERNAL_BIGNUM_VECTOR(n)+C_SIZEOF_BIGNUM_WRAPPER)
 
 /* Fixed size types have pre-computed header tags */
+#define C_STRING_TAG              (C_STRING_TYPE | 4)
 #define C_PAIR_TAG                (C_PAIR_TYPE | (C_SIZEOF_PAIR - 1))
 #define C_WEAK_PAIR_TAG           (C_PAIR_TAG | C_SPECIALBLOCK_BIT)
 #define C_POINTER_TAG             (C_POINTER_TYPE | (C_SIZEOF_POINTER - 1))
