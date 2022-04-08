@@ -554,6 +554,7 @@ static C_cpsproc(call_cc_wrapper) C_noret;
 static C_cpsproc(call_cc_values_wrapper) C_noret;
 static C_cpsproc(gc_2) C_noret;
 static C_cpsproc(allocate_vector_2) C_noret;
+static C_cpsproc(allocate_bytevector_2) C_noret;
 static C_cpsproc(generic_trampoline) C_noret;
 static void handle_interrupt(void *trampoline) C_noret;
 static C_cpsproc(callback_return_continuation) C_noret;
@@ -890,7 +891,7 @@ static C_PTABLE_ENTRY *create_initial_ptable()
 {
   /* IMPORTANT: hardcoded table size -
      this must match the number of C_pte calls + 1 (NULL terminator)! */
-  C_PTABLE_ENTRY *pt = (C_PTABLE_ENTRY *)C_malloc(sizeof(C_PTABLE_ENTRY) * 63);
+  C_PTABLE_ENTRY *pt = (C_PTABLE_ENTRY *)C_malloc(sizeof(C_PTABLE_ENTRY) * 64);
   int i = 0;
 
   if(pt == NULL)
@@ -903,6 +904,7 @@ static C_PTABLE_ENTRY *create_initial_ptable()
   C_pte(call_cc_wrapper);
   C_pte(C_gc);
   C_pte(C_allocate_vector);
+  C_pte(C_allocate_bytevector);
   C_pte(C_make_structure);
   C_pte(C_ensure_heap_reserve);
   C_pte(C_return_to_host);
@@ -1077,10 +1079,10 @@ C_regparm C_SYMBOL_TABLE *C_find_symbol_table(char *name)
 }
 
 
-C_regparm C_word C_find_symbol(C_word str, C_SYMBOL_TABLE *stable)
+C_regparm C_word C_find_symbol(C_word bv, C_SYMBOL_TABLE *stable)
 {
-  C_char *sptr = C_c_string(str);
-  int len = C_header_size(str);
+  C_char *sptr = C_c_string(bv);
+  int len = C_header_size(bv) - 1;
   int key;
   C_word s;
 
@@ -1126,7 +1128,7 @@ void initialize_symbol_table(void)
 C_regparm C_word C_find_keyword(C_word str, C_SYMBOL_TABLE *kwtable)
 {
   C_char *sptr = C_c_string(str);
-  int len = C_header_size(str);
+  int len = C_header_size(str) - 1;
   int key;
   C_word s;
 
@@ -1962,6 +1964,11 @@ void barf(int code, char *loc, ...)
     c = 3;
     break;
 
+  case C_DECODING_ERROR:
+    msg = C_text("string decoding error");
+    c = 2;
+    break;
+
   default: panic(C_text("illegal internal error code"));
   }
 
@@ -2356,7 +2363,7 @@ C_regparm C_word C_fcall C_intern_in(C_word **ptr, int len, C_char *str, C_SYMBO
 
   if(C_truep(s = lookup(key, len, str, stable))) return s;
 
-  s = C_string(ptr, len, str);
+  s = C_bytevector(ptr, len + 1, str);
   return add_symbol(ptr, key, s, stable);
 }
 
@@ -2369,7 +2376,7 @@ C_regparm C_word C_fcall C_h_intern_in(C_word *slot, int len, C_char *str, C_SYM
    * lf[] entries are not tracked by the GC.
    */
   int key;
-  C_word s;
+  C_word s, bv;
 
   if(stable == NULL) stable = symbol_table;
 
@@ -2380,14 +2387,17 @@ C_regparm C_word C_fcall C_h_intern_in(C_word *slot, int len, C_char *str, C_SYM
     
     if(!C_truep(C_permanentp(C_symbol_name(s)))) {
       /* Replace by statically allocated string, and persist it */
-      C_set_block_item(s, 1, C_static_string(C_heaptop, len, str));
+      bv = C_static_bytevector(C_heaptop, len + 1, str);
+      C_c_bytevector(bv)[ len ] = 0;
+      C_set_block_item(s, 1, bv);
       C_i_persist_symbol(s);
     }
     return s;
   }
 
-  s = C_static_string(C_heaptop, len, str);
-  return add_symbol(C_heaptop, key, s, stable);
+  bv = C_static_bytevector(C_heaptop, len + 1, str);
+  C_c_bytevector(bv)[ len ] = 0;
+  return add_symbol(C_heaptop, key, bv, stable);
 }
 
 
@@ -2406,11 +2416,12 @@ C_regparm C_word C_fcall C_lookup_symbol(C_word sym)
 {
   int key;
   C_word str = C_block_item(sym, 1);
-  int len = C_header_size(str);
+  C_word bv = C_block_item(str, 0);
+  int len = C_header_size(bv) - 1;
 
-  key = hash_string(len, C_c_string(str), symbol_table->size, symbol_table->rand, 0);
+  key = hash_string(len, C_c_string(bv), symbol_table->size, symbol_table->rand, 0);
 
-  return lookup(key, len, C_c_string(str), symbol_table);
+  return lookup(key, len, C_c_string(bv), symbol_table);
 }
 
 
@@ -2452,7 +2463,7 @@ C_regparm C_word C_fcall lookup(C_word key, int len, C_char *str, C_SYMBOL_TABLE
     sym = C_block_item(bucket,0);
     s = C_block_item(sym, 1);
 
-    if(C_header_size(s) == (C_word)len
+    if(C_header_size(s) - 1 == (C_word)len
        && !C_memcmp(str, (C_char *)C_data_pointer(s), len))
       return sym;
   }
@@ -2518,7 +2529,7 @@ C_regparm C_word C_fcall C_i_unpersist_symbol(C_word sym)
 C_regparm C_word C_fcall lookup_bucket(C_word sym, C_SYMBOL_TABLE *stable)
 {
   C_word bucket, str = C_block_item(sym, 1);
-  int key, len = C_header_size(str);
+  int key, len = C_header_size(str) - 1;
 
   if (stable == NULL) stable = symbol_table;
 
@@ -2561,22 +2572,22 @@ double compute_symbol_table_load(double *avg_bucket_len, int *total_n)
 }
 
 
-C_word add_symbol(C_word **ptr, C_word key, C_word string, C_SYMBOL_TABLE *stable)
+C_word add_symbol(C_word **ptr, C_word key, C_word bv, C_SYMBOL_TABLE *stable)
 {
   C_word bucket, sym, b2, *p;
 
   p = *ptr;
   sym = (C_word)p;
   p += C_SIZEOF_SYMBOL;
-  C_block_header_init(sym, C_SYMBOL_TYPE | (C_SIZEOF_SYMBOL - 1));
+  C_block_header_init(sym, C_SYMBOL_TAG);
   C_set_block_item(sym, 0, C_SCHEME_UNBOUND);
-  C_set_block_item(sym, 1, string);
+  C_set_block_item(sym, 1, bv);
   C_set_block_item(sym, 2, C_SCHEME_END_OF_LIST);
   *ptr = p;
   b2 = stable->table[ key ];	/* previous bucket */
 
   /* Create new weak or strong bucket depending on persistability */
-  if (C_truep(C_permanentp(string))) {
+  if (C_truep(C_permanentp(bv))) {
     bucket = C_a_pair(ptr, sym, b2);
   } else {
     bucket = C_a_weak_pair(ptr, sym, b2);
@@ -2746,27 +2757,36 @@ void C_rest_arg_out_of_bounds_error_2(C_word c, C_word n, C_word ka, C_word clos
 
 C_regparm C_word C_fcall C_string(C_word **ptr, int len, C_char *str)
 {
-  C_word strblock = (C_word)(*ptr);
-
-  *ptr = (C_word *)((C_word)(*ptr) + sizeof(C_header) + C_align(len));
-  C_block_header_init(strblock, C_STRING_TYPE | len);
-  C_memcpy(C_data_pointer(strblock), str, len);
-  return strblock;
+  C_word buf = C_bytevector(ptr, len + 1, str);
+  C_word s = (C_word)(*ptr);
+  int n;
+  *ptr += 5; /* C_SIZEOF_STRING */
+  C_c_bytevector(buf)[ len ] = 0;
+  C_block_header_init(s, C_STRING_TAG);
+  C_set_block_item(s, 0, buf);
+  n = C_utf_count(str, len);
+  if(n == -1) C_decoding_error(buf, C_fix(0));
+  C_set_block_item(s, 1, C_fix(n));
+  C_set_block_item(s, 2, C_fix(0));
+  C_set_block_item(s, 3, C_fix(0));
+  return s;
 }
-
 
 C_regparm C_word C_fcall C_static_string(C_word **ptr, int len, C_char *str)
 {
-  C_word *dptr = (C_word *)C_malloc(sizeof(C_header) + C_align(len));
-  C_word strblock;
-
-  if(dptr == NULL)
-    panic(C_text("out of memory - cannot allocate static string"));
-    
-  strblock = (C_word)dptr;
-  C_block_header_init(strblock, C_STRING_TYPE | len);
-  C_memcpy(C_data_pointer(strblock), str, len);
-  return strblock;
+  C_word buf = C_static_bytevector(ptr, len + 1, str);
+  C_word s = (C_word)(*ptr);
+  int n;
+  *ptr += 5; /* C_SIZEOF_STRING */
+  C_c_bytevector(buf)[ len ] = 0;
+  C_block_header_init(s, C_STRING_TAG);
+  C_set_block_item(s, 0, buf);
+  n = C_utf_count(str, len);
+  if(n == -1) C_decoding_error(buf, C_fix(0));
+  C_set_block_item(s, 1, C_fix(n));
+  C_set_block_item(s, 2, C_fix(0));
+  C_set_block_item(s, 3, C_fix(0));
+  return s;
 }
 
 C_regparm C_word C_fcall C_static_bignum(C_word **ptr, int len, C_char *str)
@@ -2784,7 +2804,7 @@ C_regparm C_word C_fcall C_static_bignum(C_word **ptr, int len, C_char *str)
     panic(C_text("out of memory - cannot allocate static bignum"));
 
   bigvec = (C_word)dptr;
-  C_block_header_init(bigvec, C_STRING_TYPE | C_wordstobytes(size + 1));
+  C_block_header_init(bigvec, C_BYTEVECTOR_TYPE | C_wordstobytes(size + 1));
   C_set_block_item(bigvec, 0, negp);
   /* This needs to be allocated at ptr, not dptr, because GC moves type tag */
   bignum = C_a_i_bignum_wrapper(ptr, bigvec);
@@ -2813,19 +2833,27 @@ C_regparm C_word C_fcall C_static_lambda_info(C_word **ptr, int len, C_char *str
 
 C_regparm C_word C_fcall C_bytevector(C_word **ptr, int len, C_char *str)
 {
-  C_word strblock = C_string(ptr, len, str);
-
-  (void)C_string_to_bytevector(strblock);
-  return strblock;
+  C_word block = (C_word)(*ptr);
+  *ptr = (C_word *)((C_word)(*ptr) + sizeof(C_header) + C_align(len));
+  C_block_header_init(block, C_BYTEVECTOR_TYPE | len);
+  C_memcpy(C_data_pointer(block), str, len);
+  return block;
 }
 
 
 C_regparm C_word C_fcall C_static_bytevector(C_word **ptr, int len, C_char *str)
 {
-  C_word strblock = C_static_string(ptr, len, str);
+  /* we need to add 4 here, as utf8_decode does 3-byte lookahead */
+  C_word *dptr = (C_word *)C_malloc(sizeof(C_header) + C_align(len + 4));
+  C_word block;
 
-  C_block_header_init(strblock, C_BYTEVECTOR_TYPE | len);
-  return strblock;
+  if(dptr == NULL)
+    panic(C_text("out of memory - cannot allocate static bytevector"));
+    
+  block = (C_word)dptr;
+  C_block_header_init(block, C_BYTEVECTOR_TYPE | len);
+  C_memcpy(C_data_pointer(block), str, len);
+  return block;
 }
 
 
@@ -2833,29 +2861,11 @@ C_regparm C_word C_fcall C_pbytevector(int len, C_char *str)
 {
   C_SCHEME_BLOCK *pbv = C_malloc(len + sizeof(C_header));
 
-  if(pbv == NULL) panic(C_text("out of memory - cannot allocate permanent blob"));
+  if(pbv == NULL) panic(C_text("out of memory - cannot allocate permanent bytevector"));
 
   pbv->header = C_BYTEVECTOR_TYPE | len;
   C_memcpy(pbv->data, str, len);
   return (C_word)pbv;
-}
-
-
-C_regparm C_word C_fcall C_string_aligned8(C_word **ptr, int len, C_char *str)
-{
-  C_word *p = *ptr,
-         *p0;
-
-#ifndef C_SIXTY_FOUR
-  /* Align on 8-byte boundary: */
-  if(C_aligned8(p)) ++p;
-#endif
-
-  p0 = p;
-  *ptr = p + 1 + C_bytestowords(len);
-  *(p++) = C_STRING_TYPE | C_8ALIGN_BIT | len;
-  C_memcpy(p, str, len);
-  return (C_word)p0;
 }
 
 
@@ -2867,10 +2877,7 @@ C_regparm C_word C_fcall C_string2(C_word **ptr, C_char *str)
   if(str == NULL) return C_SCHEME_FALSE;
 
   len = C_strlen(str);
-  *ptr = (C_word *)((C_word)(*ptr) + sizeof(C_header) + C_align(len));
-  C_block_header_init(strblock, C_STRING_TYPE | len);
-  C_memcpy(C_data_pointer(strblock), str, len);
-  return strblock;
+  return C_string(ptr, len, str);
 }
 
 
@@ -2888,10 +2895,7 @@ C_regparm C_word C_fcall C_string2_safe(C_word **ptr, int max, C_char *str)
     panic(buffer);
   }
 
-  *ptr = (C_word *)((C_word)(*ptr) + sizeof(C_header) + C_align(len));
-  C_block_header_init(strblock, C_STRING_TYPE | len);
-  C_memcpy(C_data_pointer(strblock), str, len);
-  return strblock;
+  return C_string(ptr, len, str);
 }
 
 
@@ -4182,12 +4186,12 @@ C_regparm void C_fcall update_symbol_tables(int mode)
 	  if ((C_persistable_symbol(sym) || str_perm) &&
               (C_block_header(bucket) == C_WEAK_PAIR_TAG)) {
 	    C_dbg(C_text("GC"), C_text("Offending symbol: `%.*s'\n"),
-		  (int)C_header_size(str), C_c_string(str));
+		  (int)C_header_size(str) - 1, C_c_string(str));
 	    panic(C_text("Persistable symbol found in weak pair"));
 	  } else if (!C_persistable_symbol(sym) && !str_perm &&
 		     (C_block_header(bucket) == C_PAIR_TAG)) {
 	    C_dbg(C_text("GC"), C_text("Offending symbol: `%.*s'...\n"),
-		  (int)C_header_size(str), C_c_string(str));
+		  (int)C_header_size(str) - 1, C_c_string(str));
 	    panic(C_text("Unpersistable symbol found in strong pair"));
 	  }
 	}
@@ -4573,16 +4577,16 @@ C_word C_fetch_trace(C_word starti, C_word buffer)
   return C_fix(p);
 }
 
-C_regparm C_word C_fcall C_u_i_string_hash(C_word str, C_word rnd)
+C_regparm C_word C_fcall C_u_i_bytevector_hash(C_word str, C_word rnd)
 {
-  int len = C_header_size(str);
+  int len = C_header_size(str) - 1;
   C_char *ptr = C_data_pointer(str);
   return C_fix(hash_string(len, ptr, C_MOST_POSITIVE_FIXNUM, C_unfix(rnd), 0));
 }
 
-C_regparm C_word C_fcall C_u_i_string_ci_hash(C_word str, C_word rnd)
+C_regparm C_word C_fcall C_u_i_bytevector_ci_hash(C_word str, C_word rnd)
 {
-  int len = C_header_size(str);
+  int len = C_header_size(str) - 1;
   C_char *ptr = C_data_pointer(str);
   return C_fix(hash_string(len, ptr, C_MOST_POSITIVE_FIXNUM, C_unfix(rnd), 1));
 }
@@ -4596,9 +4600,8 @@ C_regparm void C_fcall C_toplevel_entry(C_char *name)
 C_regparm C_word C_fcall C_a_i_provide(C_word **a, int c, C_word id)
 {
   if (debug_mode == 2) {
-    C_word str = C_block_item(id, 1);
-    C_snprintf(buffer, C_header_size(str) + 1, C_text("%s"), (C_char *) C_data_pointer(str));
-    C_dbg(C_text("debug"), C_text("providing %s...\n"), buffer);
+    C_word str = C_block_item(C_block_item(id, 1), 0);
+    C_dbg(C_text("debug"), C_text("providing %s...\n"), C_c_string(str));
   }
   return C_a_i_putprop(a, 3, core_provided_symbol, id, C_SCHEME_TRUE);
 }
@@ -4648,18 +4651,19 @@ C_word C_halt(C_word msg)
 
 C_word C_message(C_word msg)
 {
-  unsigned int n = C_header_size(msg);
+  C_word m = C_block_item(msg, 0);
+  unsigned int n = C_header_size(m);
   /*
    * Strictly speaking this isn't necessary for the non-gui-mode,
    * but let's try and keep this consistent across modes.
    */
-  if (C_memchr(C_c_string(msg), '\0', n) != NULL)
+  if (C_memchr(C_c_string(m), '\0', n - 1) != NULL)
     barf(C_ASCIIZ_REPRESENTATION_ERROR, "##sys#message", msg);
 
   if(C_gui_mode) {
     if (n >= sizeof(buffer))
       n = sizeof(buffer) - 1;
-    C_strncpy(buffer, C_c_string(msg), n);
+    C_strncpy(buffer, C_c_string(m), n);
     buffer[ n ] = '\0';
 #if defined(_WIN32) && !defined(__CYGWIN__)
     MessageBox(NULL, buffer, C_text("CHICKEN runtime"), MB_OK | MB_ICONEXCLAMATION);
@@ -4667,7 +4671,7 @@ C_word C_message(C_word msg)
 #endif
   } /* fall through */
 
-  C_fwrite(C_c_string(msg), n, sizeof(C_char), stdout);
+  C_fwrite(C_c_string(m), n, sizeof(C_char), stdout);
   C_putchar('\n');
   return C_SCHEME_UNDEFINED;
 }
@@ -4850,9 +4854,8 @@ C_regparm C_word C_fcall C_execute_shell_command(C_word string)
       barf(C_OUT_OF_MEMORY_ERROR, "system");
   }
 
-  C_memcpy(buf, C_data_pointer(string), n);
-  buf[ n ] = '\0';
-  if (n != strlen(buf))
+  C_memcpy(buf, C_data_pointer(bv), n); /* includes 0 */
+  if (n - 1 != strlen(buf))
     barf(C_ASCIIZ_REPRESENTATION_ERROR, "system", string);
 
   n = C_system(buf);
@@ -5178,22 +5181,33 @@ C_word C_a_i_list(C_word **a, int c, ...)
 C_word C_a_i_string(C_word **a, int c, ...)
 {
   va_list v;
-  C_word x, s = (C_word)(*a);
+  C_word x, s, b;
   char *p;
+  int len;
 
-  *a = (C_word *)((C_word)(*a) + sizeof(C_header) + C_align(c));
-  C_block_header_init(s, C_STRING_TYPE | c);
-  p = (char *)C_data_pointer(s);
+  s = (C_word)(*a);
+  *a = (C_word *)((C_word)(*a) + sizeof(C_word) * 5); /* C_SIZEOF_STRING */
+  b = (C_word)(*a);
+  
+  C_block_header_init(s, C_STRING_TAG);
+  C_set_block_item(s, 0, b);
+  C_set_block_item(s, 1, C_fix(c));
+  C_set_block_item(s, 2, C_fix(0));
+  C_set_block_item(s, 3, C_fix(0));
+  p = (char *)C_data_pointer(b);
   va_start(v, c);
 
   for(; c; c--) {
     x = va_arg(v, C_word);
 
     if((x & C_IMMEDIATE_TYPE_BITS) == C_CHARACTER_BITS)
-      *(p++) = C_character_code(x);
+      p = C_utf_encode(p, C_character_code(x));
     else break;
   }
 
+  len = p - (char *)C_data_pointer(b) + 1;
+  *a = (C_word *)((C_word)(*a) + sizeof(C_header) + C_align(len));
+  C_block_header_init(b, C_BYTEVECTOR_TYPE | len);
   va_end(v);
   if (c) barf(C_BAD_ARGUMENT_TYPE_ERROR, "string", x);
   return s;
@@ -6043,7 +6057,7 @@ C_regparm C_word C_fcall C_i_string_length(C_word s)
   if(C_immediatep(s) || C_header_bits(s) != C_STRING_TYPE)
     barf(C_BAD_ARGUMENT_TYPE_ERROR, "string-length", s);
 
-  return C_fix(C_header_size(s));
+  return C_block_item(s, 1);
 }
 
 
@@ -7507,7 +7521,7 @@ C_regparm C_word C_fcall C_i_null_list_p(C_word x)
 C_regparm C_word C_fcall C_i_string_null_p(C_word x)
 {
   if(!C_immediatep(x) && C_header_bits(x) == C_STRING_TYPE)
-    return C_zero_length_p(x);
+    return C_mk_bool(C_unfix(C_block_item(x, 1)) == 0);
   else {
     barf(C_BAD_ARGUMENT_TYPE_NO_STRING_ERROR, "string-null?", x);
     return C_SCHEME_FALSE;
@@ -10022,7 +10036,7 @@ void C_ccall C_open_file_port(C_word c, C_word *av)
     channel = av[ 3 ],
     mode = av[ 4 ];
   C_FILEPTR fp = (C_FILEPTR)NULL;
-  C_char fmode[ 4 ];
+  C_char *fmode;
   C_word n;
   char *buf;
 
@@ -10031,27 +10045,13 @@ void C_ccall C_open_file_port(C_word c, C_word *av)
   case C_fix(1): fp = C_stdout; break;
   case C_fix(2): fp = C_stderr; break;
   default:
-    n = C_header_size(channel);
-    buf = buffer;
-
-    if(n >= STRING_BUFFER_SIZE) {
-      if((buf = (char *)C_malloc(n + 1)) == NULL)
-	barf(C_OUT_OF_MEMORY_ERROR, "open");
-    }
-
-    C_strncpy(buf, C_c_string(channel), n);
-    buf[ n ] = '\0';
-    if (n != strlen(buf))
+    buf = C_c_string(C_block_item(channel, 0));
+    fmode = C_c_string(C_block_item(mode, 0));
+    if (C_header_size(C_block_item(channel, 0)) - 1 != strlen(buf))
       barf(C_ASCIIZ_REPRESENTATION_ERROR, "open", channel);
-    n = C_header_size(mode);
-    if (n >= sizeof(fmode)) n = sizeof(fmode) - 1;
-    C_strncpy(fmode, C_c_string(mode), n);
-    fmode[ n ] = '\0';
-    if (n != strlen(fmode)) /* Shouldn't happen, but never hurts */
+    if (C_header_size(C_block_item(mode, 0)) - 1 != strlen(fmode))
       barf(C_ASCIIZ_REPRESENTATION_ERROR, "open", mode);
     fp = C_fopen(buf, fmode);
-
-    if(buf != buffer) C_free(buf);
   }
   
   C_set_block_item(port, 0, (C_word)fp);
@@ -10064,31 +10064,22 @@ void C_ccall C_allocate_vector(C_word c, C_word *av)
   C_word 
     /* closure = av[ 0 ] */
     k = av[ 1 ],
-    size, bvecf, init, align8,
-    bytes,
-    n, *p;
+    size, init, bytes, n, *p;
 
-  if(c != 6) C_bad_argc(c, 6);
+  if(c != 4) C_bad_argc(c, 4);
 
   size = av[ 2 ];
-  bvecf = av[ 3 ];
-  init = av[ 4 ];
-  align8 = av[ 5 ];
+  init = av[ 3 ];
   n = C_unfix(size);
 
   if(n > C_HEADER_SIZE_MASK || n < 0)
     barf(C_OUT_OF_RANGE_ERROR, NULL, size, C_fix(C_HEADER_SIZE_MASK));
 
-  if(!C_truep(bvecf)) bytes = C_wordstobytes(n) + sizeof(C_word);
-  else bytes = n + sizeof(C_word);
-
-  if(C_truep(align8)) bytes += sizeof(C_word);
+  bytes = C_wordstobytes(n) + sizeof(C_word);
 
   C_save(k);
   C_save(size);
   C_save(init);
-  C_save(bvecf);
-  C_save(align8);
   C_save(C_fix(bytes));
 
   if(!C_demand(C_bytestowords(bytes))) {
@@ -10097,10 +10088,10 @@ void C_ccall C_allocate_vector(C_word c, C_word *av)
       C_fromspace_top = C_fromspace_limit; /* trigger major GC */
   
     C_save(C_SCHEME_TRUE);
-    /* We explicitly pass 7 here, that's the number of things saved.
+    /* We explicitly pass 5 here, that's the number of things saved.
      * That's the arguments, plus one additional thing: the mode.
      */
-    C_reclaim((void *)allocate_vector_2, 7);
+    C_reclaim((void *)allocate_vector_2, 5);
   }
 
   C_save(C_SCHEME_FALSE);
@@ -10115,11 +10106,9 @@ void C_ccall allocate_vector_2(C_word c, C_word *av)
   C_word 
     mode = av[ 0 ],
     bytes = C_unfix(av[ 1 ]),
-    align8 = av[ 2 ],
-    bvecf = av[ 3 ],
-    init = av[ 4 ],
-    size = C_unfix(av[ 5 ]),
-    k = av[ 6 ],
+    init = av[ 2 ],
+    size = C_unfix(av[ 3 ]),
+    k = av[ 4 ],
     *v0, v;
 
   if(C_truep(mode)) {
@@ -10139,23 +10128,90 @@ void C_ccall allocate_vector_2(C_word c, C_word *av)
   }
   else v0 = C_alloc(C_bytestowords(bytes));
 
+  v = (C_word)v0;
+  *(v0++) = C_VECTOR_TYPE | size;  
+  while(size--) *(v0++) = init;
+  C_kontinue(k, v);
+}
+
+void C_ccall C_allocate_bytevector(C_word c, C_word *av)
+{
+  C_word 
+    /* closure = av[ 0 ] */
+    k = av[ 1 ],
+    size, init, align8, bytes, str, n, *p;
+
+  if(c != 4) C_bad_argc(c, 4);
+
+  size = av[ 2 ];
+  init = av[ 3 ];
+  n = C_unfix(size);
+
+  if(n > C_HEADER_SIZE_MASK || n < 0)
+    barf(C_OUT_OF_RANGE_ERROR, NULL, size, C_fix(C_HEADER_SIZE_MASK));
+
+  bytes = n + sizeof(C_word) * 2;
+
+  C_save(k);
+  C_save(size);
+  C_save(init);
+  C_save(C_fix(bytes));
+
+  if(!C_demand(C_bytestowords(bytes))) {
+    /* Allocate on heap: */
+    if((C_uword)(C_fromspace_limit - C_fromspace_top) < (bytes + stack_size * 2))
+      C_fromspace_top = C_fromspace_limit; /* trigger major GC */
+  
+    C_save(C_SCHEME_TRUE);
+    /* We explicitly pass 5 here, that's the number of things saved.
+     * That's the arguments, plus one additional thing: the mode.
+     */
+    C_reclaim((void *)allocate_vector_2, 5);
+  }
+
+  C_save(C_SCHEME_FALSE);
+  p = C_temporary_stack;
+  C_temporary_stack = C_temporary_stack_bottom;
+  allocate_bytevector_2(0, p);
+}
+
+
+void C_ccall allocate_bytevector_2(C_word c, C_word *av)
+{
+  C_word 
+    mode = av[ 0 ],
+    bytes = C_unfix(av[ 1 ]),
+    init = av[ 2 ],
+    size = C_unfix(av[ 3 ]),
+    k = av[ 4 ],
+    *v0, v;
+  char buf[ 4 ];
+
+  if(C_truep(mode)) {
+    while((C_uword)(C_fromspace_limit - C_fromspace_top) < (bytes + stack_size)) {
+      if(C_heap_size_is_fixed)
+	panic(C_text("out of memory - cannot allocate vector (heap resizing disabled)"));
+
+      C_save(init);
+      C_save(k);
+      C_rereclaim2(percentage(heap_size, C_heap_growth) + (C_uword)bytes, 0);
+      k = C_restore;
+      init = C_restore;
+    }
+
+    v0 = (C_word *)C_align((C_word)C_fromspace_top);
+    C_fromspace_top += C_align(bytes);
+  }
+  else v0 = C_alloc(C_bytestowords(bytes));
+
 #ifndef C_SIXTY_FOUR
-  if(C_truep(align8) && C_aligned8(v0)) ++v0;
+  if(C_aligned8(v0)) ++v0;
 #endif
 
   v = (C_word)v0;
+  *(v0++) = C_BYTEVECTOR_TYPE | size;
 
-  if(!C_truep(bvecf)) {
-    *(v0++) = C_VECTOR_TYPE | size | (C_truep(align8) ? C_8ALIGN_BIT : 0);
-  
-    while(size--) *(v0++) = init;
-  }
-  else {
-    *(v0++) = C_STRING_TYPE | size;
-
-    if(C_truep(init))
-      C_memset(v0, C_character_code(init), size);
-  }
+  if(C_truep(init)) C_memset(v0, C_unfix(init), size);
 
   C_kontinue(k, v);
 }
@@ -10166,7 +10222,7 @@ static C_word allocate_tmp_bignum(C_word size, C_word negp, C_word initp)
           bigvec = (C_word)(mem + C_SIZEOF_BIGNUM_WRAPPER);
   if (mem == NULL) abort();     /* TODO: panic */
   
-  C_block_header_init(bigvec, C_STRING_TYPE | C_wordstobytes(C_unfix(size)+1));
+  C_block_header_init(bigvec, C_BYTEVECTOR_TYPE | C_wordstobytes(C_unfix(size)+1));
   C_set_block_item(bigvec, 0, C_truep(negp));
 
   if (C_truep(initp)) {
@@ -10182,7 +10238,7 @@ C_allocate_scratch_bignum(C_word **ptr, C_word size, C_word negp, C_word initp)
 {
   C_word big, bigvec = C_scratch_alloc(C_SIZEOF_INTERNAL_BIGNUM_VECTOR(C_unfix(size)));
   
-  C_block_header_init(bigvec, C_STRING_TYPE | C_wordstobytes(C_unfix(size)+1));
+  C_block_header_init(bigvec, C_BYTEVECTOR_TYPE | C_wordstobytes(C_unfix(size)+1));
   C_set_block_item(bigvec, 0, C_truep(negp));
 
   if (C_truep(initp)) {
@@ -10506,56 +10562,44 @@ bignum_destructive_divide_normalized(C_word big_u, C_word big_v, C_word big_q)
 }
 
 
+/* XXX this should be an inline_allocate routine */
 void C_ccall C_string_to_symbol(C_word c, C_word *av) 
 { 
   C_word
     /* closure = av[ 0 ] */
-    k = av[ 1 ],
-    string;
+    k = av[ 1 ];
   int len, key;
-  C_word s, *a = C_alloc(C_SIZEOF_SYMBOL + C_SIZEOF_PAIR);
+  C_word s, *a = C_alloc(C_SIZEOF_SYMBOL + C_SIZEOF_PAIR), b;
   C_char *name;
 
-  if(c != 3) C_bad_argc(c, 3);
-
-  string = av[ 2 ];
-
-  if(C_immediatep(string) || C_header_bits(string) != C_STRING_TYPE)
-    barf(C_BAD_ARGUMENT_TYPE_ERROR, "string->symbol", string);
-    
-  len = C_header_size(string);
-  name = (C_char *)C_data_pointer(string);
+  b = av[ 2 ];
+  len = C_header_size(b) - 1;
+  name = C_c_string(b);
 
   key = hash_string(len, name, symbol_table->size, symbol_table->rand, 0);
   if(!C_truep(s = lookup(key, len, name, symbol_table)))
-    s = add_symbol(&a, key, string, symbol_table);
+    s = add_symbol(&a, key, b, symbol_table);
 
   C_kontinue(k, s);
 }
 
+/* XXX this should be an inline_allocate routine */
 void C_ccall C_string_to_keyword(C_word c, C_word *av) 
 { 
   C_word
     /* closure = av[ 0 ] */
-    k = av[ 1 ],
-    string;
+    k = av[ 1 ];
   int len, key;
-  C_word s, *a = C_alloc(C_SIZEOF_SYMBOL + C_SIZEOF_PAIR);
+  C_word s, *a = C_alloc(C_SIZEOF_SYMBOL + C_SIZEOF_PAIR), b;
   C_char *name;
 
-  if(c != 3) C_bad_argc(c, 3);
-
-  string = av[ 2 ];
-
-  if(C_immediatep(string) || C_header_bits(string) != C_STRING_TYPE)
-    barf(C_BAD_ARGUMENT_TYPE_ERROR, "string->keyword", string);
-    
-  len = C_header_size(string);
-  name = (C_char *)C_data_pointer(string);
+  b = av[ 2 ];
+  len = C_header_size(b) - 1;
+  name = C_c_string(b);
   key = hash_string(len, name, keyword_table->size, keyword_table->rand, 0);
 
   if(!C_truep(s = lookup(key, len, name, keyword_table))) {
-    s = add_symbol(&a, key, string, keyword_table);
+    s = add_symbol(&a, key, b, keyword_table);
     C_set_block_item(s, 0, s); /* Keywords evaluate to themselves */
     C_set_block_item(s, 2, C_SCHEME_FALSE); /* Keywords have no plists */
   }
@@ -10837,7 +10881,7 @@ C_s_a_i_digits_to_integer(C_word **ptr, C_word n, C_word str, C_word start, C_wo
     return C_SCHEME_FALSE;
   } else {
     size_t nbits;
-    char *s = C_c_string(str);
+    char *s = C_c_string(C_block_item(str, 0));
     C_word result, size;
     end = C_unfix(end);
     start = C_unfix(start);
@@ -11040,7 +11084,7 @@ void C_ccall C_fixnum_to_string(C_word c, C_word *av)
   p = to_n_nary(num, radix, neg, 0);
 
   num = C_strlen(p);
-  a = C_alloc((C_bytestowords(num) + 1));
+  a = C_alloc(C_SIZEOF_STRING(num));
   C_kontinue(k, C_string(&a, num, p));
 }
 
@@ -11097,7 +11141,7 @@ void C_ccall C_flonum_to_string(C_word c, C_word *av)
   }
 
   radix = C_strlen(p);
-  a = C_alloc((C_bytestowords(radix) + 1));
+  a = C_alloc(C_SIZEOF_STRING(radix));
   radix = C_string(&a, radix, p);
   C_kontinue(k, radix);
 }
@@ -11147,11 +11191,9 @@ void C_ccall C_integer_to_string(C_word c, C_word *av)
       kav[ 0 ] = (C_word)NULL;   /* No "self" closure */
       kav[ 1 ] = C_closure(&ka, 4, (C_word)bignum_to_str_2,
                            k, num, C_fix(radix));
-      kav[ 2 ] = C_fix(len);
-      kav[ 3 ] = C_SCHEME_TRUE; /* Byte vector */
-      kav[ 4 ] = C_SCHEME_FALSE; /* No initialization */
-      kav[ 5 ] = C_SCHEME_FALSE; /* Don't align at 8 bytes */
-      C_allocate_vector(6, kav);
+      kav[ 2 ] = C_fix(len + 1);
+      kav[ 3 ] = 0; /* No initialization */
+      C_allocate_bytevector(6, kav);
     }
   }
 }
@@ -11167,9 +11209,10 @@ static void bignum_to_str_2(C_word c, C_word *av)
     radix = C_unfix(C_block_item(self, 3));
   char
     *buf = C_c_string(string),
-    *index = buf + C_header_size(string) - 1;
+    *index = buf + C_header_size(string) - 2;
   int radix_shift,
     negp = (C_bignum_negativep(bignum) ? 1 : 0);
+  C_word us[ 5 ], *a = us;
 
   radix_shift = C_ilen(radix) - 1;
   if (((C_uword)1 << radix_shift) == radix) { /* Power of two? */
@@ -11257,16 +11300,17 @@ static void bignum_to_str_2(C_word c, C_word *av)
   
     /* Shorten with distance between start and index. */
     if (buf != index) {
-      i = C_header_size(string) - (index - buf);
+      i = C_header_size(string) - (index - buf) + 1;
       C_memmove(buf, index, i); /* Move start of number to beginning. */
-      C_block_header(string) = C_STRING_TYPE | i; /* Mutate strlength. */
+      C_block_header(string) = C_BYTEVECTOR_TYPE | i; /* Mutate strlength. */
     }
   }
 
-  C_kontinue(k, string);
+  C_kontinue(k, C_a_ustring(&a, 0, string, index - buf));
 }
 
 
+/* XXX replace with inline routine */
 void C_ccall C_make_structure(C_word c, C_word *av)
 {
   C_word
@@ -11292,6 +11336,7 @@ void C_ccall C_make_structure(C_word c, C_word *av)
 }
 
 
+/* XXX replace with inline routine */
 void C_ccall C_make_symbol(C_word c, C_word *av)
 {
   C_word
@@ -11310,6 +11355,7 @@ void C_ccall C_make_symbol(C_word c, C_word *av)
 }
 
 
+/* XXX replace with inline routine */
 void C_ccall C_make_pointer(C_word c, C_word *av)
 {
   C_word
@@ -11324,6 +11370,7 @@ void C_ccall C_make_pointer(C_word c, C_word *av)
 }
 
 
+/* XXX replace with inline routine */
 void C_ccall C_make_tagged_pointer(C_word c, C_word *av)
 {
   C_word
@@ -11554,7 +11601,7 @@ void C_ccall C_machine_byte_order(C_word c, C_word *av)
   C_cblockend;
 #endif
 
-  a = C_alloc(2 + C_bytestowords(strlen(str)));
+  a = C_alloc(C_SIZEOF_STRING(strlen(str)));
   s = C_string2(&a, str);
 
   C_kontinue(k, s);
@@ -11570,7 +11617,7 @@ void C_ccall C_machine_type(C_word c, C_word *av)
 
   if(c != 2) C_bad_argc(c, 2);
 
-  a = C_alloc(2 + C_bytestowords(strlen(C_MACHINE_TYPE)));
+  a = C_alloc(C_SIZEOF_STRING(C_strlen(C_MACHINE_TYPE)));
   s = C_string2(&a, C_MACHINE_TYPE);
   
   C_kontinue(k, s);
@@ -11586,7 +11633,7 @@ void C_ccall C_software_type(C_word c, C_word *av)
 
   if(c != 2) C_bad_argc(c, 2);
 
-  a = C_alloc(2 + C_bytestowords(strlen(C_SOFTWARE_TYPE)));
+  a = C_alloc(C_SIZEOF_STRING(C_strlen(C_SOFTWARE_TYPE)));
   s = C_string2(&a, C_SOFTWARE_TYPE);
 
  C_kontinue(k, s);
@@ -11602,7 +11649,7 @@ void C_ccall C_build_platform(C_word c, C_word *av)
 
   if(c != 2) C_bad_argc(c, 2);
 
-  a = C_alloc(2 + C_bytestowords(strlen(C_BUILD_PLATFORM)));
+  a = C_alloc(C_SIZEOF_STRING(C_strlen(C_BUILD_PLATFORM)));
   s = C_string2(&a, C_BUILD_PLATFORM);
 
  C_kontinue(k, s);
@@ -11618,7 +11665,7 @@ void C_ccall C_software_version(C_word c, C_word *av)
 
   if(c != 2) C_bad_argc(c, 2);
 
-  a = C_alloc(2 + C_bytestowords(strlen(C_SOFTWARE_VERSION)));
+  a = C_alloc(C_SIZEOF_STRING(C_strlen(C_SOFTWARE_VERSION)));
   s = C_string2(&a, C_SOFTWARE_VERSION);
 
  C_kontinue(k, s);
@@ -11749,7 +11796,7 @@ void C_ccall dload_2(C_word c, C_word *av0)
     name = av0[ 1 ],
     k = av0[ 2 ],,
     av[ 2 ];
-  C_char *mname = (C_char *)C_data_pointer(name);
+  C_char *mname = C_c_string(name);
 
   /*
    * C_fprintf(C_stderr,
