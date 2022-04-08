@@ -60,9 +60,8 @@
 (define (gen . data)
   (for-each
    (lambda (x) 
-     (if (eq? #t x)
-	 (newline output)
-	 (display x output) ) )
+     (cond ((eq? #t x) (newline output))
+	   (else (display x output) ) ))
    data) )
 
 (define (gen-list lst)
