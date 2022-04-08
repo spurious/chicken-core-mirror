@@ -33,7 +33,7 @@
     (compiler-cleanup-hook bomb collected-debugging-output debugging
      debugging-chicken with-debugging-output quit-compiling
      emit-syntax-trace-info check-signature build-lambda-list
-     c-ify-string valid-c-identifier? read-expressions
+     valid-c-identifier? read-expressions
      bytes->words words->bytes replace-rest-op-with-list-ops
      check-and-open-input-file close-checked-input-file fold-inner
      constant? collapsable-literal? immediate? basic-literal?
@@ -1292,7 +1292,7 @@
       ((nonnull-c-string) `(##sys#peek-nonnull-c-string ,body (##core#quote 0)))
       ((c-string* unsigned-c-string*) `(##sys#peek-and-free-c-string ,body (##core#quote 0)))
       ((nonnull-c-string* nonnull-unsigned-c-string*) `(##sys#peek-and-free-nonnull-c-string ,body (##core#quote 0)))
-      ((symbol) `(##sys#intern-symbol (##sys#peek-c-string ,body (##core#quote 0))))
+      ((symbol) `(##sys#string->symbol (##sys#peek-c-string ,body (##core#quote 0))))
       ((c-string-list) `(##sys#peek-c-string-list ,body (##core#quote #f)))
       ((c-string-list*) `(##sys#peek-and-free-c-string-list ,body (##core#quote #f)))
       (else
@@ -1948,3 +1948,4 @@ Available debugging options:
 EOF
 ))
 )
+

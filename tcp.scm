@@ -425,15 +425,16 @@ EOF
 		 (when (fx>= bufindex buflen)
 		   (read-input))
 		 (if (fx< bufindex buflen)
-		     (##core#inline "C_subchar" buf bufindex)
+		     (string-ref buf bufindex)
 		     #!eof))
-	       (lambda (p n dest start)	; read-string!
+	       (lambda (p n dest start)	; read-bytevector!
 		 (let loop ((n n) (m 0) (start start))
 		   (cond ((eq? n 0) m)
 			 ((fx< bufindex buflen)
 			  (let* ((rest (fx- buflen bufindex))
 				 (n2 (if (fx< n rest) n rest)))
-			    (##core#inline "C_substring_copy" buf dest bufindex (fx+ bufindex n2) start)
+			    (##core#inline "C_copy_memory_with_offset" dest buf start 
+                              bufindex n2)
 			    (set! bufindex (fx+ bufindex n2))
 			    (loop (fx- n n2) (fx+ m n2) (fx+ start n2)) ) )
 			 (else
