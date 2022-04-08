@@ -87,7 +87,7 @@
 ;        | (deprecated NAME)
 ;   VALUE = string | symbol | keyword | char | number |
 ;           boolean | true | false |
-;           null | eof | blob |  pointer | port | locative | fixnum |
+;           null | eof | bytevector |  pointer | port | locative | fixnum |
 ;           float | bignum | ratnum | cplxnum | integer | pointer-vector
 ;   BASIC = * | list | pair | procedure | vector | undefined | noreturn | values
 ;   COMPLEX = (pair TYPE TYPE)
@@ -132,7 +132,7 @@
 (define-constant +maximal-complex-object-constructor-result-type-length+ 256)
 
 (define-constant value-types
-  '(string symbol keyword char null boolean true false blob eof
+  '(string symbol keyword char null boolean true false bytevector eof
     fixnum float number integer bignum ratnum cplxnum
     pointer-vector port pointer locative))
 

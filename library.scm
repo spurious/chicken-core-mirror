@@ -2812,53 +2812,134 @@ EOF
 (import chicken.keyword)
 
 
-;;; Blob:
+;;; bytevectors:
 
-(module chicken.blob
-  (blob->string string->blob blob? blob=? blob-size make-blob)
+(define (##sys#bytevector->list v loc)
+  (##sys#check-bytevector v loc)
+  (let ((n (##sys#size v)))
+    (let loop ((i (fx- n 1)) (lst '()))
+      (if (fx< i 0)
+          lst
+          (loop (fx+ i 1)
+                (cons (##core#inline "C_subbyte" v i) lst))))))
+  
+(define (##sys#list->bytevector lst loc)
+  (let* ((n (length lst))
+         (bv (##sys#make-bytevector n)))
+    (let loop ((lst lst) (i 0))
+      (if (null? lst)
+          bv
+          (let ((b (car lst)))
+            (##sys#check-fixnum b loc)
+            (##core#inline "C_setsubbyte" bv i b)
+            (loop (cdr lst) (fx+ i 1)))))))
+
+(module chicken.bytevector
+  (bytevector? bytevector=? bytevector-length
+               make-bytevector bytevector bytevector-u8-ref
+               bytevector-u8-set! bytevector-copy bytevector-copy!
+               bytevector-append utf8->string string->utf8)
 
 (import scheme)
 
-(define (##sys#make-blob size)
-  (let ([bv (##sys#allocate-vector size #t #f #t)])
-    (##core#inline "C_string_to_bytevector" bv)
-    bv) )
+(define (make-bytevector size #!optional (fill #f))
+  (##sys#check-fixnum size 'make-bytevector)
+  (if fill (##sys#check-fixnum fill 'make-bytevector))
+  (##sys#make-bytevector size fill) )
 
-(define (make-blob size)
-  (##sys#check-fixnum size 'make-blob)
-  (##sys#make-blob size) )
-
-(define (blob? x)
+(define (bytevector? x)
   (and (##core#inline "C_blockp" x)
        (##core#inline "C_bytevectorp" x) ) )
 
-(define (blob-size bv)
-  (##sys#check-blob bv 'blob-size)
+(define (bytevector-length bv)
+  (##sys#check-bytevector bv 'bytevector-size)
   (##sys#size bv) )
 
-(define (string->blob s)
-  (##sys#check-string s 'string->blob)
-  (let* ([n (##sys#size s)]
-	 [bv (##sys#make-blob n)] )
-    (##core#inline "C_copy_memory" bv s n) 
+(define (bytevector-u8-ref bv i)
+  (##sys#check-bytevector bv 'bytevector-u8-ref)
+  (##sys#check-fixnum bv 'bytevector-u8-ref)
+  (##sys#check-range i 0 (##sys#size bv) 'bytevector-u8-ref)
+  (##core#inline "C_subbyte" bv i))
+
+(define (bytevector-u8-set! bv i b)
+  (##sys#check-bytevector bv 'bytevector-u8-set!)
+  (##sys#check-fixnum bv 'bytevector-u8-set!)
+  (##sys#check-range i 0 (##sys#size bv) 'bytevector-u8-set!)
+  (##sys#check-fixnum b 'bytevector-u8-set!)
+  (##core#inline "C_setsubbyte" bv i b))
+
+(define (string->utf8 s)
+  (##sys#check-string s 'string->utf8)
+  (let* ((sbv (##sys#slot s 0))
+         (n (##core#inline "C_fixnum_difference" (##sys#size sbv) 1))
+	 (bv (##sys#make-bytevector n)) )
+    (##core#inline "C_copy_memory" sbv bv n) 
     bv) )
 
-(define (blob->string bv)
-  (##sys#check-blob bv 'blob->string)
-  (let* ([n (##sys#size bv)]
-	 [s (##sys#make-string n)] )
-    (##core#inline "C_copy_memory" s bv n) 
+(define (utf8->string bv)
+  (##sys#check-bytevector bv 'utf8->string)
+  (let* ((n (##sys#size bv))
+	 (s (##sys#make-string n)) )
+    (##core#inline "C_copy_memory" bv (##sys#slot s 0) n)
     s) )
 
-(define (blob=? b1 b2)
-  (##sys#check-blob b1 'blob=?)
-  (##sys#check-blob b2 'blob=?)
+(define (bytevector=? b1 b2)
+  (##sys#check-bytevector b1 'bytevector=?)
+  (##sys#check-bytevector b2 'bytevector=?)
   (let ((n (##sys#size b1)))
     (and (eq? (##sys#size b2) n)
-	 (zero? (##core#inline "C_string_compare" b1 b2 n)))))
+	 (##core#inline "C_bv_compare" b1 b2 n))))
 
-) ; chicken.blob
+(define (bytevector . args)
+  (let* ((n (length args))
+         (bv (##sys#make-bytevector n)))
+    (let loop ((args args) (i 0))
+      (cond ((null? args) bv)
+            (else
+              (let ((b (car args)))
+                (##sys#check-fixnum b 'bytevector)
+                (##core#inline "C_setsubbyte" bv i b)
+                (loop (cdr args) (##core#inline "C_fixnum_plus" i 1))))))))
+  
+(define (bytevector-copy bv #!optional (start 0) end)
+  (##sys#check-bytevector bv 'bytevector-copy)
+  (let* ((n (##sys#size bv))
+         (to (or end (##core#inline "C_fixnum_plus" n 1))))
+    (##sys#check-range start 0 n 'bytevector->copy)
+    (let* ((n2 (##core#inline "C_fixnum_difference" to start))
+           (v2 (##sys#make-bytevector n2)))
+      (##core#inline "C_copy_memory_with_offset" v2 bv 0 start n2)
+      v2)))
 
+(define (bytevector-copy! bv1 at bv2 #!optional (start 0) end)
+  (##sys#check-bytevector bv1 'bytevector-copy!)
+  (##sys#check-bytevector bv2 'bytevector-copy!)
+  (let* ((n1 (##sys#size bv1))
+         (n2 (##sys#size bv2))
+         (to (or end (##core#inline "C_fixnum_plus" n2 1))))
+    (##sys#check-range start 0 n2 'bytevector->copy!)
+    (##sys#check-range at 0 n1 'bytevector->copy!)
+    (let ((nc (##core#inline "C_fixnum_difference" to start)))
+      (##sys#check-range (##core#inline "C_fixnum_plus" at nc) 0 n1 'bytevector->copy!)
+      (let ((v2 (##sys#make-bytevector n2)))
+        (##core#inline "C_copy_memory_with_offset" bv2 bv1 at start nc)))))
+  
+(define (bytevector-append . bvs)
+  (let loop ((lst bvs) (len 0))
+    (if (null? lst)
+        (let ((bv (##sys#make-bytevector len)))
+          (let loop ((lst bvs) (i 0))
+            (if (null? lst)
+                bv
+                (let* ((bv1 (car lst))
+                       (n (##sys#size bv1)))
+                  (##core#inline "C_copy_memory_with_offset" bv bv1 i 0 n)
+                  (loop (cdr lst) (##core#inline "C_fixnum_plus" i n))))))
+        (let ((bv (car lst)))
+          (##sys#check-bytevector bv 'bytevector-append)
+          (loop (cdr lst) (##core#inline "C_fixnum_plus" len (##sys#size bv)))))))
+
+) ; chicken.bytevector
 
 
 ;;; Vectors:
@@ -2867,11 +2948,10 @@ EOF
     (##sys#check-fixnum size 'make-vector)
     (when (fx< size 0) (##sys#error 'make-vector "size is negative" size))
     (##sys#allocate-vector
-     size #f
+     size
      (if (null? fill)
 	 (##core#undefined)
-	 (car fill) )
-     #f) ))
+	 (car fill) ))))
 
 (define ##sys#make-vector make-vector)
 

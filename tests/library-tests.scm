@@ -1,6 +1,6 @@
 ;;;; library-tests.scm
 
-(import chicken.blob chicken.bitwise chicken.fixnum chicken.flonum
+(import chicken.bytevector chicken.bitwise chicken.fixnum chicken.flonum
 	chicken.keyword chicken.port chicken.condition)
 
 (define-syntax assert-fail
@@ -606,30 +606,16 @@ A
 (assert (= 1000 (p)))
 
 
-;;; blob-literal syntax
-
-(assert (equal? '#${a} '#${0a}))
-(assert (equal? '#${ab cd} '#${abcd}))
-(assert (equal? '#${ab c} '#${ab0c}))
-(assert (equal? '#${abc} '#${ab0c}))
-(assert (equal? '#${a b c} '#${0a0b0c}))
-
-;; self-evaluating
-(assert (equal? '#${a} #${a}))
-(assert (equal? '#${abcd} #${abcd}))
-(assert (equal? '#${abc} #${abc}))
-
-
-;; #808: blobs and strings with embedded nul bytes should not be compared
+;; #808: bytevectors and strings with embedded nul bytes should not be compared
 ;; with ASCIIZ string comparison functions
 (assert (equal? '#${a b 0 c} '#${a b 0 c}))
-(assert (blob=? '#${a b 0 c} '#${a b 0 c}))
+(assert (bytevector=? '#${a b 0 c} '#${a b 0 c}))
 (assert (equal=? "foo\x00a" "foo\x00a"))
 (assert (string=? "foo\x00a" "foo\x00a"))
 (assert (string-ci=? "foo\x00a" "foo\x00a"))
 (assert (string-ci=? "foo\x00a" "foo\x00A"))
 (assert (not (equal? '#${a b 0 c} '#${a b 0 d})))
-(assert (not (blob=? '#${a b 0 c} '#${a b 0 d})))
+(assert (not (bytevector=? '#${a b 0 c} '#${a b 0 d})))
 (assert (not (equal=? "foo\x00a" "foo\x00b")))
 (assert (not (string=? "foo\x00a" "foo\x00b")))
 (assert (not (string-ci=? "foo\x00a" "foo\x00b")))
@@ -787,9 +773,9 @@ A
 	(c 'e)
 	(assert (equal? '(a b c d c e d e e d) (reverse path))))))
 
-;;; vector and blob limits
+;;; vector and bytevector limits
 
-(assert-fail (make-blob -1))
+(assert-fail (make-bytevector -1))
 (assert-fail (make-vector -1))
 
 ;;; Resizing of vectors works to both sides
