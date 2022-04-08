@@ -4361,33 +4361,6 @@ EOF
 	      (fxior (fxshl (fxand hi #b111111) 10)
 		     (fxand lo #b1111111111)))) )
 
-(define (##sys#read-bytevector-literal port)
-  (define (hex c)
-    (let ((c (char-downcase c)))
-      (cond ((and (char>=? c #\a) (char<=? c #\f))
-	     (fx- (char->integer c) 87)	) ; - #\a + 10
-	    ((and (char>=? c #\0) (char<=? c #\9))
-	     (fx- (char->integer c) 48))
-	    (else (##sys#read-error port "invalid hex-code in blob-literal")))))
-  (let loop ((lst '()) (h #f))
-    (let ((c (##sys#read-char-0 port)))
-      (cond ((eof-object? c)
-	     (##sys#read-error port "unexpected end of blob literal"))
-	    ((char=? #\} c)
-	     (let ((str (##sys#reverse-list->string
-			 (if h
-			     (cons (integer->char (fxshr h 4)) lst)
-			     lst))))
-	       (##core#inline "C_string_to_bytevector" str)
-	       str))
-	    ((char-whitespace? c) 
-	     (if h
-		 (loop (cons (integer->char (fxshr h 4)) lst) #f)
-		 (loop lst h)))
-	    (h (loop (cons (integer->char (fxior h (hex c))) lst) #f))
-	    (else (loop lst (fxshl (hex c) 4)))))))
-
-
 ;;; Hooks for user-defined read-syntax:
 ;
 ; - Redefine this to handle new read-syntaxes. If 'char' doesn't match
@@ -4396,10 +4369,26 @@ EOF
 
 (define (##sys#user-read-hook char port)
   (case char
-    ;; I put it here, so the SRFI-4 unit can intercept '#f...'
+    ;; has been put here, so the SRFI-4 unit can intercept '#f...'
     ((#\f #\F) (##sys#read-char-0 port) #f)
     ((#\t #\T) (##sys#read-char-0 port) #t)
+    ((#\u)
+     (##sys#read-char-0 port)
+     (let ((c (##sys#read-char-0 port)))
+       (if (eq? c #\8)
+           (let ((lst (##sys#read-numvector-data port)))
+             (if (pair? lst)
+                 (##sys#list->bytevector lst)
+                 (##sys#slot lst 0)))
+           (##sys#read-error port "invalid sharp-sign read syntax" char))))
     (else (##sys#read-error port "invalid sharp-sign read syntax" char) ) ) )
+       
+(define (##sys#read-numvector-data port)
+  (let ((c (##sys#peek-char-0 port)))
+    (case c
+      ((#\() (##sys#read port ##sys#default-read-info-hook))
+      ((#\") (##sys#read port ##sys#default-read-info-hook))
+      (else (##sys#read-error port "invalid numeric vector syntax" c)))))
 
 
 ;;; Table for specially-handled read-syntax:
@@ -4641,15 +4630,8 @@ EOF
 		   (outchr port #\space)
 		   (out (##sys#slot x 0)) ) )
 		((##core#inline "C_bytevectorp" x)
-		 (outstr port "#${")
-		 (let ((len (##sys#size x)))
-		   (do ((i 0 (fx+ i 1)))
-		       ((fx>= i len))
-		     (let ((b (##sys#byte x i)))
-		       (when (fx< b 16)
-			 (outchr port #\0))
-		       (outstr port (##sys#number->string b 16)))))
-		 (outchr port #\}) )
+		 (outstr port "#u8")
+                 (out (##bytevector->list x)))
 		((##core#inline "C_structurep" x) (##sys#user-print-hook x readable port))
 		((##core#inline "C_closurep" x) (outstr port (##sys#procedure->string x)))
 		((##core#inline "C_locativep" x) (outstr port "#<locative>"))
