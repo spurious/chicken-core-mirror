@@ -1344,12 +1344,12 @@ EOF
 (set! scheme#string->list
   (lambda (s)
     (##sys#check-string s 'string->list)
-    (let ((len (##sys#size s)))
+    (let ((len (string-length s)))
       (let loop ((i (fx- len 1)) (ls '()))
 	(if (fx< i 0)
 	    ls
 	    (loop (fx- i 1)
-		  (cons (##core#inline "C_subchar" s i) ls)) ) ) )))
+		  (cons (string-ref s i) ls)) ) ) )))
 
 (define ##sys#string->list string->list)
 
@@ -1364,7 +1364,7 @@ EOF
 	      ((fx>= i len) s)
 	    (let ([c (##sys#slot lst 0)])
 	      (##sys#check-char c 'list->string)
-	      (##core#inline "C_setsubchar" s i c) ) ) ) )))
+	      (string-set! s i c) ) ) ) )))
 
 (define ##sys#list->string list->string)
 
@@ -1378,7 +1378,7 @@ EOF
 	  (cond ((fx>= n2 0)
 		 (let ((c (##sys#slot l2 0)))
 		   (##sys#check-char c 'reverse-list->string)
-		   (##core#inline "C_setsubchar" s n2 c) )
+		   (string-set! s n2 c) )
 		 (iter (##sys#slot l2 1) (fx- n2 1)) ) ) )
 	s )
       (##sys#error-not-a-proper-list l 'reverse-list->string) ) )
@@ -1387,16 +1387,37 @@ EOF
   (lambda (s c)
     (##sys#check-string s 'string-fill!)
     (##sys#check-char c 'string-fill!)
-    (##core#inline "C_set_memory" s c (##sys#size s))
-    (##core#undefined) ))
+    (let* ((bv (##sys#slot s 0))
+           (len (##sys#size bv))
+           (code (char->integer c)))
+      (if (and (eq? (fx- len 1) (##sys#slot s 1))
+               (fx< code 128))
+          (##core#inline "C_fill_bytevector" bv code (fx- len 1))
+          (let* ((count (##core#inline "C_utf_bytes" c))
+                 (slen (string-length s))
+                 (n (fx* count slen))
+                 (bv2 (##sys#allocate-bytevector (fx+ n 1) #f)))
+            (##core#inline "C_utf_fill" bv2 c)
+            (##sys#setslot s 0 bv2)
+            (##sys#setslot s 2 0)
+            (##sys#setslot s 3 0)
+            (##core#undefined))))))
 
 (set! scheme#string-copy
   (lambda (s)
     (##sys#check-string s 'string-copy)
-    (let* ([len (##sys#size s)]
-	   [s2 (##sys#make-string len)] )
-      (##core#inline "C_copy_memory" s2 s len)
+    (let* ((len (string-length s))
+	   (s2 (##sys#make-string len)) )
+      (##core#inline "C_copy_memory" (##sys#slot s2 0) (##sys#slot s 0)
+                     (##sys#size (##sys#slot s 0)))
       s2) ) )
+
+(define (##sys#substring s start end)
+  (let* ((n (##core#inline "C_utf_range" s start end))
+         (bv (##sys#make-bytevector (fx+ n 1)))
+         (str (##core#inline_allocate ("C_a_ustring" 5) bv (fx- end start))))
+    (##core#inline "C_utf_copy" s str start end 0)
+    str ) )
 
 (set! scheme#substring
   (lambda (s start . end)
@@ -1406,8 +1427,8 @@ EOF
 		   (let ((end (car end)))
 		     (##sys#check-fixnum end 'substring)
 		     end)
-		   (##sys#size s) ) ) )
-      (let ((len (##sys#size s)))
+		   (string-length s) ) ) )
+      (let ((len (string-length s)))
 	(if (and (fx<= start end)
 		 (fx>= start 0)
 		 (fx<= end len) )
@@ -1416,21 +1437,16 @@ EOF
 	     (foreign-value "C_OUT_OF_RANGE_ERROR" int)
 	     'substring start end) ) ) )))
 
-(define (##sys#substring s start end)
-  (let ([s2 (##sys#make-string (fx- end start))])
-    (##core#inline "C_substring_copy" s s2 start end 0)
-    s2 ) )
-
 (letrec ((compare
 	  (lambda (s1 s2 loc k)
 	    (##sys#check-string s1 loc)
 	    (##sys#check-string s2 loc)
-	    (let ((len1 (##core#inline "C_block_size" s1))
-		  (len2 (##core#inline "C_block_size" s2)) )
+	    (let ((len1 (string-length s1))
+		  (len2 (string-length s2)) )
 	      (k len1 len2
-		 (##core#inline "C_string_compare"
+		 (##core#inline "C_u_i_substring_equal_p"
 			    s1
-			    s2
+			    s2 0 0
 			    (if (fx< len1 len2)
 				len1
 				len2) ) ) ) ) ) )
@@ -1467,12 +1483,12 @@ EOF
 	  (lambda (s1 s2 loc k)
 	    (##sys#check-string s1 loc)
 	    (##sys#check-string s2 loc)
-	    (let ((len1 (##core#inline "C_block_size" s1))
-		  (len2 (##core#inline "C_block_size" s2)) )
+	    (let ((len1 (string-length s1))
+		  (len2 (string-length s2)) )
 	      (k len1 len2
-		 (##core#inline "C_string_compare_case_insensitive"
+		 (##core#inline "C_u_i_substring_ci_equal_p"
 				s1
-				s2
+				s2 0 0
 				(if (fx< len1 len2)
 				    len1
 				    len2) ) ) ) ) ) )
@@ -2443,7 +2459,7 @@ EOF
     ;; is not mandated by the standard, but compatible with earlier
     ;; CHICKENs and it just makes more sense.
     (##core#inline_allocate ("C_a_i_flonum_quotient" 4) 0.0 0.0))
-  (let* ((len (##sys#size str))
+  (let* ((len (string-length str))
          (0..r (integer->char (fx+ (char->integer #\0) (fx- radix 1))))
          (a..r (integer->char (fx+ (char->integer #\a) (fx- radix 11))))
          (A..r (integer->char (fx+ (char->integer #\A) (fx- radix 11))))
@@ -2458,7 +2474,7 @@ EOF
             (let lp ((i start))
               (if (fx= i len)
                   (and (fx> i start) (cons i #f))
-                  (let ((c (%subchar str i)))
+                  (let ((c (string-ref str i)))
                     (if (fx<= radix 10)
                         (if (and (char>=? c #\0) (char<=? c 0..r))
                             (lp (fx+ i 1))
@@ -2473,7 +2489,7 @@ EOF
             (let lp ((i start))
               (if (fx= i len)
                   (and (fx> i start) (cons i #f))
-                  (let ((c (%subchar str i)))
+                  (let ((c (string-ref str i)))
                     (if (eq? c #\#)
                         (lp (fx+ i 1))
                         (and (fx> i start) (cons i i))))))))
@@ -2495,7 +2511,7 @@ EOF
          (scan-exponent
           (lambda (start)
             (and (fx< start len)
-                 (let ((sign (case (%subchar str start)
+                 (let ((sign (case (string-ref str start)
                                ((#\+) 'pos) ((#\-) 'neg) (else #f))))
                    (and-let* ((start (if sign (fx+ start 1) start))
                               (end (scan-digits start)))
@@ -2510,7 +2526,7 @@ EOF
                         (next (if tail (cdr tail) start)))
                    (and (or decimal-head (not next)
                             (fx> next start)) ; Don't allow empty "."
-                        (case (and next (%subchar str next))
+                        (case (and next (string-ref str next))
                           ((#\e #\s #\f #\d #\l
                             #\E #\S #\F #\D #\L)
                            (and-let* (((fx> len next))
@@ -2530,12 +2546,12 @@ EOF
          (scan-ureal
           (lambda (start neg?)
             (if (and (fx> len (fx+ start 1)) (eq? radix 10)
-                     (eq? (%subchar str start) #\.))
+                     (eq? (string-ref str start) #\.))
                 (begin
                   (go-inexact! neg?)
                   (scan-decimal-tail (fx+ start 1) neg? #f))
                 (and-let* ((end (scan-digits+hashes start neg? #f)))
-                  (case (and (cdr end) (%subchar str (cdr end)))
+                  (case (and (cdr end) (string-ref str (cdr end)))
                     ((#\.)
                      (go-inexact! neg?)
                      (and (eq? radix 10)
@@ -2570,11 +2586,11 @@ EOF
          (scan-real
           (lambda (start)
             (and (fx< start len)
-                 (let* ((sign (case (%subchar str start)
+                 (let* ((sign (case (string-ref str start)
                                 ((#\+) 'pos) ((#\-) 'neg) (else #f)))
                         (next (if sign (fx+ start 1) start)))
                    (and (fx< next len)
-                        (case (%subchar str next)
+                        (case (string-ref str next)
                           ((#\i #\I)
                            (or (and sign
                                     (cond
@@ -2599,19 +2615,19 @@ EOF
                                (scan-ureal next (eq? sign 'neg))))
                           (else (scan-ureal next (eq? sign 'neg)))))))))
          (number (and-let* ((r1 (scan-real offset)))
-                   (case (and (cdr r1) (%subchar str (cdr r1)))
+                   (case (and (cdr r1) (string-ref str (cdr r1)))
                      ((#f) (car r1))
                      ((#\i #\I) (and (fx= len (fx+ (cdr r1) 1))
-                                     (or (eq? (%subchar str offset) #\+) ; ugh
-                                         (eq? (%subchar str offset) #\-))
+                                     (or (eq? (string-ref str offset) #\+) ; ugh
+                                         (eq? (string-ref str offset) #\-))
                                      (make-rectangular 0 (car r1))))
                      ((#\+ #\-)
                       (set! seen-hashes? #f) ; Reset flag for imaginary part
                       (and-let* ((r2 (scan-real (cdr r1)))
                                  ((cdr r2))
                                  ((fx= len (fx+ (cdr r2) 1)))
-                                 ((or (eq? (%subchar str (cdr r2)) #\i)
-                                      (eq? (%subchar str (cdr r2)) #\I))))
+                                 ((or (eq? (string-ref str (cdr r2)) #\i)
+                                      (eq? (string-ref str (cdr r2)) #\I))))
                         (make-rectangular (car r1) (car r2))))
                      ((#\@)
                       (set! seen-hashes? #f) ; Reset flag for angle
@@ -2636,9 +2652,9 @@ EOF
     (let scan-prefix ((i 0)
 		      (exness #f)
 		      (radix #f)
-		      (len (##sys#size str)))
-      (if (and (fx< (fx+ i 2) len) (eq? (%subchar str i) #\#))
-	  (case (%subchar str (fx+ i 1))
+		      (len (string-length str)))
+      (if (and (fx< (fx+ i 2) len) (eq? (string-ref str i) #\#))
+	  (case (string-ref str (fx+ i 1))
 	    ((#\i #\I) (and (not exness) (scan-prefix (fx+ i 2) 'i radix len)))
 	    ((#\e #\E) (and (not exness) (scan-prefix (fx+ i 2) 'e radix len)))
 	    ((#\b #\B) (and (not radix) (scan-prefix (fx+ i 2) exness 2 len)))
@@ -3799,11 +3815,11 @@ EOF
 
 	  (define (r-cons-codepoint cp lst)
 	    (let* ((s (##sys#char->utf8-string (integer->char cp)))
-		   (len (##sys#size s)))
+		   (len (string-length s)))
 	      (let lp ((i 0) (lst lst))
 		(if (fx>= i len)
 		  lst
-		  (lp (fx+ i 1) (cons (##core#inline "C_subchar" s i) lst))))))
+		  (lp (fx+ i 1) (cons (string-ref s i) lst))))))
 
 	  (define (r-string term)
 	    (let loop ((c (##sys#read-char-0 port)) (lst '()))
@@ -3978,7 +3994,7 @@ EOF
 			(info 'symbol-info s (##sys#port-line port)) ))
 		     ((string=? tok ".")
 		      (##sys#read-error port "invalid use of `.'"))
-		     ((and (fx> (##sys#size tok) 0) (char=? (string-ref tok 0) #\#))
+		     ((and (fx> (string-length tok) 0) (char=? (string-ref tok 0) #\#))
 		      (##sys#read-error port "unexpected prefix in number syntax" tok))
 		     ((##sys#string->number tok (or radix 10) exactness))
 		     (radix (##sys#read-error port "illegal number syntax" tok))
@@ -4091,12 +4107,12 @@ EOF
 	    ;; Code contributed by Alex Shinn
 	    (let* ([c (##sys#peek-char-0 port)]
 		   [tk (r-token)]
-		   [len (##sys#size tk)])
+		   [len (string-length tk)])
 	      (cond [(fx> len 1)
 		     (cond [(and (or (char=? #\x c) (char=? #\u c) (char=? #\U c))
 				 (##sys#string->number (##sys#substring tk 1 len) 16) )
 			    => (lambda (n) (integer->char n)) ]
-			   [(and-let* ((c0 (char->integer (##core#inline "C_subchar" tk 0)))
+			   [(and-let* ((c0 (char->integer (string-ref tk 0)))
 				       ((fx<= #xC0 c0)) ((fx<= c0 #xF7))
 				       (n0 (fxand (fxshr c0 4) 3))
 				       (n (fx+ 2 (fxand (fxior n0 (fxshr n0 1)) (fx- n0 1))))
@@ -4104,21 +4120,21 @@ EOF
 				       (res (fx+ (fxshl (fxand c0 (fx- (fxshl 1 (fx- 8 n)) 1))
 							6)
 						 (fxand (char->integer 
-							 (##core#inline "C_subchar" tk 1)) 
+							 (string-ref tk 1)) 
 							#b111111))))
 			      (cond ((fx>= n 3)
 				     (set! res (fx+ (fxshl res 6)
 						    (fxand 
 						     (char->integer
-						      (##core#inline "C_subchar" tk 2)) 
+						      (string-ref tk 2)) 
 						     #b111111)))
 				     (if (fx= n 4)
 					 (set! res (fx+ (fxshl res 6)
 							(fxand (char->integer
-								(##core#inline "C_subchar" tk 3)) 
+								(string-ref tk 3)) 
 							       #b111111))))))
 			      (integer->char res))]
-			   [(char-name (##sys#intern-symbol tk))]
+			   [(char-name (##sys#string-symbol tk))]
 			   [else (##sys#read-error port "unknown named character" tk)] ) ]
 		    [(memq c terminating-characters) (##sys#read-char-0 port)]
 		    [else c] ) ) )
@@ -6043,7 +6059,7 @@ static C_word C_fcall C_setenv(C_word x, C_word y) {
 	       '()
 	       (let ([arg (##sys#slot args 0)]
 		     [r (##sys#slot args 1)] )
-		 (if (and (fx>= (##sys#size arg) 3)
+		 (if (and (fx>= (string-length arg) 3)
 			  (string=? "-:" (##sys#substring arg 0 2)))
 		     (loop r)
 		     (cons arg (loop r)) ) ) ) )
@@ -6470,7 +6486,7 @@ static C_word C_fcall C_setenv(C_word x, C_word y) {
 	 (if ##sys#build-id (string-append " (rev " ##sys#build-id ")") "")
 	 "\n"
 	 (get-config)
-	 (if (zero? (##sys#size spec))
+	 (if (zero? (string-length spec))
 	     ""
 	     (string-append " [" spec " ]"))))
       ##sys#build-version))

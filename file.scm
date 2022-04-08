@@ -186,7 +186,7 @@ EOF
 (define create-directory
   (lambda (name #!optional recursive)
     (##sys#check-string name 'create-directory)
-    (unless (or (fx= 0 (##sys#size name))
+    (unless (or (fx= 0 (string-length name))
                 (file-exists? name))
       (if recursive
 	  (let loop ((dir (let-values (((dir file ext) (decompose-pathname name)))

@@ -153,7 +153,7 @@ EOF
 (define chop-separator 
   (let ([substring substring] )
     (lambda (str)
-      (let* ((len (sub1 (##sys#size str)))
+      (let* ((len (sub1 (string-length str)))
 	     (c (string-ref str len)))
 	(if (and (fx> len 0) (dirseparator? c))
 	    (substring str 0 len)
@@ -171,14 +171,14 @@ EOF
 	  (let ([n2 (string-append name ".bat")])
 	    (and (file-exists? n2) n2) ) ) )
     (define (string-index proc str1)
-      (let ((len (##sys#size str1)))
+      (let ((len (string-length str1)))
 	(let loop ((i 0))
 	  (cond ((fx>= i len) #f)
-		((proc (##core#inline "C_subchar" str1 i)) i)
+		((proc (string-ref str1 i)) i)
 		(else (loop (fx+ i 1))) ) ) ) )
     (lambda (name)
       (let ([path (get-environment-variable "PATH")])
-	(and (> (##sys#size name) 0)
+	(and (> (string-length name) 0)
 	     (cond [(dirseparator? (string-ref name 0)) (addext name)]
 		   [(string-index dirseparator? name)
 		    (let ((p (_getcwd buf 256)))
@@ -612,7 +612,7 @@ EOF
 	    ((cplxnum? x) (fprintf out "~A complex number ~S~%"
 			    (if (exact? x) "exact" "inexact") x))
 	    ((number? x) (fprintf out "number ~S~%" x))
-	    ((string? x) (descseq "string" ##sys#size string-ref 0))
+	    ((string? x) (descseq "string" string-length string-ref 0))
 	    ((vector? x) (descseq "vector" ##sys#size ##sys#slot 0))
 	    ((keyword? x)
 	     (fprintf out "keyword symbol with name ~s~%" 
@@ -740,7 +740,7 @@ EOF
       (define (bestlen n) (if len (min len n) n))
       (cond [(##sys#immediate? x) (##sys#error 'dump "cannot dump immediate object" x)]
 	    [(##sys#bytevector? x) (hexdump x (bestlen (##sys#size x)) ##sys#byte out)]
-	    [(string? x) (hexdump x (bestlen (##sys#size x)) ##sys#byte out)]
+	    [(string? x) (hexdump x (bestlen (string-length x)) ##sys#byte out)]
 	    [(and (not (##sys#immediate? x)) (##sys#pointer? x))
 	     (hexdump x 32 ##sys#peek-byte out) ]
 	    [(and (##sys#generic-structure? x) (assq (##sys#slot x 0) bytevector-data))
@@ -757,7 +757,7 @@ EOF
 
       (define (justify n m base lead)
 	(let* ([s (number->string n base)]
-	       [len (##sys#size s)] )
+	       [len (string-length s)] )
 	  (if (fx< len m)
 	      (string-append (make-string (fx- m len) lead) s)
 	      s) ) )
@@ -941,15 +941,15 @@ EOF
 	'()
 	(let ((x (car args)))
 	  (cond ((member x '("-s" "-ss" "-script" "-sx" "--")) args)
-                ((and (fx= (##sys#size x) 2)
-                      (char=? #\- (##core#inline "C_subchar" x 0)))
-                 (if (memq (##core#inline "C_subchar" x 1) short-options)
+                ((and (fx= (string-length x) 2)
+                      (char=? #\- (string-ref x 0)))
+                 (if (memq (string-ref x 1) short-options)
                      (cons x (loop (cdr args)))
                      (##sys#error "invalid option" x)))
-                ((and (fx> (##sys#size x) 2)
-                       (char=? #\- (##core#inline "C_subchar" x 0))
+                ((and (fx> (string-length x) 2)
+                       (char=? #\- (string-ref x 0))
                        (not (member x long-options)) )
-                 (if (char=? #\: (##core#inline "C_subchar" x 1))
+                 (if (char=? #\: (string-ref x 1))
                      (loop (cdr args))
                      (let ((cs (string->list (substring x 1))))
                        (if (findall cs short-options)
