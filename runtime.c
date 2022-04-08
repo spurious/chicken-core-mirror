@@ -2714,12 +2714,6 @@ void C_stack_overflow(C_char *loc)
 }
 
 
-void C_unbound_error(C_word sym)
-{
-  barf(C_UNBOUND_VARIABLE_ERROR, NULL, sym);
-}
-
-
 void C_no_closure_error(C_word x)
 {
   barf(C_NOT_A_CLOSURE_ERROR, NULL, x);
@@ -4263,6 +4257,13 @@ void
 C_unbound_variable(C_word sym)
 {
   barf(C_UNBOUND_VARIABLE_ERROR, NULL, sym);
+}
+
+
+void 
+C_decoding_error(C_word str, C_word index)
+{
+  barf(C_DECODING_ERROR, NULL, str, index);
 }
 
 
@@ -12516,12 +12517,22 @@ static C_regparm C_word C_fcall decode_literal2(C_word **ptr, C_char **str,
       val |= ((C_uword)*((*str)++) & 0xff);
       return C_fix(val); 
 
+/* XXX Handle legacy bignum encoding */
 #ifdef C_SIXTY_FOUR
     case ((C_STRING_TYPE | C_GC_FORWARDING_BIT) >> (24 + 32)) & 0xff:
 #else
     case ((C_STRING_TYPE | C_GC_FORWARDING_BIT) >> 24) & 0xff:
 #endif
       bits = (C_STRING_TYPE | C_GC_FORWARDING_BIT);
+      break;
+/* XXX */
+
+#ifdef C_SIXTY_FOUR
+    case ((C_BYTEVECTOR_TYPE | C_GC_FORWARDING_BIT) >> (24 + 32)) & 0xff:
+#else
+    case ((C_BYTEVECTOR_TYPE | C_GC_FORWARDING_BIT) >> 24) & 0xff:
+#endif
+      bits = (C_BYTEVECTOR_TYPE | C_GC_FORWARDING_BIT);
       break;
 
     default: 

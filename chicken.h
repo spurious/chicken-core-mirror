@@ -660,6 +660,7 @@ void *alloca ();
 #define C_BAD_ARGUMENT_TYPE_FOREIGN_LIMITATION        54
 #define C_BAD_ARGUMENT_TYPE_COMPLEX_ABS               55
 #define C_REST_ARG_OUT_OF_BOUNDS_ERROR                56
+#define C_DECODING_ERROR                              57
 
 /* Platform information */
 #if defined(C_BIG_ENDIAN)
