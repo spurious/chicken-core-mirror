@@ -115,22 +115,11 @@
 			      (##sys#slot ,%cache ,(add1 (* i 2)))
 			      ,(fold (add1 i))))))))))
 
-(declare (unused %%string-copy!))
-(define-compiler-syntax %%string-copy!
-  (syntax-rules ()
-    ((_ to tstart from fstart fend)
-     (let ((x to)
-	   (y tstart)
-	   (z from)
-	   (u fstart)
-	   (v fend))
-       (##core#inline "C_substring_copy" z x u v y)))))
-
 (declare (unused %substring=?))
 (define-compiler-syntax %substring=?
   (syntax-rules ()
     ((_ a b start1 start2 len)
-     (##core#inline "C_substring_compare" a b start1 start2 len))))
+     (##core#inline "C_u_i_substring_equal_p" a b start1 start2 len))))
 
 (define-compiler-syntax make-irregex 
   (syntax-rules ()
