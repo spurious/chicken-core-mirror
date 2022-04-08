@@ -4270,22 +4270,13 @@ EOF
 				    ((#\`)
 				     (##sys#read-char-0 port)
 				     (r-quote 'quasisyntax))
-				    ((#\$)
-				     (##sys#read-char-0 port)
-				     (let ((c (##sys#peek-char-0 port)))
-				       (cond ((char=? c #\{)
-					      (##sys#read-char-0 port)
-					      (##sys#read-bytevector-literal port))
-					     (else
-					      ;; HACK: reuse r-quote to add line number info
-					      (r-quote 'location)))))
 				    ((#\:)
 				     (##sys#read-char-0 port)
 				     (let ((c (##sys#peek-char-0 port)))
 				       (fluid-let ((ksp #f))
 					 (r-xtoken
 					  (lambda (str kw)
-					    (if (and (eq? 0 (##sys#size str))
+					    (if (and (eq? 0 (string-length str))
 						     (not (char=? c #\|)))
 						(##sys#read-error port "empty keyword")
 						(build-keyword str)))))))
