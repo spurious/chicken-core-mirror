@@ -1063,8 +1063,7 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_make_character(c)        (((((C_uword)(c)) & C_CHAR_BIT_MASK) << C_CHAR_SHIFT) | C_CHARACTER_BITS)
 #define C_character_code(x)        C_CHECKp(x,C_charp(C_VAL1(x)),((C_word)(C_VAL1(x)) >> C_CHAR_SHIFT) & C_CHAR_BIT_MASK)
 #define C_flonum_magnitude(x)      (*C_CHECKp(x,C_flonump(C_VAL1(x)),(double *)C_data_pointer(C_VAL1(x))))
-/* XXX Sometimes this is (ab)used on bytevectors (ie, blob=? uses string_compare) */
-#define C_c_string(x)              C_CHECK(x,(C_truep(C_stringp(C_VAL1(x))) || C_truep(C_bytevectorp(C_VAL1(x)))),(C_char *)C_data_pointer(C_VAL1(x)))
+#define C_c_string(x)              C_CHECK(x,(C_truep(C_bytevectorp(C_VAL1(x)))),(C_char *)C_data_pointer(C_VAL1(x)))
 
 #define C_c_pointer(x)             ((void *)(x))
 #define C_c_pointer_nn(x)          ((void *)C_block_item(x, 0))
@@ -1184,10 +1183,7 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 
 #define C_slot(x, i)              C_block_item(x, C_unfix(i))
 #define C_subbyte(x, i)           C_fix(((C_byte *)C_data_pointer(x))[ C_unfix(i) ] & 0xff)
-#define C_subchar(x, i)           C_make_character(((C_uchar *)C_data_pointer(x))[ C_unfix(i) ])
-#define C_setbyte(x, i, n)        (((C_byte *)C_data_pointer(x))[ C_unfix(i) ] = C_unfix(n), C_SCHEME_UNDEFINED)
-#define C_setsubchar(x, i, n)     (((C_char *)C_data_pointer(x))[ C_unfix(i) ] = C_character_code(n), C_SCHEME_UNDEFINED)
-#define C_setsubbyte(x, i, n)     (((C_char *)C_data_pointer(x))[ C_unfix(i) ] = C_unfix(n), C_SCHEME_UNDEFINED)
+#define C_setsubbyte(x, i, n)     ((((C_byte *)C_data_pointer(x))[ C_unfix(i) ] = C_unfix(n) & 0xff), C_SCHEME_UNDEFINED)
 
 #define C_fixnum_times(n1, n2)          (C_fix(C_unfix(n1) * C_unfix(n2)))
 #define C_u_fixnum_plus(n1, n2)         (((n1) - C_FIXNUM_BIT) + (n2))
@@ -1248,19 +1244,19 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_u_i_char_lessp(x, y)          C_mk_bool(C_character_code(x) < C_character_code(y))
 #define C_u_i_char_greater_or_equal_p(x, y) C_mk_bool(C_character_code(x) >= C_character_code(y))
 #define C_u_i_char_less_or_equal_p(x, y) C_mk_bool(C_character_code(x) <= C_character_code(y))
-#define C_substring_copy(s1, s2, start1, end1, start2) \
-                                        (C_memmove((C_char *)C_data_pointer(s2) + C_unfix(start2), \
-                                                   (C_char *)C_data_pointer(s1) + C_unfix(start1), \
-                                                   C_unfix(end1) - C_unfix(start1) ), C_SCHEME_UNDEFINED)
-#define C_substring_compare(s1, s2, start1, start2, len) \
-                                        C_mk_bool(C_memcmp((C_char *)C_data_pointer(s1) + C_unfix(start1), \
-                                                           (C_char *)C_data_pointer(s2) + C_unfix(start2), \
-                                                           C_unfix(len) ) == 0)
-#define C_substring_compare_case_insensitive(s1, s2, start1, start2, len) \
-                                        C_mk_bool(C_memcasecmp((C_char *)C_data_pointer(s1) + C_unfix(start1), \
-                                                                (C_char *)C_data_pointer(s2) + C_unfix(start2), \
-                                                                C_unfix(len) ) == 0)
+
+#define C_bv_compare(x, y, n)           C_mk_bool(C_memcmp(C_data_pointer(x), C_data_pointer(y), C_unfix(n)) == 0)
+#define C_u_i_string_equal_p(x, y)        C_utf_equal(x, y)
+#define C_u_i_string_ci_equal_p(x, y)     C_utf_equal_ci(x, y)
+
+#define C_u_i_substring_equal_p(x, y, s1, s2, len) \
+                                        C_mk_bool(C_utf_compare(x, y, s1, s2, len) == C_fix(0))
+#define C_u_i_substring_ci_equal_p(x, y, s1, s2, len) \
+                                        C_mk_bool(C_utf_compare_ci(x, y, s1, s2, len) == C_fix(0))
+
 /* this does not use C_mutate: */
+#define C_copy_bytevector(b1, b2, len)  (C_memcpy(C_data_pointer(b2), C_data_pointer(b1), C_unfix(len)), (b2))
+#define C_fill_bytevector(bv, code, len) (C_memset(C_data_pointer(bv), C_unfix(code), C_unfix(len)), C_SCHEME_UNDEFINED)
 #define C_subvector_copy(v1, v2, start1, end1, start2) \
                                         (C_memcpy_slots((C_char *)C_data_pointer(v2) + C_unfix(start2), \
                                                   (C_char *)C_data_pointer(v1) + C_unfix(start1), \
@@ -1298,13 +1294,11 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #endif
 
 #define C_copy_memory(to, from, n)      (C_memcpy(C_data_pointer(to), C_data_pointer(from), C_unfix(n)), C_SCHEME_UNDEFINED)
+#define C_copy_memory_with_offset(to, from, start1, start2, n) \
+                                       (C_memcpy(C_data_pointer(to) + C_unfix(start1), C_data_pointer(from) + C_unfix(start2), C_unfix(n)), C_SCHEME_UNDEFINED)
 #define C_copy_ptr_memory(to, from, n, toff, foff) \
   (C_memmove(C_pointer_address(to) + C_unfix(toff), C_pointer_address(from) + C_unfix(foff), \
 	     C_unfix(n)), C_SCHEME_UNDEFINED)
-#define C_set_memory(to, c, n)          (C_memset(C_data_pointer(to), C_character_code(c), C_unfix(n)), C_SCHEME_UNDEFINED)
-#define C_string_compare(to, from, n)   C_fix(C_memcmp(C_c_string(to), C_c_string(from), C_unfix(n)))
-#define C_string_compare_case_insensitive(from, to, n) \
-                                        C_fix(C_memcasecmp(C_c_string(from), C_c_string(to), C_unfix(n)))
 #define C_poke_double(b, i, n)          (((double *)C_data_pointer(b))[ C_unfix(i) ] = C_c_double(n), C_SCHEME_UNDEFINED)
 #define C_poke_c_string(b, i, from, s)  (C_strlcpy((char *)C_block_item(b, C_unfix(i)), C_data_pointer(from), s), C_SCHEME_UNDEFINED)
 #define C_peek_fixnum(b, i)             C_fix(C_block_item(b, C_unfix(i)))
@@ -1322,8 +1316,7 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 /* These expect C_VECTOR_TYPE to be 0: */
 #define C_vector_to_structure(v)        (C_block_header(v) |= C_STRUCTURE_TYPE, C_SCHEME_UNDEFINED)
 #define C_vector_to_closure(v)          (C_block_header(v) |= C_CLOSURE_TYPE, C_SCHEME_UNDEFINED)
-#define C_string_to_bytevector(s)       (C_block_header(s) = C_header_size(s) | C_BYTEVECTOR_TYPE, C_SCHEME_UNDEFINED)
-#define C_string_to_lambdainfo(s)       (C_block_header(s) = C_header_size(s) | C_LAMBDA_INFO_TYPE, C_SCHEME_UNDEFINED)
+#define C_bytevector_to_lambdainfo(s)       (C_block_header(s) = C_header_size(s) | C_LAMBDA_INFO_TYPE, C_SCHEME_UNDEFINED)
 
 #ifdef C_TIMER_INTERRUPTS
 # define C_check_for_interrupt         if(--C_timer_interrupt_counter <= 0) C_raise_interrupt(C_TIMER_INTERRUPT_NUMBER)
@@ -1377,8 +1370,10 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_u_i_char_upper_casep(x)       C_mk_bool(C_character_code(x) < 0x100 && C_isupper(C_character_code(x)))
 #define C_u_i_char_lower_casep(x)       C_mk_bool(C_character_code(x) < 0x100 && C_islower(C_character_code(x)))
 
-#define C_u_i_char_upcase(x)            (C_character_code(x) < 0x100 ? C_make_character(C_toupper(C_character_code(x))) : (x))
-#define C_u_i_char_downcase(x)          (C_character_code(x) < 0x100 ? C_make_character(C_tolower(C_character_code(x))) : (x))
+#define C_u_i_char_upcase(x)            C_utf_char_upcase(x)
+#define C_u_i_char_downcase(x)          C_utf_char_downcase(x)
+#define C_utf_length(bv)                C_fix(C_utf_count((C_char *)C_data_pointer(bv), C_header_size(bv) - 1))
+#define C_utf_range_length(bv, from, to)    C_fix(C_utf_count((C_char *)C_data_pointer(bv) + C_unfix(from), C_unfix(to) - C_unfix(from)))
 
 #define C_i_list_ref(lst, i)            C_i_car(C_i_list_tail(lst, i))
 #define C_u_i_list_ref(lst, i)          C_u_i_car(C_i_list_tail(lst, i))
@@ -1438,12 +1433,12 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_i_check_char(x)               C_i_check_char_2(x, C_SCHEME_FALSE)
 #define C_i_check_port(x, in, op)       C_i_check_port_2(x, in, op, C_SCHEME_FALSE)
 
-#define C_u_i_8vector_length(x)         C_fix(C_header_size(C_block_item(x, 1)))
+#define C_u_i_string_length(x)          C_block_item((x), 1)
+
 #define C_u_i_16vector_length(x)        C_fix(C_header_size(C_block_item(x, 1)) >> 1)
 #define C_u_i_32vector_length(x)        C_fix(C_header_size(C_block_item(x, 1)) >> 2)
 #define C_u_i_64vector_length(x)        C_fix(C_header_size(C_block_item(x, 1)) >> 3)
-#define C_u_i_u8vector_length           C_u_i_8vector_length
-#define C_u_i_s8vector_length           C_u_i_8vector_length
+#define C_u_i_s8vector_length(x)        C_fix(C_header_size(C_block_item(x, 1)))
 #define C_u_i_u16vector_length          C_u_i_16vector_length
 #define C_u_i_s16vector_length          C_u_i_16vector_length
 #define C_u_i_u32vector_length          C_u_i_32vector_length
@@ -1797,7 +1792,6 @@ C_fctexport C_word C_fcall C_static_bytevector(C_word **ptr, int len, C_char *st
 C_fctexport C_word C_fcall C_static_lambda_info(C_word **ptr, int len, C_char *str) C_regparm;
 C_fctexport C_word C_fcall C_bytevector(C_word **ptr, int len, C_char *str) C_regparm;
 C_fctexport C_word C_fcall C_pbytevector(int len, C_char *str) C_regparm;
-C_fctexport C_word C_fcall C_string_aligned8(C_word **ptr, int len, C_char *str) C_regparm;
 C_fctexport C_word C_fcall C_string2(C_word **ptr, C_char *str) C_regparm;
 C_fctexport C_word C_fcall C_string2_safe(C_word **ptr, int max, C_char *str) C_regparm;
 C_fctexport C_word C_fcall C_intern(C_word **ptr, int len, C_char *str) C_regparm;
@@ -2205,8 +2199,6 @@ C_fctexport  int  CHICKEN_yield();
 C_fctexport C_cpsproc(C_default_5fstub_toplevel);
 
 
-/* Inline functions: */
-
 #ifndef HAVE_STATEMENT_EXPRESSIONS
 
 inline static C_word *C_a_i(C_word **a, int n)
@@ -2432,7 +2424,7 @@ inline static C_word C_bignum0(C_word **ptr)
 {
   C_word *p = *ptr, p0 = (C_word)p;
 
-  *(p++) = C_STRING_TYPE | C_wordstobytes(1);
+  *(p++) = C_BYTEVECTOR_TYPE | C_wordstobytes(1);
   *(p++) = 0; /* zero is always positive */
   *ptr = p;
 
@@ -2443,7 +2435,7 @@ inline static C_word C_bignum1(C_word **ptr, int negp, C_uword d1)
 {
   C_word *p = *ptr, p0 = (C_word)p;
 
-  *(p++) = C_STRING_TYPE | C_wordstobytes(2);
+  *(p++) = C_BYTEVECTOR_TYPE | C_wordstobytes(2);
   *(p++) = negp;
   *(p++) = d1;
   *ptr = p;
@@ -2456,7 +2448,7 @@ inline static C_word C_bignum2(C_word **ptr, int negp, C_uword d1, C_uword d2)
 {
   C_word *p = *ptr, p0 = (C_word)p;
 
-  *(p++) = C_STRING_TYPE | C_wordstobytes(3);
+  *(p++) = C_BYTEVECTOR_TYPE | C_wordstobytes(3);
   *(p++) = negp;
   *(p++) = d1;
   *(p++) = d2;
@@ -2654,26 +2646,6 @@ inline static C_ulong C_num_to_unsigned_long(C_word x)
   }
 }
 
-
-inline static C_word C_u_i_string_equal_p(C_word x, C_word y)
-{
-  C_uword n = C_header_size(x);
-  return C_mk_bool(n == C_header_size(y)
-         && !C_memcmp((char *)C_data_pointer(x), (char *)C_data_pointer(y), n));
-}
-
-/* Like memcmp but case insensitive (to strncasecmp as memcmp is to strncmp) */
-inline static int C_memcasecmp(const char *x, const char *y, unsigned int len)
-{
-  const unsigned char *ux = (const unsigned char *)x;
-  const unsigned char *uy = (const unsigned char *)y;
-
-  while (len--) {
-    if (tolower(*ux++) != tolower(*uy++))
-      return (tolower(*--ux) - tolower(*--uy));
-  }
-  return 0;
-}
 
 inline static C_word C_ub_i_flonum_eqvp(double x, double y)
 {
@@ -3358,6 +3330,20 @@ inline static C_word C_a_i_vector8(C_word **ptr, int n, C_word x1, C_word x2, C_
   *(p++) = x6;
   *(p++) = x7;
   *(p++) = x8;
+  *ptr = p;
+  return (C_word)p0;
+}
+
+
+inline static C_word C_fcall C_a_ustring(C_word **ptr, int n, C_word bv, C_word c)
+{
+  C_word *p = *ptr, *p0 = p;
+ 
+  *(p++) = C_STRING_TAG;
+  *(p++) = bv;
+  *(p++) = c;
+  *(p++) = C_fix(0);
+  *(p++) = C_fix(0);
   *ptr = p;
   return (C_word)p0;
 }
