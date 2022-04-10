@@ -2,6 +2,9 @@
 
 - Core libraries
   - Added "locative-index", kindly contributed by John Croisant.
+  - Added "fp*+" (fused multiply-add) to "chicken.flonum" module
+    (suggested by Christian Himpe).
+
 
 - Build system
   - Default "cc" on BSD systems for building CHICKEN to avoid ABI problems

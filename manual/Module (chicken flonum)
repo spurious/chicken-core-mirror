@@ -20,6 +20,7 @@ your code.
 <procedure>(fp- X Y)</procedure>
 <procedure>(fp* X Y)</procedure>
 <procedure>(fp/ X Y)</procedure>
+<procedure>(fp*+ X Y Z)</procedure>
 <procedure>(fpgcd X Y)</procedure>
 <procedure>(fpneg X)</procedure>
 <procedure>(fpmin X Y)</procedure>
@@ -52,7 +53,7 @@ Arithmetic floating-point operations.
 In safe mode, these procedures throw a type error when given non-float
 arguments. In unsafe mode, these procedures do not check their
 arguments. A non-flonum argument in unsafe mode can crash the
-application.
+application. {{fp*+}} implements fused multiply-add {{(X * Y) + Z}}.
 
 Note: {{fpround}} uses the rounding mode that your C library
 implements, which is usually different from R5RS.

@@ -304,6 +304,8 @@
 (assert (inexact= -42.0 (fpceiling -42.2)))
 (assert (not (fpinteger? 2.3)))
 (assert (fpinteger? 1.0))
+(assert (inexact= 7.0 (fp*+ 2.0 3.0 1.0)))
+(assert (inexact= 53.0 (fp*+ 10.0 5.0 3.0)))
 
 ;; string->symbol
 

@@ -1194,6 +1194,9 @@
 (chicken.flonum#fp+ (#(procedure #:clean #:enforce #:foldable) chicken.flonum#fp+ (float float) float)
      ((float float) (##core#inline_allocate ("C_a_i_flonum_plus" 4) #(1) #(2)) ))
 
+(chicken.flonum#fp*+ (#(procedure #:clean #:enforce #:foldable) chicken.flonum#fp*+ (float float float) float)
+     ((float float float) (##core#inline_allocate ("C_a_i_flonum_multiply_add" 4) #(1) #(2) #(3)) ))
+
 (chicken.flonum#fp< (#(procedure #:clean #:enforce #:foldable) chicken.flonum#fp< (float float) boolean)
      ((float float) (##core#inline "C_flonum_lessp" #(1) #(2)) ))
 

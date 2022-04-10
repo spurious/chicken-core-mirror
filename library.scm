@@ -1590,6 +1590,12 @@ EOF
   (fp-check-flonums x y 'fp/)
   (##core#inline_allocate ("C_a_i_flonum_quotient" 4) x y) )
 
+(define (fp*+ x y z)
+  (unless (and (flonum? x) (flonum? y) (flonum? z))
+    (##sys#error-hook (foreign-value "C_BAD_ARGUMENT_TYPE_NO_FLONUM_ERROR" int)
+      'fp*+ x y z) )
+  (##core#inline_allocate ("C_a_i_flonum_multiply_add" 4) x y z) )
+
 (define (fpgcd x y)
   (fp-check-flonums x y 'fpgcd)
   (##core#inline_allocate ("C_a_i_flonum_gcd" 4) x y))

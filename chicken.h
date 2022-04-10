@@ -982,6 +982,7 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 # define C_access                   access
 # define C_getpid                   getpid
 # define C_getenv                   getenv
+# define C_fma                      fma
 #else
 /* provide this file and define C_PROVIDE_LIBC_STUBS if you want to use
    your own libc-replacements or -wrappers */
@@ -1204,6 +1205,7 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_a_i_flonum_plus(ptr, c, n1, n2) C_flonum(ptr, C_flonum_magnitude(n1) + C_flonum_magnitude(n2))
 #define C_a_i_flonum_difference(ptr, c, n1, n2) C_flonum(ptr, C_flonum_magnitude(n1) - C_flonum_magnitude(n2))
 #define C_a_i_flonum_times(ptr, c, n1, n2) C_flonum(ptr, C_flonum_magnitude(n1) * C_flonum_magnitude(n2))
+#define C_a_i_flonum_multiply_add(ptr, c, n1, n2, n3) C_flonum(ptr, fma(C_flonum_magnitude(n1), C_flonum_magnitude(n2), C_flonum_magnitude(n3)))
 #define C_a_i_flonum_quotient(ptr, c, n1, n2) C_flonum(ptr, C_flonum_magnitude(n1) / C_flonum_magnitude(n2))
 #define C_a_i_flonum_negate(ptr, c, n)  C_flonum(ptr, -C_flonum_magnitude(n))
 #define C_a_u_i_flonum_signum(ptr, n, x) (C_flonum_magnitude(x) == 0.0 ? (x) : ((C_flonum_magnitude(x) < 0.0) ? C_flonum(ptr, -1.0) : C_flonum(ptr, 1.0)))
@@ -1513,6 +1515,7 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_ub_i_flonum_difference(x, y)  ((x) - (y))
 #define C_ub_i_flonum_times(x, y)       ((x) * (y))
 #define C_ub_i_flonum_quotient(x, y)    ((x) / (y))
+#define C_ub_i_flonum_multiply_add(x, y, z)    C_fma((x), (y), (z))
 
 #define C_ub_i_flonum_equalp(n1, n2)    C_mk_bool((n1) == (n2))
 #define C_ub_i_flonum_greaterp(n1, n2)  C_mk_bool((n1) > (n2))

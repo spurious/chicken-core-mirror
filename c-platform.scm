@@ -149,7 +149,7 @@
 
 (define-constant +flonum-bindings+
   (map (lambda (x) (symbol-append 'chicken.flonum# x))
-       '(fp/? fp+ fp- fp* fp/ fp> fp< fp= fp>= fp<= fpmin fpmax fpneg fpgcd
+       '(fp/? fp+ fp- fp* fp/ fp> fp< fp= fp>= fp<= fpmin fpmax fpneg fpgcd fp*+
 	 fpfloor fpceiling fptruncate fpround fpsin fpcos fptan fpasin fpacos
 	 fpatan fpatan2 fpexp fpexpt fplog fpsqrt fpabs fpinteger?)))
 
@@ -653,6 +653,7 @@
 (rewrite 'chicken.flonum#fp/? 16 2 "C_a_i_flonum_quotient_checked" #f words-per-flonum)
 (rewrite 'chicken.flonum#fpneg 16 1 "C_a_i_flonum_negate" #f words-per-flonum)
 (rewrite 'chicken.flonum#fpgcd 16 2 "C_a_i_flonum_gcd" #f words-per-flonum)
+(rewrite 'chicken.flonum#fp*+ 16 3 "C_a_i_flonum_multiply_add" #f words-per-flonum)
 
 (rewrite 'scheme#zero? 5 "C_eqp" 0 'fixnum)
 (rewrite 'scheme#zero? 2 1 "C_u_i_zerop2" #f)
