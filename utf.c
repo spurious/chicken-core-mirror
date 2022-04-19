@@ -942,21 +942,17 @@ C_regparm C_word C_fcall C_utf_range(C_word str, C_word start, C_word end)
     return C_fix(p2 - p1);
 }
 
-/* count characters */
-C_regparm int C_fcall C_utf_count(C_char *str, int len)
+/* count characters
+   http://canonical.org/~kragen/strlen-utf8.html */
+C_regparm int C_fcall C_utf_count(C_char *s, int len) 
 {
-    int e;
-    C_char *p1 = str, *p2;
-    int c = 0;
-    C_u32 chr;
-    while(len > 0) {
-        p2 = utf8_decode(p1, &chr, &e);
-        len -= p2 - p1;
-        p1 = p2;
-        ++c;
+    int i = 0, j = 0;   
+    while (len--) {
+        if ((s[i] & 0xc0) != 0x80) j++;
+        i++;
     }
-    return c;
-}
+    return j; 
+} 
 
 C_regparm C_word C_fcall C_utf_bytes(C_word chr)
 {
