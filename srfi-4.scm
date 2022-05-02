@@ -422,8 +422,7 @@ EOF
 		      (,set v i (##core#inline "C_slot" p 0))
 		      (##sys#error-not-a-proper-list lst) ) ) ) )))))))
 
-(define (list->u8vector lst)
-  (##sys#list->bytevector lst 'list->u8vector))
+(define list->u8vector ##sys#list->bytevector)
 
 (list->NNNvector s8vector)
 (list->NNNvector u16vector)
@@ -490,7 +489,8 @@ EOF
 		   (loop (fx+ i 1)) ) ) ) ) ) ) )))
 
 (define (u8vector->list v)
-  (##sys#bytevector->list v 'u8vector->list))
+  (##sys#check-bytevector v 'u8vector->list)
+  (##sys#bytevector->list v))
   
 (NNNvector->list s8vector)
 (NNNvector->list u16vector)
@@ -602,7 +602,7 @@ EOF
 (set! ##sys#user-read-hook
   (let ([old-hook ##sys#user-read-hook]
 	[read read]
-	[consers (list 'u8 ##sys#list->bytevector
+	[consers (list 'u8 list->u8vector
 		       's8 list->s8vector
 		       'u16 list->u16vector
 		       's16 list->s16vector
