@@ -2814,23 +2814,22 @@ EOF
 
 ;;; bytevectors:
 
-(define (##sys#bytevector->list v loc)
-  (##sys#check-bytevector v loc)
+(define (##sys#bytevector->list v)
   (let ((n (##sys#size v)))
     (let loop ((i (fx- n 1)) (lst '()))
       (if (fx< i 0)
           lst
-          (loop (fx+ i 1)
+          (loop (fx- i 1)
                 (cons (##core#inline "C_subbyte" v i) lst))))))
   
-(define (##sys#list->bytevector lst loc)
+(define (##sys#list->bytevector lst)
   (let* ((n (length lst))
          (bv (##sys#make-bytevector n)))
     (let loop ((lst lst) (i 0))
       (if (null? lst)
           bv
           (let ((b (car lst)))
-            (##sys#check-fixnum b loc)
+            (##sys#check-fixnum b)
             (##core#inline "C_setsubbyte" bv i b)
             (loop (cdr lst) (fx+ i 1)))))))
 
