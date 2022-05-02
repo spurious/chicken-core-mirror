@@ -915,7 +915,7 @@ C_regparm C_word C_fcall C_utf_equal_ci(C_word s1, C_word s2)
 {
     C_word n1 = C_block_item(s1, 1);
     if(n1 != C_block_item(s2, 1)) return C_SCHEME_FALSE;
-    return C_mk_bool(C_utf_compare_ci(s1, s2, 0, 0, n1) == C_fix(0));
+    return C_mk_bool(C_utf_compare_ci(s1, s2, C_fix(0), C_fix(0), n1) == C_fix(0));
 }
 
 C_regparm C_word C_fcall C_utf_copy(C_word from, C_word to, C_word start1, C_word end1, C_word start2)

@@ -4231,7 +4231,7 @@ EOF
 								(string-ref tk 3)) 
 							       #b111111))))))
 			      (integer->char res))]
-			   [(char-name (##sys#string-symbol tk))]
+			   [(char-name (##sys#string->symbol tk))]
 			   [else (##sys#read-error port "unknown named character" tk)] ) ]
 		    [(memq c terminating-characters) (##sys#read-char-0 port)]
 		    [else c] ) ) )
@@ -4461,7 +4461,7 @@ EOF
 
 (define (##sys#user-read-hook char port)
   (case char
-    ;; has been put here, so the SRFI-4 unit can intercept '#f...'
+    ;; has been put here, so the SRFI-4 module can intercept '#f...'
     ((#\f #\F) (##sys#read-char-0 port) #f)
     ((#\t #\T) (##sys#read-char-0 port) #t)
     ((#\u)
@@ -4724,7 +4724,7 @@ EOF
 		   (out (##sys#slot x 0)) ) )
 		((##core#inline "C_bytevectorp" x)
 		 (outstr port "#u8")
-                 (out (##bytevector->list x)))
+                 (out (##sys#bytevector->list x)))
 		((##core#inline "C_structurep" x) (##sys#user-print-hook x readable port))
 		((##core#inline "C_closurep" x) (outstr port (##sys#procedure->string x)))
 		((##core#inline "C_locativep" x) (outstr port "#<locative>"))

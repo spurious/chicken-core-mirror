@@ -608,14 +608,14 @@ A
 
 ;; #808: bytevectors and strings with embedded nul bytes should not be compared
 ;; with ASCIIZ string comparison functions
-(assert (equal? '#${a b 0 c} '#${a b 0 c}))
-(assert (bytevector=? '#${a b 0 c} '#${a b 0 c}))
+(assert (equal? '#u8(#xa #xb 0 #xc) '#u8(#xa #xb 0 #xc)))
+(assert (bytevector=? '#u8(#xa #xb 0 #xc) '#u8(#xa #xb 0 #xc)))
 (assert (equal=? "foo\x00a" "foo\x00a"))
 (assert (string=? "foo\x00a" "foo\x00a"))
 (assert (string-ci=? "foo\x00a" "foo\x00a"))
 (assert (string-ci=? "foo\x00a" "foo\x00A"))
-(assert (not (equal? '#${a b 0 c} '#${a b 0 d})))
-(assert (not (bytevector=? '#${a b 0 c} '#${a b 0 d})))
+(assert (not (equal? '#u8(#xa #xb 0 #xc) '#u8(#xa #xb 0 #xd))))
+(assert (not (bytevector=? '#u8(#xa #xb 0 #xc) '#u8(#xa #xb 0 #xd))))
 (assert (not (equal=? "foo\x00a" "foo\x00b")))
 (assert (not (string=? "foo\x00a" "foo\x00b")))
 (assert (not (string-ci=? "foo\x00a" "foo\x00b")))
