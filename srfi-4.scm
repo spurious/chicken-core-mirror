@@ -537,7 +537,7 @@ EOF
 
 (define (unpack tag sz loc)
   (lambda (str)
-    (##sys#check-byte-vector str loc)
+    (##sys#check-bytevector str loc)
     (let ([len (##sys#size str)])
       (if (or (eq? #t sz)
 	      (eq? 0 (##core#inline "C_fixnum_modulo" len sz)))
@@ -546,7 +546,7 @@ EOF
 
 (define (unpack-copy tag sz loc)
   (lambda (str)
-    (##sys#check-byte-vector str loc)
+    (##sys#check-bytevector str loc)
     (let* ((len (##sys#size str))
 	   (new (##sys#make-bytevector len)))
       (if (or (eq? #t sz)

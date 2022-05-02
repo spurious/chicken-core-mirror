@@ -272,7 +272,7 @@
     ##sys#check-symbol ##sys#check-boolean ##sys#check-locative
     ##sys#check-port ##sys#check-input-port ##sys#check-output-port
     ##sys#check-open-port ##sys#check-bytevector ##sys#signal-hook
-    ##sys#check-char ##sys#check-vector ##sys#check-byte-vector ##sys#list ##sys#cons
+    ##sys#check-char ##sys#check-vector ##sys#check-bytevector ##sys#list ##sys#cons
     ##sys#call-with-values ##sys#flonum-in-fixnum-range? 
     ##sys#immediate? ##sys#context-switch
     ##sys#make-structure ##sys#apply ##sys#apply-values

@@ -1124,7 +1124,7 @@ EOF
       (##core#inline "C_i_check_bytevector_2" x (car loc))
       (##core#inline "C_i_check_bytevector" x) ) )
 
-(define ##sys#check-byte-vector ##sys#check-blob)
+(define ##sys#check-bytevector ##sys#check-blob)
 
 (define (##sys#check-pair x . loc) 
   (if (pair? loc)
