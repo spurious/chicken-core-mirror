@@ -1529,7 +1529,7 @@ EOF
     (##core#inline "C_copy_memory_with_offset" z bv1 0 0 s1)
     (##core#inline "C_copy_memory_with_offset" z bv2 s1 0 s2)
     (##core#inline_allocate ("C_a_ustring" 5) z
-                            (fx+ (##sys#slot x 2) (##sys#slot y 2)))))
+                            (fx+ (##sys#slot x 1) (##sys#slot y 1)))))
 
 (set! scheme#string-append
   (lambda all
