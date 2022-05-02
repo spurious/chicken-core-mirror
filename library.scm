@@ -3352,26 +3352,27 @@ EOF
 		      (else
 		       (fx+ act len) ) ) )))
           (lambda (p rlimit)		; read-line
-	    (if rlimit (##sys#check-fixnum rlimit 'read-line))
+	    (when rlimit (##sys#check-fixnum rlimit 'read-line))
 	    (let ((sblen read-line-buffer-initial-size))
 	      (unless (##sys#slot p 12)
-		(##sys#setslot p 12 (##sys#make-string sblen)))
+		(##sys#setslot p 12 (##sys#make-bytevector sblen)))
 	      (let loop ([len sblen]
-			 [limit (or rlimit maximal-string-length)]   ; guaranteed fixnum?
+			 [limit (or rlimit maximal-string-length)]
 			 [buffer (##sys#slot p 12)]
 			 [result ""]
 			 [f #f])
-		(let ([n (##core#inline "fast_read_line_from_file" (##sys#slot buffer 0)
-                                        p (fxmin limit len))])
-		  (cond [(eof-object? n) (if f result #!eof)]
-			[(not n)
-			 (if (fx< limit len)
-			     (##sys#string-append result (##sys#substring buffer 0 limit))
-			     (loop (fx* len 2)
+		(let ((n (##core#inline "fast_read_line_from_file" buffer
+                                        p (fxmin limit len))))
+		  (cond ((eof-object? n) (if f result #!eof))
+			((not n)
+                          (let ((prev (##sys#buffer->string buffer 0 limit)))
+  			     (if (fx< limit len)
+			         (##sys#string-append result prev)
+   			         (loop (fx* len 2)
 				   (fx- limit len)
-				   (##sys#make-string (fx* len 2))
-				   (##sys#string-append result buffer)
-				   #t)) ]
+				   (##sys#make-bytevector (fx* len 2))
+				   (##sys#string-append result prev)
+				   #t)) ) )
 			((fx< n 0)
 			 (if (eq? (##sys#update-errno) (foreign-value "EINTR" int))
 			     (let ((n (fx- (fxneg n) 1)))
@@ -3380,10 +3381,7 @@ EOF
 				  (loop len limit buffer
 					(##sys#string-append
 					 result 
-                                         (##sys#substring buffer 0
-                                            (##core#inline "C_utf_range_length"
-                                                           (##sys#slot buffer 0)
-                                                           0 n)))
+                                         (##sys#buffer->string buffer 0 n))
 					#t))))
 			     (##sys#signal-hook
 			      #:file-error 'read-line
@@ -3391,15 +3389,10 @@ EOF
 			      p rlimit)))
 			(f (##sys#setislot p 4 (fx+ (##sys#slot p 4) 1))
 			   (##sys#string-append result
-                             (##sys#substring buffer 0
-                                              (##core#inline "C_utf_range_length"
-                                                             (##sys#slot buffer 0)
-                                                             p (fx+ p n)))))
+                             (##sys#buffer->string buffer 0 n)))
 			(else
 			 (##sys#setislot p 4 (fx+ (##sys#slot p 4) 1))
-			 (##sys#substring buffer 0 
-                             (##core#inline "C_utf_range_length" (##sys#slot buffer 0)
-                                            p (fx+ p n))) ) ) ) )))
+			 (##sys#buffer->string buffer 0 n)))))))
 	  #f	; read-buffered
 	  ) )
 
