@@ -2822,15 +2822,16 @@ EOF
           (loop (fx- i 1)
                 (cons (##core#inline "C_subbyte" v i) lst))))))
   
-(define (##sys#list->bytevector lst)
-  (let* ((n (length lst))
+(define (##sys#list->bytevector lst0)
+  (let* ((n (length lst0))
          (bv (##sys#make-bytevector n)))
-    (let loop ((lst lst) (i 0))
+    (let loop ((lst lst0) (i 0))
       (if (null? lst)
           bv
           (let ((b (car lst)))
-            (##sys#check-fixnum b)
-            (##core#inline "C_setsubbyte" bv i b)
+            (if (##core#inline "C_fixnump" b)
+                (##core#inline "C_setsubbyte" bv i b)
+                (##sys#signal-hook #:type-error "can not convert list to bytevector" lst0))
             (loop (cdr lst) (fx+ i 1)))))))
 
 (module chicken.bytevector
