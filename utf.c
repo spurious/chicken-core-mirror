@@ -887,14 +887,14 @@ C_regparm C_word C_fcall C_utf_compare_ci(C_word s1, C_word s2, C_word start1, C
 {
     C_char *p1 = utf_index(s1, C_unfix(start1));
     C_char *p2 = utf_index(s2, C_unfix(start2));
-    int e;
-    while(len--) {
+    int e, n = C_unfix(len);
+    while(n--) {
         C_u32 c1, c2;
-        C_char *p1a = utf8_decode(p1, &c1, &e);
-        C_char *p2a = utf8_decode(p2, &c2, &e);
+        p1 = utf8_decode(p1, &c1, &e);
+        p2 = utf8_decode(p2, &c2, &e);
         c1 = utf_downcase(c1);
         c2 = utf_downcase(c2);
-        if(c1 != c2) return C_fix(c1 - c2);
+        if(c1 != c2) return C_fix((C_word)c1 - (C_word)c2);
     }
     return C_fix(0);
 }
