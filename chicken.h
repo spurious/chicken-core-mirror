@@ -1035,7 +1035,7 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_symbol_value(x)          (C_block_item(x, 0))
 #define C_symbol_name(x)           (C_block_item(x, 1))
 #define C_symbol_plist(x)          (C_block_item(x, 2))
-#define C_save(x)	           (*(--C_temporary_stack) = (C_word)(x))
+#define C_save(x)	                 (*(--C_temporary_stack) = (C_word)(x))
 #define C_rescue(x, i)             (C_temporary_stack[ i ] = (x))
 #define C_restore                  (*(C_temporary_stack++))
 #define C_heaptop                  ((C_word **)(&C_fromspace_top))
