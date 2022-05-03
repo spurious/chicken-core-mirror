@@ -4694,6 +4694,8 @@ C_regparm C_word C_fcall C_equalp(C_word x, C_word y)
                                 C_flonum_magnitude(y));
     else return !C_memcmp(C_data_pointer(x), C_data_pointer(y), header & C_HEADER_SIZE_MASK);
   }
+  else if(C_header_bits(x) == C_STRING_TYPE)
+    return C_equalp(C_block_item(x, 0), C_block_item(y, 0));
   else if(header == C_SYMBOL_TAG) return 0;
   else {
     i = 0;

@@ -1443,9 +1443,8 @@ EOF
 	    (let ((len1 (string-length s1))
 		  (len2 (string-length s2)) )
 	      (k len1 len2
-		 (##core#inline "C_u_i_substring_equal_p"
-			    s1
-			    s2 0 0
+		 (##core#inline "C_utf_compare"
+			    s1 s2 0 0
 			    (if (fx< len1 len2)
 				len1
 				len2) ) ) ) ) ) )
@@ -1485,9 +1484,8 @@ EOF
 	    (let ((len1 (string-length s1))
 		  (len2 (string-length s2)) )
 	      (k len1 len2
-		 (##core#inline "C_u_i_substring_ci_equal_p"
-				s1
-				s2 0 0
+		 (##core#inline "C_utf_compare_ci"
+				s1 s2 0 0
 				(if (fx< len1 len2)
 				    len1
 				    len2) ) ) ) ) ) )
@@ -2691,11 +2689,13 @@ EOF
 		  (if (##core#inline "C_closurep" x)
 		      (##core#inline "shallow_equal" x y)
 		      (compare-slots x y 1))))
+            ((##core#inline "C_stringp" x)
+             (walk (##sys#slot x 0) (##sys#slot y 0)))
 	    ((##core#inline "C_byteblockp" x)
 	     (and (##core#inline "C_byteblockp" y)
 		  (let ((s1 (##sys#size x)))
 		    (and (eq? s1 (##sys#size y))
-			 (##core#inline "C_u_i_substring_equal_p" x y 0 0 s1)))))
+			 (##core#inline "C_bv_compare" x y s1)))))
 	    (else
 	     (let ((s1 (##sys#size x)))
 	       (and (eq? s1 (##sys#size y))
