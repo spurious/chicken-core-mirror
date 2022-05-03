@@ -2413,8 +2413,7 @@ C_regparm C_word C_fcall intern0(C_char *str)
 C_regparm C_word C_fcall C_lookup_symbol(C_word sym)
 {
   int key;
-  C_word str = C_block_item(sym, 1);
-  C_word bv = C_block_item(str, 0);
+  C_word bv = C_block_item(sym, 1);
   int len = C_header_size(bv) - 1;
 
   key = hash_string(len, C_c_string(bv), symbol_table->size, symbol_table->rand, 0);
