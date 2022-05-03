@@ -2231,6 +2231,13 @@ inline static C_word *C_a_i(C_word **a, int n)
 
 #endif
 
+inline static C_word 
+C_chop_bv(C_word bv) 
+{
+    ((C_SCHEME_BLOCK *)bv)->header = C_make_header(C_BYTEVECTOR_TYPE, C_header_size(bv) - 1);
+    return bv;
+}
+
 inline static C_word
 C_mutate(C_word *slot, C_word val)
 {
