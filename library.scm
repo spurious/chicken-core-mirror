@@ -1405,11 +1405,11 @@ EOF
 (set! scheme#string-copy
   (lambda (s)
     (##sys#check-string s 'string-copy)
-    (let* ((len (string-length s))
-	   (s2 (##sys#make-string len)) )
-      (##core#inline "C_copy_memory" (##sys#slot s2 0) (##sys#slot s 0)
-                     (##sys#size (##sys#slot s 0)))
-      s2) ) )
+    (let* ((bv (##sys#slot s 0))
+           (len (##sys#size bv))
+	   (bv2 (##sys#make-bytevector len)) )
+      (##core#inline "C_copy_memory" bv2 bv len)
+      (##core#inline_allocate ("C_a_ustring" 5) bv2 (string-length s)))))
 
 (define (##sys#substring s start end)
   (let* ((n (##core#inline "C_utf_range" s start end))
