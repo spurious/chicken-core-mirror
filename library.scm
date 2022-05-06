@@ -5600,6 +5600,7 @@ EOF
 		 (string-append "attempted rest argument access at index " (##sys#number->string n)
                                 " but rest list length is " (##sys#number->string c) )
 		 (if fn (list fn) '()))))
+        ((57) (apply ##sys#signal-hook #:runtime-error loc "decoding error" args))
 	(else (apply ##sys#signal-hook #:runtime-error loc "unknown internal error" args)) ) ) ) )
 
 ) ; chicken.condition
