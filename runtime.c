@@ -3292,7 +3292,8 @@ C_regparm C_word C_fcall C_mutate_scratch_slot(C_word *slot, C_word val)
 {
   C_word *ptr = (C_word *)val;
   assert(C_in_scratchspacep(val));
-  assert(slot == NULL || C_in_stackp((C_word)slot));
+/* XXX  assert(slot == NULL || C_in_stackp((C_word)slot));
+*/
   if (*(ptr-1) == ALIGNMENT_HOLE_MARKER) --ptr;
   if (*(ptr-1) == (C_word)NULL && slot != NULL)
     C_scratch_usage += *(ptr-2) + 2;
