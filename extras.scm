@@ -123,9 +123,9 @@
 (define (read-bytevector!/port n dest port start)
   (if (eq? n 0) 
       0
-      (let ((rdstring (##sys#slot (##sys#slot port 2) 7))) ; read-bytevector!
+      (let ((rdbvec (##sys#slot (##sys#slot port 2) 7))) ; read-bytevector!
         (let loop ((start start) (n n) (m 0))
-          (let ((n2 (rdstring port n dest start)))
+          (let ((n2 (rdbvec port n dest start)))
             (##sys#setislot port 5 ; update port-position
                             (fx+ (##sys#slot port 5) n2))
             (cond ((eq? n2 0) m)
@@ -134,18 +134,28 @@
                   (else (fx+ n2 m))))))))
 
 (define (read-string!/port n dest port start)
-  (let* ((p (##core#inline "C_utf_position" dest start))
-         (bv (##sys#slot dest 0)))
-    (let loop ((n n) (p p) (un 0))
-      (let ((n2 (read-bytevector!/port n bv port p)))
-        (if (eq? n2 0)
-            un
-            (let ((un2 (##core#inline "C_utf_range_length" bv p (fx+ p n2))))
-              (if (fx< un2 n2)
-                  (loop (fx- n un2)
-                        (fx+ p n2)
-                        (fx+ un un2))
-                  (fx+ un2 un))))))))
+  (let ((buf (##sys#make-bytevector (fx* n 4))))
+    (define (finish un bytes)
+      (##core#inline "C_utf_overwrite" dest start n buf bytes)
+      un)
+    (let loop ((p 0) (n n) (un 0) (bn 0))
+      (let ((bytes (read-bytevector!/port n buf port p)))
+        (if (eq? bytes 0)
+            (finish un bn)
+            (let recount ((bytes bytes))
+              (let* ((fc (##core#inline "C_utf_fragment_counts" buf p bytes))
+                     (full (fxshr fc 4))
+                     (left (fxand fc 15))
+                     (total (fx+ un full))
+                     (tbytes (fx+ bn bytes))
+                     (remain (fx- n full)))
+                (cond ((fx> left 0)
+                       (let ((b2 (read-bytevector!/port left buf port (fx+ p bytes))))
+                         (if (fx< b2 left) 
+                             (finish total tbytes)  ;XXX add marker
+                             (recount (fx+ bytes b2)))))
+                      ((eq? remain 0) (finish total tbytes))
+                      (else (loop (fx+ p bytes) remain total tbytes))))))))))
 
 (define (read-string! n dest #!optional (port ##sys#standard-input) (start 0))
   (##sys#check-input-port port #t 'read-string!)
@@ -166,24 +176,24 @@
 
 (define read-string/port
   (lambda (n p)
-    (let ((bufsize 2048))
-      (cond ((eq? n 0) "") ; Don't attempt to peek (fd might not be ready)
-            ((eof-object? (##sys#peek-char-0 p)) #!eof)
-            (n (let* ((str (##sys#make-string n))
-                      (n2 (read-string!/port n str p 0)))
-                 (if (eq? n n2)
-                     str
-                     (##sys#substring str 0 n2))))
-            (else
-              (let ((buf (##sys#make-bytevector bufsize)))
-                (let loop ((pos 0))
-                  (let ((n (read-bytevector!/port bufsize buf p pos)))
-                    (cond ((eq? n 0)
-                           (let ((len (##core#inline "C_utf_range_length" buf 0 pos))
-                                 (bv (##sys#make-bytevector pos)))
-                             (##core#inline "C_copy_memory" bv buf pos)
-                             (##core#inline_allocate ("C_a_ustring" 5) bv len)))
-                          (else (loop (fx+ pos n))))))))))))
+    (cond ((eq? n 0) "") ; Don't attempt to peek (fd might not be ready)
+          ((eof-object? (##sys#peek-char-0 p)) #!eof)
+          (n (let* ((str (##sys#make-string n))
+                    (n2 (read-string!/port n str p 0)))
+               (if (eq? n n2)
+                   str
+                   (##sys#substring str 0 n2))))
+          (else
+            (let* ((bufsize 2048)
+                   (buf (##sys#make-bytevector bufsize)))
+              (let loop ((pos 0))
+                (let ((n (read-bytevector!/port bufsize buf p pos)))
+                  (cond ((eq? n 0)
+                         (let ((len (##core#inline "C_utf_range_length" buf 0 pos))
+                               (bv (##sys#make-bytevector (fx+ pos 1))))
+                           (##core#inline "C_copy_memory" bv buf pos)
+                           (##core#inline_allocate ("C_a_ustring" 5) bv len)))
+                        (else (loop (fx+ pos n)))))))))))
 
 (define read-bytevector/port
   (lambda (n p)
