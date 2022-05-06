@@ -740,7 +740,9 @@ EOF
       (define (bestlen n) (if len (min len n) n))
       (cond [(##sys#immediate? x) (##sys#error 'dump "cannot dump immediate object" x)]
 	    [(##sys#bytevector? x) (hexdump x (bestlen (##sys#size x)) ##sys#byte out)]
-	    [(string? x) (hexdump x (bestlen (string-length x)) ##sys#byte out)]
+	    [(string? x)
+             (let ((bv (##sys#slot x 0)))
+               (hexdump bv (bestlen (fx- (##sys#size bv) 1)) ##sys#byte out))]
 	    [(and (not (##sys#immediate? x)) (##sys#pointer? x))
 	     (hexdump x 32 ##sys#peek-byte out) ]
 	    [(and (##sys#generic-structure? x) (assq (##sys#slot x 0) bytevector-data))
