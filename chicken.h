@@ -1897,6 +1897,8 @@ C_fctexport C_word C_fcall C_utf_bytes(C_word chr) C_regparm;
 C_fctexport C_word C_fcall C_utf_fill(C_word bv, C_word chr) C_regparm;
 C_fctexport int C_fcall C_utf_expect(int byte) C_regparm;
 C_fctexport void C_fcall C_utf_putc(int chr, C_FILEPTR fp) C_regparm;
+C_fctexport C_word C_fcall C_utf_fragment_counts(C_word bv, C_word pos, C_word len) C_regparm;
+C_fctexport C_word C_fcall C_utf_overwrite(C_word s, C_word i, C_word len, C_word bv, C_word c) C_regparm;
 
 C_fctimport C_cpsproc(C_toplevel) C_noret;
 C_fctimport C_cpsproc(C_invalid_procedure) C_noret;

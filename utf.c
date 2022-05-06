@@ -857,20 +857,59 @@ C_regparm C_word C_fcall C_utf_setsubchar(C_word s, C_word i, C_word c)
     C_word bvlen = C_header_size(bv) - 1;
     int prefix = C_unfix(C_block_item(s, 3));    /* offset */
     int suffix = bvlen - prefix - ol;
+
     if(nl > ol) {
         int tl = bvlen + nl - ol;
+        if(C_in_scratchspacep(bv))
+            C_mutate_scratch_slot(NULL, bv);
         C_word bvn = C_scratch_alloc(C_bytestowords(tl) + 1);
         C_block_header_init(bvn, C_make_header(C_BYTEVECTOR_TYPE, tl + 1));
-        C_memcpy(C_c_string(bvn), C_c_string(bv), prefix);
+        if(prefix) C_memcpy(C_c_string(bvn), C_c_string(bv), prefix);
         C_memcpy((C_char *)C_data_pointer(bvn) + prefix, buf, nl);
         C_memcpy((C_char *)C_data_pointer(bvn) + prefix + nl, 
-            (C_char *)C_data_pointer(bv) + prefix + ol, suffix);
+            (C_char *)C_data_pointer(bv) + prefix + ol, suffix + 1); /* include 0 byte */
         C_mutate_scratch_slot(&C_block_item(s, 0), bvn);
     } else if(nl < ol) {
         C_memcpy(p1, buf, nl);
-        C_memmove(p1 + nl, p1 + ol, suffix);
-        C_block_header_init(bv, C_make_header(C_BYTEVECTOR_TYPE, bvlen - ol - nl));
+        C_memmove(p1 + nl, p1 + ol, suffix + 1); /* include 0 byte */
+        C_block_header_init(bv, C_make_header(C_BYTEVECTOR_TYPE, bvlen - (ol - nl) + 1));
     } else C_memcpy(p1, buf, nl);
+
+    return C_SCHEME_UNDEFINED;
+}
+
+/* copy c bytes of bv into s at position i, occupying len characters */
+C_regparm C_word C_fcall C_utf_overwrite(C_word s, C_word i, C_word len, C_word bv, 
+    C_word c) 
+{
+    C_word bvs = C_block_item(s, 0);
+    C_word bvlen = C_header_size(bvs) - 1;
+    C_char *p1 = utf_index(s, C_unfix(i));
+    C_char *p2 = utf_index(s, C_unfix(i) + C_unfix(len));
+    int count = C_unfix(c);
+    int d = p2 - p1;
+    int prefix = p1 - (C_char *)C_data_pointer(bvs);
+    int suffix = bvlen - prefix - d;
+
+    if(count > d) {
+        int tl = bvlen + count - d;
+        if(C_in_scratchspacep(bvs))
+            C_mutate_scratch_slot(NULL, bvs);
+        C_word bvn = C_scratch_alloc(C_bytestowords(tl) + 1);
+        C_block_header_init(bvn, C_make_header(C_BYTEVECTOR_TYPE, tl + 1));
+        if(prefix) C_memcpy(C_c_string(bvn), C_data_pointer(bvs), prefix);
+        C_memcpy((C_char *)C_data_pointer(bvn) + prefix, (C_char *)C_data_pointer(bv), 
+            count);
+        C_memcpy((C_char *)C_data_pointer(bvn) + prefix + count, 
+            p2, suffix + 1); /* include 0 byte */
+        C_mutate_scratch_slot(&C_block_item(s, 0), bvn);
+    } else if(count < d) {
+        C_memcpy(p1, C_data_pointer(bv), count);
+        C_memmove(p1 + count, p2, suffix + 1); /* include 0 byte */
+        C_block_header_init(bvs, C_make_header(C_BYTEVECTOR_TYPE, 
+            bvlen - (d - count) + 1));
+    } else if(count) C_memcpy(p1, C_data_pointer(bvs), count);
+
     return C_SCHEME_UNDEFINED;
 }
 
@@ -1029,7 +1068,7 @@ C_regparm C_word C_fcall C_utf_fill(C_word bv, C_word chr)
         C_memcpy(p, buf, len);
         p += len;
     }
-    ((C_char *)C_data_pointer(bv))[ size + 1 ] = 0; /* terminating zero */
+    ((C_char *)C_data_pointer(bv))[ size ] = 0; /* terminating zero */
     return bv;
 }
 
@@ -1037,6 +1076,24 @@ C_regparm int C_fcall C_utf_expect(int byte)
 {
     int len = lengths[ byte >> 3 ];
     return len + !len;
+}
+
+C_regparm C_word C_fcall C_utf_fragment_counts(C_word bv, C_word pos, C_word len)
+{
+    int full = 0;
+    C_uchar *ptr = C_data_pointer(bv) + C_unfix(pos);
+    int count = C_unfix(len);
+
+    while(count) {
+        unsigned int byte = *(ptr++);
+        int n = lengths[ byte >> 3 ];
+        int bn = n + !n;
+        if(count >= bn) ++full;
+        else return C_fix((full << 4) | (bn - count));
+        count -= bn;
+    }
+    
+    return C_fix(full << 4);
 }
 
 C_regparm void C_fcall C_utf_putc(int chr, C_FILEPTR fp) 
