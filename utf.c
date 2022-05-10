@@ -1105,3 +1105,15 @@ C_regparm void C_fcall C_utf_putc(int chr, C_FILEPTR fp)
     *p = '\0';
     C_fputs(buf, fp);
 }
+
+C_regparm C_word C_fcall C_utf_list_size(C_word lst)
+{
+    int n = 0;
+    while(!C_immediatep(lst) && C_header_bits(lst) == C_PAIR_TYPE) {
+        C_word x = C_block_item(lst, 0);
+        if(((x) & C_IMMEDIATE_TYPE_BITS) == C_CHARACTER_BITS)
+            n += C_unfix(C_utf_bytes(x));
+        lst = C_block_item(lst, 1);
+    }
+    return C_fix(n);
+}

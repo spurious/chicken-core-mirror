@@ -1367,20 +1367,20 @@ EOF
 
 (define ##sys#list->string list->string)
 
-;;; By Sven Hartrumpf:
-
 (define (##sys#reverse-list->string l)
-  (if (list? l)
-      (let* ((n (length l))
-	     (s (##sys#make-string n)))
-	(let iter ((l2 l) (n2 (fx- n 1)))
-	  (cond ((fx>= n2 0)
-		 (let ((c (##sys#slot l2 0)))
-		   (##sys#check-char c 'reverse-list->string)
-		   (string-set! s n2 c) )
-		 (iter (##sys#slot l2 1) (fx- n2 1)) ) ) )
-	s )
-      (##sys#error-not-a-proper-list l 'reverse-list->string) ) )
+  (let* ((sz (##core#inline "C_utf_list_size" l))
+         (bv (##sys#make-bytevector (fx+ sz 1))))
+    (let loop ((p sz) (l l) (n 0))
+      (cond ((null? l)
+             (##core#inline_allocate ("C_a_ustring" 5) bv n))
+            ((pair? l)
+             (let ((c (##sys#slot l 0)))
+               (##sys#check-char c 'reverse-list->string)
+               (let* ((bs (##core#inline "C_utf_bytes" c))
+                      (p2 (fx- p bs)))
+                 (##core#inline "C_utf_insert" bv p2 c)
+                 (loop p2 (##sys#slot l 1) (fx+ n 1)))))
+            (else (##sys#error-not-a-proper-list l 'reverse-list->string) ) ))))
 
 (set! scheme#string-fill!
   (lambda (s c)
