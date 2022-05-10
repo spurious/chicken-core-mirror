@@ -4596,7 +4596,7 @@ C_regparm void C_fcall C_toplevel_entry(C_char *name)
 C_regparm C_word C_fcall C_a_i_provide(C_word **a, int c, C_word id)
 {
   if (debug_mode == 2) {
-    C_word str = C_block_item(C_block_item(id, 1), 0);
+    C_word str = C_block_item(id, 1);
     C_dbg(C_text("debug"), C_text("providing %s...\n"), C_c_string(str));
   }
   return C_a_i_putprop(a, 3, core_provided_symbol, id, C_SCHEME_TRUE);
