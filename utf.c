@@ -761,6 +761,7 @@ static C_char *utf8_encode(C_u32 u, C_char *p1)
     return (C_char *)p;
 }
 
+/* XXX not used yet */
 static C_char *utf_map_multi(int c, int mode)
 {
     int i;
