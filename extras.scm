@@ -252,13 +252,14 @@
       (##sys#check-output-port port #t 'write-string)
       (when n (##sys#check-fixnum n 'write-string))
       (let* ((bv (##sys#slot s 0))
-             (len (fx- (##sys#size bv) 1)))
+             (len (fx- (##sys#size bv) 1))
+             (bytes (##core#inline "C_utf_position" s n)))
         ((##sys#slot (##sys#slot port 2) 3) ; write-bytevector
          port
          bv
          0
-         (if (and n (fx< n len))
-             n
+         (if (and bytes (fx< bytes len))
+             bytes
              len))))))
 
 
