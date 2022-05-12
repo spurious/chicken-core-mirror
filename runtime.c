@@ -10086,7 +10086,7 @@ void C_ccall C_allocate_bytevector(C_word c, C_word *av)
     /* We explicitly pass 5 here, that's the number of things saved.
      * That's the arguments, plus one additional thing: the mode.
      */
-    C_reclaim((void *)allocate_vector_2, 5);
+    C_reclaim((void *)allocate_bytevector_2, 5);
   }
 
   C_save(C_SCHEME_FALSE);
