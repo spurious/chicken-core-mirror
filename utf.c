@@ -861,8 +861,7 @@ C_regparm C_word C_fcall C_utf_setsubchar(C_word s, C_word i, C_word c)
 
     if(nl > ol) {
         int tl = bvlen + nl - ol;
-        if(C_in_scratchspacep(bv))
-            C_mutate_scratch_slot(NULL, bv);
+        if(C_in_scratchspacep(bv)) C_mutate_scratch_slot(NULL, bv);
         C_word bvn = C_scratch_alloc(C_SIZEOF_BYTEVECTOR(tl + 1));
         C_block_header_init(bvn, C_make_header(C_BYTEVECTOR_TYPE, tl + 1));
         if(prefix) C_memcpy(C_c_string(bvn), C_c_string(bv), prefix);
@@ -969,9 +968,9 @@ C_regparm C_word C_fcall C_utf_copy(C_word from, C_word to, C_word start1, C_wor
 }
 
 /* compute byte-index from char-index */
-C_regparm C_word C_fcall C_utf_position(C_word str, C_word start)
+C_regparm C_word C_fcall C_utf_position(C_word str, C_word index)
 {
-    C_char *p1 = utf_index(str, C_unfix(start));
+    C_char *p1 = utf_index(str, C_unfix(index));
     return C_fix(p1 - (C_char *)C_data_pointer(C_block_item(str, 0)));
 }
 
