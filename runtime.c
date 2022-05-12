@@ -3051,7 +3051,7 @@ C_mutate_slot(C_word *slot, C_word val)
    * into nursery.  Stuff pointing anywhere else can be skipped, as
    * well as mutations on nursery objects.
    */
-  if(!C_in_stackp(val) || C_in_stackp((C_word)slot))
+  if(C_in_stackp((C_word)slot) || (!C_in_stackp(val) && !C_in_scratchspacep(val)))
     return *slot = val;
 
 #ifdef C_GC_HOOKS
