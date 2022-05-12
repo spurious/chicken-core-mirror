@@ -1,10 +1,11 @@
 ;;; unicode tests, taken from Chibi
 
 (import (chicken port) (chicken sort))
+(import (chicken string) (chicken io))
 
 (include "test.scm")
                            
-(test-begin "unicode")
+(test-begin "scheme")
 
 (test-equal #\Р (string-ref "Русский" 0))
 (test-equal #\и (string-ref "Русский" 5))
@@ -42,10 +43,7 @@
         s))
 
 ; tests from the utf8 egg:
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; R5RS
 
-(test-begin)
 (test-equal 2 (string-length "漢字"))
 
 (test-equal 28450 (char->integer (string-ref "漢字" 0)))
@@ -107,12 +105,21 @@
 
 (test-equal "这是" (with-input-from-string "这是中文" (cut read-string 2)))
 
+(define s "abcdef")
+(call-with-input-string "这是中文" (cut read-string! 2 s <> 2))
+(test-equal "ab这是ef" s)
+       
+(define s "这是中文")
+(call-with-input-string "abcd" (cut read-string! 1 s <> 2))
+(test-equal "这是a文" s)
+       
 (test-equal "这是" (with-output-to-string (cut write-string "这是中文" 2)))
 
 (test-equal "我爱她" (conc (with-input-from-string "我爱你"
                       (cut read-token (lambda (c)
                                         (memv c (map (cut string-ref <> 0)
-                                                     '("爱" "您" "我")))))) "她"))
+                                                     '("爱" "您" "我"))))))
+                        "她"))
 
 (test-equal '("第一" "第二" "第三") (string-chop "第一第二第三" 2))
 
