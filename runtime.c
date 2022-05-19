@@ -7524,38 +7524,49 @@ C_regparm C_word C_fcall C_i_null_pointerp(C_word x)
   return C_SCHEME_FALSE;
 }
 
+/* only used here for char comparators below: */
+static C_word C_fcall check_char_internal(C_word x, C_char *loc)
+{
+  if((x & C_IMMEDIATE_TYPE_BITS) != C_CHARACTER_BITS) {
+    error_location = intern0(loc);
+    barf(C_BAD_ARGUMENT_TYPE_NO_CHAR_ERROR, NULL, x);
+  }
+
+  return C_SCHEME_UNDEFINED;
+}
+
 C_regparm C_word C_i_char_equalp(C_word x, C_word y)
 {
-  C_i_check_char_2(x, intern0("char=?"));
-  C_i_check_char_2(y, intern0("char=?"));
+  check_char_internal(x, "char=?");
+  check_char_internal(y, "char=?");
   return C_u_i_char_equalp(x, y);
 }
 
 C_regparm C_word C_i_char_greaterp(C_word x, C_word y)
 {
-  C_i_check_char_2(x, intern0("char>?"));
-  C_i_check_char_2(y, intern0("char>?"));
+  check_char_internal(x, "char>?");
+  check_char_internal(y, "char>?");
   return C_u_i_char_greaterp(x, y);
 }
 
 C_regparm C_word C_i_char_lessp(C_word x, C_word y)
 {
-  C_i_check_char_2(x, intern0("char<?"));
-  C_i_check_char_2(y, intern0("char<?"));
+  check_char_internal(x, "char<?");
+  check_char_internal(y, "char<?");
   return C_u_i_char_lessp(x, y);
 }
 
 C_regparm C_word C_i_char_greater_or_equal_p(C_word x, C_word y)
 {
-  C_i_check_char_2(x, intern0("char>=?"));
-  C_i_check_char_2(y, intern0("char>=?"));
+  check_char_internal(x, "char>=?");
+  check_char_internal(y, "char>=?");
   return C_u_i_char_greater_or_equal_p(x, y);
 }
 
 C_regparm C_word C_i_char_less_or_equal_p(C_word x, C_word y)
 {
-  C_i_check_char_2(x, intern0("char<=?"));
-  C_i_check_char_2(y, intern0("char<=?"));
+  check_char_internal(x, "char<=?");
+  check_char_internal(y, "char<=?");
   return C_u_i_char_less_or_equal_p(x, y);
 }
 
