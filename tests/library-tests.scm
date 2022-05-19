@@ -307,6 +307,35 @@
 (assert (inexact= 7.0 (fp*+ 2.0 3.0 1.0)))
 (assert (inexact= 53.0 (fp*+ 10.0 5.0 3.0)))
 
+;;; Tests contributed by Christian Himpe:
+
+;; original tests:
+(assert (inexact= 7.0 (fp*+ 2.0 3.0 1.0)))
+(assert (inexact= 53.0 (fp*+ 10.0 5.0 3.0)))
+
+;; my new tests:
+(assert (inexact= 5.0 (fp*+ 1.0 2.0 3.0)))
+(assert (inexact= 2.0 (fp*+ 1.0 2.0 0.0)))
+(assert (inexact= 3.0 (fp*+ 1.0 0.0 3.0)))
+(assert (inexact= 3.0 (fp*+ 0.0 2.0 3.0)))
+(assert (inexact= 3.0 (fp*+ 0.0 0.0 3.0)))
+(assert (inexact= -1.0 (fp*+ 2.0 0.5 -2.0)))
+(assert (zero? (fp*+ 0.0 0.0 0.0)))
+(assert (zero? (fp*+ -1.0 1.0 1.0)))
+(assert (zero? (fp*+ 1.0 -1.0 1.0)))
+(assert (zero? (fp*+ -1.0 -1.0 -1.0)))
+
+(assert (infinite? (fp*+ +inf.0 1.0 1.0)))
+(assert (infinite? (fp*+ 1.0 +inf.0 1.0)))
+(assert (infinite? (fp*+ 1.0 1.0 +inf.0)))
+(assert (infinite? (fp*+ +inf.0 1.0 +inf.0)))
+(assert (nan? (fp*+ -inf.0 1.0 +inf.0)))
+(assert (nan? (fp*+ +nan.0 1.0 1.0)))
+(assert (nan? (fp*+ 1.0 +nan.0 1.0)))
+(assert (nan? (fp*+ 1.0 1.0 +nan.0)))
+(assert (nan? (fp*+ 0.0 +inf.0 1.0)))
+(assert (nan? (fp*+ -inf.0 0.0 1.0)))
+
 ;; string->symbol
 
 ;; by Jim Ursetto
