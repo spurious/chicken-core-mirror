@@ -132,8 +132,6 @@
 			       'no-trace
 			       'unsafe
 			       'block
-			       'optimize-leaf-routines
-			       'no-lambda-info
 			       'specialize
 			       'optimize-leaf-routines 
 			       'no-lambda-info
