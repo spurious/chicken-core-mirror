@@ -844,7 +844,7 @@
 		      (gen "C_ccall ") )
 		  (gen id) ]
 		 [else
-		  (gen "static C_TLS int toplevel_initialized=0;")
+		  (gen "static int toplevel_initialized=0;")
 		  (unless unit-name
 		    (gen #t "C_main_entry_point") )
 		  (gen #t #t "void C_ccall C_" topname) ] )

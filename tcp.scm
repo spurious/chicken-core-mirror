@@ -52,7 +52,7 @@ static C_word make_socket_nonblocking (C_word sock) {
 }
 
 /* This is a bit of a hack, but it keeps things simple */
-static C_TLS char *last_wsa_errorstring = NULL;
+static C_char *last_wsa_errorstring = NULL;
 
 static char *errormsg_from_code(int code) {
   int bufsize;
