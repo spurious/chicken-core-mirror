@@ -1616,8 +1616,10 @@
 	   (and str (fits? (string-length str)))))
 	((flonum? lit))
 	((symbol? lit)
-	 (let ((str (##sys#slot lit 1)))
+	 (let ((str (##sys#symbol->string lit)))
 	   (fits? (string-length str))))
+        ((string? lit)
+         (fits? (getsize (##sys#slot lit 0))))
 	((##core#inline "C_byteblockp" lit)
 	 (fits? (getsize lit)))
 	(else
