@@ -3616,9 +3616,10 @@ EOF
 
 (define (##sys#lambda-info->string info)
   (let* ((sz (##sys#size info))
-	 (s (##sys#make-string sz)) )
-    (##core#inline "C_copy_memory" s info sz)
-    s) )
+	 (bv (##sys#make-bytevector (fx+ sz 1))) )
+    (##core#inline "C_copy_memory" bv info sz)
+    (##core#inline_allocate ("C_a_ustring" 5) bv 
+                            (##core#inline "C_utf_length" bv))))
 
 (set! chicken.base#procedure-information
   (lambda (x)
