@@ -639,21 +639,21 @@
 		#t "C_externimport void C_ccall C_" uu "(C_word c,C_word *av) C_noret;"))
 	 (map toplevel used-units))
 	(unless (zero? n)
-	  (gen #t #t "static C_TLS C_word lf[" n "];") )
+	  (gen #t #t "static C_word lf[" n "];") )
 	(gen #t "static double C_possibly_force_alignment;")
 	(do ((i 0 (add1 i))
 	     (llits lliterals (cdr llits)))
 	    ((null? llits))
-	  (let* ((ll (##sys#lambda-info->string (car llits)))
-		 (llen (string-length ll)))
-	    (gen #t "static C_char C_TLS li" i "[] C_aligned={C_lihdr(" 
+	  (let* ((ll (car llits))
+		 (llen (##sys#size ll)))
+	    (gen #t "static C_char li" i "[] C_aligned={C_lihdr(" 
 		 (arithmetic-shift llen -16) #\,
 		 (bitwise-and #xff (arithmetic-shift llen -8)) #\,
 		 (bitwise-and #xff llen)
 		 #\))
 	    (do ((n 0 (add1 n)))
 		((>= n llen))
-	      (gen #\, (char->integer (string-ref ll n))) )
+	      (gen #\, (##sys#byte ll n)))
 	    (do ((n (- (bitwise-and #xfffff8 (+ llen 7)) llen) (sub1 n))) ; fill up with zeros to align following entry
 		((zero? n))
 	      (gen ",0") )
@@ -782,7 +782,7 @@
 	    ((or (keyword? lit) (symbol? lit)) ; handled slightly specially (see C_h_intern_in)
 	     (let* ((str (##sys#symbol->string lit))
 		    (cstr (c-ify-string str))
-		    (len (string-length str))
+		    (len (fx- (##sys#size (##sys#slot lit 1)) 1))
 		    (intern (if (keyword? lit)
 				"C_h_intern_kw"
 				"C_h_intern")))
@@ -1458,7 +1458,7 @@
 (define (hex n)
   (if (< n 16) 
       (string-append "\\x0" (number->string n 16))
-      (number->string n 16)))
+      (string-append "\\x" (number->string n 16))))
 
 (define (encode-literal lit)
   (define getbits
@@ -1512,20 +1512,28 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	    (string-append "\\xc2" (encode-size (string-length str)) str)))
 	 ((flonum? lit)
 	  (string-append "\\x55" (number->string lit) "\\x00") )
-	 ((or (keyword? lit) (symbol? lit))
-	  (let ((str (symbol->string lit)))
+	 ((keyword? lit)
+	  (let* ((str (keyword->string lit))
+                 (bv (##sys#slot str 1)))
 	    (string-append 
-	     "\\x01"
-	     (encode-size (string-length str))
-	     (if (keyword? lit) "\\x02" "\\x01")
-	     str) ) )
-	 ((##sys#immediate? lit)
-	  (bomb "invalid literal - cannot encode" lit))
+	     "\\x01" (encode-size (fx- (##sys#size bv) 1)) "\\x02" str) ) )
+	 ((symbol? lit)
+	  (let* ((str (symbol->string lit))
+                 (bv (##sys#slot str 1)))
+	    (string-append 
+	     "\\x01" (encode-size (fx- (##sys#size bv) 1)) "\\x01" str) ) )
+	 ((string? lit)
+	   (string-append
+	    (hex (getbits lit))
+	    (encode-size (fx- (##sys#size (##sys#slot lit 0)) 1))
+            (byteblock->string (##sys#slot lit 0)) ))
 	 ((##core#inline "C_byteblockp" lit)
 	   (string-append
-	    (string (integer->char (getbits lit)))
-	    (encode-size (getsize lit)) )
-	   (byteblock->string lit) )
+	    (hex (getbits lit))
+	    (encode-size (fx- (getsize lit) 1)) )
+  	    (byteblock->string lit) )
+	 ((##sys#immediate? lit)
+	  (bomb "invalid literal - cannot encode" lit))
 	 (else
 	  (let ((len (getsize lit)))
 	    (string-intersperse
@@ -1540,24 +1548,25 @@ return((C_header_bits(lit) >> 24) & 0xff);
         (len (##sys#size bb)))
     (do ((i 0 (fx+ i 1)))
         ((fx>= i len) (get-output-string out))
-      (display (hex (##core#inline "C_subbyte" bb i)) out))))
+      (display (hex (##sys#byte bb i)) out))))
 
 (define (c-ify-string str)
   (list->string
    (cons 
     #\"
-    (let loop ((chars (string->list str)))
-      (if (null? chars)
-	  '(#\")
-	  (let* ((c (car chars))
-		 (code (char->integer c)) )
-	    (if (or (< code 32) (>= code 127) (memq c '(#\" #\' #\\ #\? #\*)))
-		(append '(#\\)
-			(cond ((< code 8) '(#\0 #\0))
-			      ((< code 64) '(#\0))
-			      (else '()) )
-			(string->list (number->string code 8))
-			(loop (cdr chars)) )
-		(cons c (loop (cdr chars))) ) ) ) ) ) ) )
-
+    (let loop ((bytes (##sys#bytevector->list (##sys#slot str 0))))
+      (if (or (null? bytes) 
+              (null? (cdr bytes)))
+          '(#\")
+	  (let ((code (car bytes)))
+	    (if (or (< code 32)
+                    (>= code 127) 
+                    (memq code '(#\" #\' #\\ #\? #\*)))
+		(append '(#\\ #\x)
+			(if (< code 16) '(#\0) '())
+			(string->list (number->string code 16))
+			(loop (cdr bytes)) )
+		(cons (integer->char code)
+                      (loop (cdr bytes))))))))))
+   
 )
