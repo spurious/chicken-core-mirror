@@ -912,7 +912,6 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 # define C_memchr                   memchr
 # define C_memset                   memset
 # define C_memmove                  memmove
-# define C_strncasecmp              strncasecmp
 # define C_malloc                   malloc
 # define C_calloc                   calloc
 # define C_free                     free
@@ -960,8 +959,6 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 # endif
 # define C_signal                   signal
 # define C_getrusage                getrusage
-# define C_tolower                  tolower
-# define C_toupper                  toupper
 # define C_gettimeofday             gettimeofday
 # define C_gmtime                   gmtime
 # define C_localtime                localtime

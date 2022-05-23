@@ -792,7 +792,7 @@ static int *utf_map_single(int c)
 static int utf_downcase(int c) 
 {
     int *p;
-    if(c < 128) return C_tolower(c);
+    if(c < 128) return c >= 'A' && c <= 'Z' ? c | 0x20 : c;
     p = utf_map_single(c);
     if(p != NULL) return p[ 2 ];
     return c;
@@ -801,7 +801,7 @@ static int utf_downcase(int c)
 static int utf_upcase(int c) 
 {
     int *p;
-    if(c < 128) return C_toupper(c);
+    if(c < 128) return c >= 'a' && c <= 'z' ? c & 0x5f : c;
     p = utf_map_single(c);
     if(p != NULL) return p[ 1 ];
     return c;

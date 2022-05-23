@@ -2442,10 +2442,15 @@ C_regparm C_word C_fcall hash_string(int len, C_char *str, C_word m, C_word r, i
 {
   C_uword key = r;
 
-  if (ci)
-    while(len--) key ^= (key << 6) + (key >> 2) + C_tolower((int)(*str++));
-  else
-    while(len--) key ^= (key << 6) + (key >> 2) + *(str++);
+  if (ci) {
+    while(len--) {
+        int c = C_character_code(C_utf_char_downcase(C_make_character(((int)(*str++)))));
+        key ^= (key << 6) + (key >> 2) + c;
+    }    
+  } else {
+    while(len--) 
+        key ^= (key << 6) + (key >> 2) + *(str++);
+  }
 
   return (C_word)(key % (C_uword)m);
 }
@@ -11829,8 +11834,10 @@ void C_ccall dload_2(C_word c, C_word *av0)
   if (C_header_size(name) >= 5) {
     char *n = (char*) C_data_pointer(name);
     int l = C_header_size(name);
-    if (C_strncasecmp(".dll", n+l-5, 4) && 
-	C_strncasecmp(".so", n+l-4, 3))
+    if (C_strncmp(".dll", n+l-5, 4) && 
+        C_strncmp(".DLL", n+l-5, 4) && 
+        C_strncmp(".so", n+l-5, 3) && 
+	C_strncmp(".SO", n+l-4, 3))
       C_kontinue(k, C_SCHEME_FALSE);
   }
 
