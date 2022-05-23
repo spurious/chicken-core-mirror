@@ -798,17 +798,6 @@
 	     (gen "\"));"))
 	    (else (bad-literal lit))))
 
-    (define (gen-string-constant str)
-      (let* ([len (string-length str)]
-	     [ns (fx/ len 80)]
-	     [srest (modulo len 80)] )
-	(do ([i ns (sub1 i)]
-	     [offset 0 (+ offset 80)] )
-	    ((zero? i)
-	     (when (or (zero? len) (not (zero? srest)))
-	       (gen (c-ify-string (substring str offset len))) ) )
-	  (gen (c-ify-string (substring str offset (+ offset 80))) #t) ) ) )
- 
     (define (procedures)
       (for-each
        (lambda (p)
