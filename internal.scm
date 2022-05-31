@@ -96,8 +96,8 @@
 	 (eq? 'srfi (car x))
 	 (fixnum? (cadr x))))
   (define (library-part->string x)
-    (cond ((symbol? x) (##sys#symbol->string x))
-	  ((fixnum? x) (##sys#number->string x))
+    (cond ((symbol? x) (##sys#symbol->string/shared x))
+	  ((fixnum? x) (##sys#number->string/shared x))
 	  (else (fail))))
   (cond
     ((symbol? lib) lib)
@@ -118,7 +118,7 @@
 
 (define (module-requirement id)
   (##sys#string->symbol
-   (##sys#string-append (##sys#slot id 1) "#")))
+   (##sys#string-append (##sys#symbol->string/shared id) "#")))
 
 
 ;;; Check for multiple bindings in "let"-style constructs:

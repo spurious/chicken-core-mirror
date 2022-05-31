@@ -616,13 +616,13 @@ EOF
 	    ((vector? x) (descseq "vector" ##sys#size ##sys#slot 0))
 	    ((keyword? x)
 	     (fprintf out "keyword symbol with name ~s~%" 
-	       (##sys#symbol->string x)))
+	       (##sys#symbol->string/shared x)))
 	    ((symbol? x)
 	     (unless (##sys#symbol-has-toplevel-binding? x)
 	       (display "unbound " out))
 	     (fprintf out "~asymbol with name ~S~%"
 	       (if (##sys#interned-symbol? x) "" "uninterned ")
-	       (##sys#symbol->string x))
+	       (##sys#symbol->string/shared x))
 	     (let ((plist (##sys#slot x 2)))
 	       (unless (null? plist)
 		 (display "  \nproperties:\n\n" out)

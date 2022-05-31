@@ -212,7 +212,7 @@
 			   '(exn . message)
 			   (cons (string-append
 				  "during expansion of ("
-				  (##sys#symbol->string name) 
+				  (##sys#symbol->string/shared name) 
 				  " ...) - "
 				  (car r) )
 				 (cdr r) ) )
@@ -228,7 +228,7 @@
 	(when (and (not cs) (eq? exp exp2))
 	  (##sys#syntax-error-hook
 	   (string-append
-	    "syntax transformer for `" (##sys#symbol->string name)
+	    "syntax transformer for `" (##sys#symbol->string/shared name)
 	    "' returns original form, which would result in endless expansion")
 	   exp))
 	(dx `(,name ~~> ,exp2))
@@ -325,7 +325,7 @@
   (let ((reverse reverse))
     (lambda (llist0 body errh se)
       (define (err msg) (errh msg llist0))
-      (define (->keyword s) (string->keyword (##sys#symbol->string s)))
+      (define (->keyword s) (string->keyword (##sys#symbol->string/shared s)))
       (let ((rvar #f)
 	    (hasrest #f)
 	    ;; These might not exist in se, use default or chicken env:

@@ -474,7 +474,7 @@
 		  (let ((proc (style head)))
 		    (if proc
 			(proc expr col extra)
-			(if (> (string-length (##sys#symbol->string head))
+			(if (> (string-length (##sys#symbol->string/shared head))
 			       max-call-head-width)
 			    (pp-general expr col extra #f #f #f pp-expr)
 			    (pp-call expr col extra pp-expr))))

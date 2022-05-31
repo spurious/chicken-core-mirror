@@ -1003,7 +1003,7 @@
   (if (not name)
       "toplevel"
       (##sys#string-append
-       (string->c-identifier (##sys#slot name 1))
+       (string->c-identifier (##sys#symbol->string/shared name))
        "_toplevel")))
 
 (define (c-toplevel name loc)
@@ -1127,7 +1127,7 @@
     (let ((libs
 	   (if lib
 	       (##sys#list lib)
-	       (cons (##sys#string-append (##sys#slot unit-name 1) load-library-extension)
+	       (cons (##sys#string-append (##sys#symbol->string/shared unit-name) load-library-extension)
 		     (dynamic-load-libraries))))
 	  (top
 	   (c-toplevel unit-name loc)))

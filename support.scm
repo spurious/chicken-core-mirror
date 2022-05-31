@@ -1616,7 +1616,7 @@
 	   (and str (fits? (string-length str)))))
 	((flonum? lit))
 	((symbol? lit)
-	 (let ((str (##sys#symbol->string lit)))
+	 (let ((str (##sys#symbol->string/shared lit)))
 	   (fits? (string-length str))))
         ((string? lit)
          (fits? (getsize (##sys#slot lit 0))))

@@ -2717,6 +2717,13 @@ EOF
          (s2 (##sys#make-bytevector len)))
     (##core#inline "C_copy_bytevector" bv s2 len)))
 
+(define (##sys#symbol->string/shared s)
+  (let* ((bv (##sys#slot s 1))
+         (count (##core#inline "C_utf_length" bv)))
+    (##core#inline_allocate ("C_a_ustring" 5) 
+                            bv
+                            count)))
+
 (define (##sys#symbol->string s)
   (let* ((bv (##sys#slot s 1))
          (len (##sys#size bv))
@@ -2758,7 +2765,7 @@ EOF
 	      (let ((prefix (car str-or-sym)))
 		(or (and (##core#inline "C_blockp" prefix)
 			 (cond ((##core#inline "C_stringp" prefix) prefix)
-			       ((##core#inline "C_symbolp" prefix) (##sys#symbol->string prefix))
+			       ((##core#inline "C_symbolp" prefix) (##sys#symbol->string/shared prefix))
 			       (else (err prefix))))
 		    (err prefix) ) ) )
 	  (##sys#number->string counter) ) ) ) ) ) ) )
@@ -2771,7 +2778,7 @@ EOF
 	string-append 
 	(map (lambda (s)
 	       (##sys#check-symbol s 'symbol-append)
-	       (##sys#symbol->string s))
+	       (##sys#symbol->string/shared s))
 	     ss))))))
 
 ;;; Keywords:
@@ -4589,7 +4596,7 @@ EOF
 		(memq chr special-characters) ) ) )
 
 	(define (outsym port sym)
-	  (let ((str (##sys#symbol->string sym)))
+	  (let ((str (##sys#symbol->string/shared sym)))
 	    (if (or (not readable) (sym-is-readable? str))
 		(outstr port str)
 		(outreadablesym port str))))
@@ -4795,7 +4802,7 @@ EOF
     (cond (a (handle-exceptions ex
 		(begin
 		  (##sys#print "#<Error in printer of record type `" #f port)
-		  (##sys#print (##sys#symbol->string type) #f port)
+		  (##sys#print (##sys#symbol->string/shared type) #f port)
 		  (if (##sys#structure? ex 'condition)
 		      (and-let* ((a (member '(exn . message) (##sys#slot ex 2))))
 			(##sys#print "': " #f port)
@@ -4805,7 +4812,7 @@ EOF
 	       ((##sys#slot a 1) x port)))
 	  (else
 	   (##sys#print "#<" #f port)
-	   (##sys#print (##sys#symbol->string type) #f port)
+	   (##sys#print (##sys#symbol->string/shared type) #f port)
 	   (case type
 	     ((condition)
 	      (##sys#print ": " #f port)
@@ -5317,7 +5324,7 @@ EOF
 			      (loc (and loca (cadr loca))) )
 			  (if (and loc (symbol? loc))
 			      (string-append
-			       "(" (##sys#symbol->string loc) ") "
+			       "(" (##sys#symbol->string/shared loc) ") "
 			       (cond ((symbol? msg) (##sys#slot msg 1))
 				     ((string? msg) msg)
 				     (else "") ) ) ; Hm...
@@ -5464,7 +5471,7 @@ EOF
 			(display ": " port)
 			(let ((loc (errloc ex)))
 			  (when (and loc (symbol? loc))
-			    (display (string-append "(" (##sys#symbol->string loc) ") ") port) ) )
+			    (display (string-append "(" (##sys#symbol->string/shared loc) ") ") port) ) )
 			(display msg port) ) )
 		     (else
 		      (let ((kinds (##sys#slot ex 1)))
@@ -6538,7 +6545,7 @@ static C_word C_fcall C_setenv(C_word x, C_word y) {
 	(if (eq? 'unknown x)
 	    ""
 	    (string-append (symbol->string x) "-")))
-      (string-append (str sv) (str st) (str bp) (##sys#symbol->string mt))))
+      (string-append (str sv) (str st) (str bp) (##sys#symbol->string/shared mt))))
   (if full
       (let ((spec (string-append
 		   " " (number->string (foreign-value "C_WORD_SIZE" int)) "bit"
@@ -6628,7 +6635,7 @@ static C_word C_fcall C_setenv(C_word x, C_word y) {
     (lambda (x)
       (cond ((keyword? x) x)
 	    ((string? x) (string->keyword x))
-	    ((symbol? x) (string->keyword (##sys#symbol->string x)))
+	    ((symbol? x) (string->keyword (##sys#symbol->string/shared x)))
 	    (else (err x))))))
 
 (define ##sys#features

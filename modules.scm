@@ -656,8 +656,8 @@
       (##sys#warn (string-append msg " in module `" (symbol->string mod) "'") id))
     (define (tostr x)
       (cond ((string? x) x)
-	    ((keyword? x) (##sys#string-append (##sys#symbol->string x) ":")) ; hack
-	    ((symbol? x) (##sys#symbol->string x))
+	    ((keyword? x) (##sys#string-append (##sys#symbol->string/shared x) ":")) ; hack
+	    ((symbol? x) (##sys#symbol->string/shared x))
 	    ((number? x) (number->string x))
 	    (else (##sys#syntax-error-hook loc "invalid prefix" ))))
     (call-with-current-continuation
@@ -756,7 +756,7 @@
 			   (define (rename imp)
 			     (cons
 			      (##sys#string->symbol
-			       (##sys#string-append (tostr prefix) (##sys#symbol->string (car imp))))
+			       (##sys#string-append (tostr prefix) (##sys#symbol->string/shared (car imp))))
 			      (cdr imp)))
 			   (values name lib `(,head ,spec ,prefix) (map rename impv) (map rename imps) impi)))
 			(else
@@ -829,9 +829,9 @@
 (define (module-rename sym prefix)
   (##sys#string->symbol
    (string-append
-    (##sys#slot prefix 1)
+    (##sys#symbol->string/shared prefix)
     "#"
-    (##sys#slot sym 1) ) ) )
+    (##sys#symbol->string/shared sym) ) ) )
 
 (define (##sys#alias-global-hook sym assign where)
   (define (mrename sym)
