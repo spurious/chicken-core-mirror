@@ -31,7 +31,7 @@
 
 #define CASE_MAP1_LENGTH 6052
 
-static int case_map1[ CASE_MAP1_LENGTH * 4 ] = {
+static int case_map1[ CASE_MAP1_LENGTH ] = {
 65, 65, 97, 65, 66, 66, 98, 66, 67, 67, 99, 67, 68, 68, 100,
 68, 69, 69, 101, 69, 70, 70, 102, 70, 71, 71, 103, 71, 72, 72,
 104, 72, 73, 73, 105, 73, 74, 74, 106, 74, 75,
@@ -773,7 +773,7 @@ static C_char *utf_map_multi(int c, int mode)
 
 static int *utf_map_single(int c)
 {
-    int lo = 0, hi = CASE_MAP1_LENGTH - 1;
+    int lo = 0, hi = (CASE_MAP1_LENGTH / 4) - 1;
     while(hi != lo) {
         int mid = lo + (hi - lo) / 2;
         int val = case_map1[ mid * 4 ];
