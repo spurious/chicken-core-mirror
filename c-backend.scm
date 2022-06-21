@@ -1455,10 +1455,12 @@
 ;; 
 ;; - everything hardcoded, using the FFI would be the ugly, but safer method.
 
-(define (hex n)
-  (if (< n 16) 
-      (string-append "\\x0" (number->string n 16))
-      (string-append "\\x" (number->string n 16))))
+(define (oct n)
+  (string-append
+    (cond ((< n 8) "\\00")
+          ((< n 64) "\\0")
+          (else "\\"))
+    (number->string n 8)))
 
 (define (encode-literal lit)
   (define getbits
@@ -1481,26 +1483,26 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	(quit-compiling
 	 "Encoded literal size of ~S is too large (must fit in 24 bits)" n)
 	(string-append 
-          (hex (bitwise-and #xff (arithmetic-shift n -16)))
-	  (hex (bitwise-and #xff (arithmetic-shift n -8)))
-          (hex (bitwise-and #xff n)))))
+          (oct (bitwise-and #xff (arithmetic-shift n -16)))
+	  (oct (bitwise-and #xff (arithmetic-shift n -8)))
+          (oct (bitwise-and #xff n)))))
   (define (finish str)		   ; can be taken out at a later stage
-    (string-append "\\xfe" str))
+    (string-append "\\376" str))
   (finish
-   (cond ((eq? #t lit) "\\xff\\x06\\x01")
-	 ((eq? #f lit) "\\xff\\x06\\x00")
-	 ((char? lit) (string-append "\\xff\\x0a" (encode-size (char->integer lit))))
-	 ((null? lit) "\\xff\\x0e")
-	 ((eof-object? lit) "\\xff\\x3e")
-	 ((eq? (void) lit) "\\xff\\x1e")
+   (cond ((eq? #t lit) "\\377\\006\\001")
+	 ((eq? #f lit) "\\377\\006\\000")
+	 ((char? lit) (string-append "\\376\\012" (encode-size (char->integer lit))))
+	 ((null? lit) "\\377\\016")
+	 ((eof-object? lit) "\\377\\076")
+	 ((eq? (void) lit) "\\377\\036")
 	 ;; The big-fixnum? check can probably be simplified
 	 ((and (fixnum? lit) (not (big-fixnum? lit)))
 	  (string-append
-	   "\\xff\\x01"
-	   (hex (bitwise-and #xff (arithmetic-shift lit -24)))
-           (hex (bitwise-and #xff (arithmetic-shift lit -16)))
-	   (hex (bitwise-and #xff (arithmetic-shift lit -8)))
-	   (hex (bitwise-and #xff lit)) ) )
+	   "\\376\\001"
+	   (oct (bitwise-and #xff (arithmetic-shift lit -24)))
+           (oct (bitwise-and #xff (arithmetic-shift lit -16)))
+	   (oct (bitwise-and #xff (arithmetic-shift lit -8)))
+	   (oct (bitwise-and #xff lit)) ) )
 	 ((exact-integer? lit)
 	  ;; Encode as hex to save space and get exact size
 	  ;; calculation.  We could encode as base 32 to save more
@@ -1509,27 +1511,27 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	  ;; get a unique new type, as bignums don't have their own
 	  ;; type tag (they're encoded as structures).
 	  (let ((str (number->string lit 16)))
-	    (string-append "\\xc2" (encode-size (string-length str)) str)))
+	    (string-append "\\302" (encode-size (string-length str)) str)))
 	 ((flonum? lit)
-	  (string-append "\\x55" (number->string lit) "\\x00") )
+	  (string-append "\\125" (number->string lit) "\\000") )
 	 ((keyword? lit)
 	  (let* ((str (keyword->string lit))
                  (bv (##sys#slot str 1)))
 	    (string-append 
-	     "\\x01" (encode-size (fx- (##sys#size bv) 1)) "\\x02" str) ) )
+	     "\\001" (encode-size (fx- (##sys#size bv) 1)) "\\002" str) ) )
 	 ((symbol? lit)
-	  (let* ((str (symbol->string lit))
-                 (bv (##sys#slot str 1)))
+	  (let* ((str (##sys#symbol->string/shared lit))
+                 (bv (##sys#slot str 0)))
 	    (string-append 
-	     "\\x01" (encode-size (fx- (##sys#size bv) 1)) "\\x01" str) ) )
+	     "\\001" (encode-size (fx- (##sys#size bv) 1)) "\\001" str) ) )
 	 ((string? lit)
 	   (string-append
-	    (hex (getbits lit))
+	    (oct (getbits lit))
 	    (encode-size (fx- (##sys#size (##sys#slot lit 0)) 1))
             (byteblock->string (##sys#slot lit 0)) ))
 	 ((##core#inline "C_byteblockp" lit)
 	   (string-append
-	    (hex (getbits lit))
+	    (oct (getbits lit))
 	    (encode-size (fx- (getsize lit) 1)) )
   	    (byteblock->string lit) )
 	 ((##sys#immediate? lit)
@@ -1538,7 +1540,7 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	  (let ((len (getsize lit)))
 	    (string-intersperse
 	     (cons*
-	      (hex (getbits lit))
+	      (oct (getbits lit))
 	      (encode-size len)
 	      (list-tabulate len (lambda (i) (encode-literal (##sys#slot lit i)))))
 	     ""))))) )
@@ -1548,7 +1550,7 @@ return((C_header_bits(lit) >> 24) & 0xff);
         (len (##sys#size bb)))
     (do ((i 0 (fx+ i 1)))
         ((fx>= i len) (get-output-string out))
-      (display (hex (##sys#byte bb i)) out))))
+      (display (oct (##sys#byte bb i)) out))))
 
 (define (c-ify-string str)
   (list->string
