@@ -4665,7 +4665,7 @@ EOF
 			(let ([code (char->integer x)])
 			  (cond [(char-name x) 
 				 => (lambda (cn) 
-				      (outstr port (##sys#slot cn 1)) ) ]
+				      (outstr port (##sys#symbol->string/shared cn)) ) ]
 				[(or (fx< code 32) (fx> code #x1ffff))
 				 (outchr port #\x)
 				 (outstr port (##sys#number->string code 16)) ]
