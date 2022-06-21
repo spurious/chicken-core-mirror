@@ -977,11 +977,6 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 # define C_longjmp                  longjmp
 # define C_alloca                   alloca
 # define C_strerror                 strerror
-# define C_isalpha                  isalpha
-# define C_isdigit                  isdigit
-# define C_isspace                  isspace
-# define C_islower                  islower
-# define C_isupper                  isupper
 # define C_sin                      sin
 # define C_cos                      cos
 # define C_tan                      tan
@@ -1360,14 +1355,14 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_i_nullp(x)                    C_mk_bool((x) == C_SCHEME_END_OF_LIST)
 #define C_i_structurep(x, s)            C_mk_bool(!C_immediatep(x) && C_header_bits(x) == C_STRUCTURE_TYPE && C_block_item(x, 0) == (s))
 
-#define C_u_i_char_alphabeticp(x)       C_mk_bool(C_character_code(x) < 0x100 && C_isalpha(C_character_code(x)))
-#define C_u_i_char_numericp(x)          C_mk_bool(C_character_code(x) < 0x100 && C_isdigit(C_character_code(x)))
-#define C_u_i_char_whitespacep(x)       C_mk_bool(C_character_code(x) < 0x100 && C_isspace(C_character_code(x)))
-#define C_u_i_char_upper_casep(x)       C_mk_bool(C_character_code(x) < 0x100 && C_isupper(C_character_code(x)))
-#define C_u_i_char_lower_casep(x)       C_mk_bool(C_character_code(x) < 0x100 && C_islower(C_character_code(x)))
+#define C_u_i_char_alphabeticp(x)       C_mk_bool(C_utf_isalpha(C_character_code(x)))
+#define C_u_i_char_numericp(x)          C_mk_bool(C_utf_isdigit(C_character_code(x)))
+#define C_u_i_char_whitespacep(x)       C_mk_bool(C_utf_isspace(C_character_code(x)))
+#define C_u_i_char_upper_casep(x)       C_mk_bool(C_utf_isupper(C_character_code(x)))
+#define C_u_i_char_lower_casep(x)       C_mk_bool(C_utf_islower(C_character_code(x)))
 
-#define C_u_i_char_upcase(x)            C_utf_char_upcase(x)
-#define C_u_i_char_downcase(x)          C_utf_char_downcase(x)
+#define C_u_i_char_upcase(x)            C_make_character(C_utf_char_upcase(C_character_code(x)))
+#define C_u_i_char_downcase(x)          C_make_character(C_utf_char_downcase(C_character_code(x)))
 #define C_utf_length(bv)                C_fix(C_utf_count((C_char *)C_data_pointer(bv), C_header_size(bv) - 1))
 #define C_utf_range_length(bv, from, to)    C_fix(C_utf_count((C_char *)C_data_pointer(bv) + C_unfix(from), C_unfix(to) - C_unfix(from)))
 
@@ -1886,8 +1881,8 @@ C_fctexport int C_fcall C_utf_count(C_char *str, int len) C_regparm;
 C_fctexport C_char * C_fcall C_utf_encode(C_char *str, int chr) C_regparm;
 C_fctexport C_word C_fcall C_utf_decode_ptr(C_char *bv) C_regparm;
 C_fctexport C_word C_fcall C_utf_decode(C_word bv, C_word pos) C_regparm;
-C_fctexport C_word C_fcall C_utf_char_downcase(C_word c) C_regparm;
-C_fctexport C_word C_fcall C_utf_char_upcase(C_word c) C_regparm;
+C_fctexport int C_fcall C_utf_char_downcase(int c) C_regparm;
+C_fctexport int C_fcall C_utf_char_upcase(int c) C_regparm;
 C_fctexport C_word C_fcall C_utf_advance(C_word bv, C_word pos) C_regparm;
 C_fctexport C_word C_fcall C_utf_insert(C_word bv, C_word pos, C_word c) C_regparm;
 C_fctexport C_word C_fcall C_utf_bytes(C_word chr) C_regparm;
@@ -1897,6 +1892,11 @@ C_fctexport void C_fcall C_utf_putc(int chr, C_FILEPTR fp) C_regparm;
 C_fctexport C_word C_fcall C_utf_fragment_counts(C_word bv, C_word pos, C_word len) C_regparm;
 C_fctexport C_word C_fcall C_utf_overwrite(C_word s, C_word i, C_word len, C_word bv, C_word c) C_regparm;
 C_fctexport C_word C_fcall C_utf_list_size(C_word lst) C_regparm;
+C_fctexport int C_fcall C_utf_isspace(int c) C_regparm;
+C_fctexport int C_fcall C_utf_isdigit(int c) C_regparm;
+C_fctexport int C_fcall C_utf_isalpha(int c) C_regparm;
+C_fctexport int C_fcall C_utf_isupper(int c) C_regparm;
+C_fctexport int C_fcall C_utf_islower(int c) C_regparm;
 
 C_fctimport C_cpsproc(C_toplevel) C_noret;
 C_fctimport C_cpsproc(C_invalid_procedure) C_noret;
