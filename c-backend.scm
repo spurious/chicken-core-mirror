@@ -1489,14 +1489,14 @@ return((C_header_bits(lit) >> 24) & 0xff);
   (finish
    (cond ((eq? #t lit) "\\377\\006\\001")
 	 ((eq? #f lit) "\\377\\006\\000")
-	 ((char? lit) (string-append "\\376\\012" (encode-size (char->integer lit))))
+	 ((char? lit) (string-append "\\377\\012" (encode-size (char->integer lit))))
 	 ((null? lit) "\\377\\016")
 	 ((eof-object? lit) "\\377\\076")
 	 ((eq? (void) lit) "\\377\\036")
 	 ;; The big-fixnum? check can probably be simplified
 	 ((and (fixnum? lit) (not (big-fixnum? lit)))
 	  (string-append
-	   "\\376\\001"
+	   "\\377\\001"
 	   (oct (bitwise-and #xff (arithmetic-shift lit -24)))
            (oct (bitwise-and #xff (arithmetic-shift lit -16)))
 	   (oct (bitwise-and #xff (arithmetic-shift lit -8)))
@@ -1509,29 +1509,31 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	  ;; get a unique new type, as bignums don't have their own
 	  ;; type tag (they're encoded as structures).
 	  (let ((str (number->string lit 16)))
-	    (string-append "\\302" (encode-size (string-length str)) str)))
+	    (string-append "\\320" (encode-size (fx- (##sys#size (##sys#slot str 0)) 1)) str)))
 	 ((flonum? lit)
 	  (string-append "\\125" (number->string lit) "\\000") )
 	 ((keyword? lit)
 	  (let* ((str (keyword->string lit))
                  (bv (##sys#slot str 1)))
 	    (string-append 
-	     "\\001" (encode-size (fx- (##sys#size bv) 1)) "\\002" str) ) )
+	     "\\001" (encode-size (fx- (##sys#size bv) 1)) "\\002" 
+                    (byteblock->string bv -1)) ) )
 	 ((symbol? lit)
 	  (let* ((str (##sys#symbol->string/shared lit))
                  (bv (##sys#slot str 0)))
 	    (string-append 
-	     "\\001" (encode-size (fx- (##sys#size bv) 1)) "\\001" str) ) )
+	     "\\001" (encode-size (fx- (##sys#size bv) 1)) "\\001"
+                    (byteblock->string bv -1) ) ))
 	 ((string? lit)
 	   (string-append
 	    (oct (getbits lit))
-	    (encode-size (fx- (##sys#size (##sys#slot lit 0)) 1))
-            (byteblock->string (##sys#slot lit 0)) ))
+	    (encode-size (##sys#size (##sys#slot lit 0)))
+            (byteblock->string (##sys#slot lit 0) 0) ))
 	 ((##core#inline "C_byteblockp" lit)
 	   (string-append
 	    (oct (getbits lit))
-	    (encode-size (fx- (getsize lit) 1)) )
-  	    (byteblock->string lit) )
+	    (encode-size (getsize lit))
+  	    (byteblock->string lit 0) ))
 	 ((##sys#immediate? lit)
 	  (bomb "invalid literal - cannot encode" lit))
 	 (else
@@ -1543,9 +1545,9 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	      (list-tabulate len (lambda (i) (encode-literal (##sys#slot lit i)))))
 	     ""))))) )
    
-(define (byteblock->string bb)
+(define (byteblock->string bb mlen)
   (let ((out (open-output-string))
-        (len (##sys#size bb)))
+        (len (fx+ (##sys#size bb) mlen)))
     (do ((i 0 (fx+ i 1)))
         ((fx>= i len) (get-output-string out))
       (display (oct (##sys#byte bb i)) out))))
@@ -1562,9 +1564,11 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	    (if (or (< code 32)
                     (>= code 127) 
                     (memq code '(#\" #\' #\\ #\? #\*)))
-		(append '(#\\ #\x)
-			(if (< code 16) '(#\0) '())
-			(string->list (number->string code 16))
+		(append '(#\\)
+                        (cond ((< code 8) '(#\0 #\0))
+                              ((< code 64) '(#\0))
+                              (else '()))
+			(string->list (number->string code 8))
 			(loop (cdr bytes)) )
 		(cons (integer->char code)
                       (loop (cdr bytes))))))))))
