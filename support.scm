@@ -1057,7 +1057,7 @@
 	     ((int unsigned-int byte unsigned-byte int32 unsigned-int32)
 	      (if unsafe param `(##sys#foreign-fixnum-argument ,param)))
 	     ((float double number) (if unsafe param `(##sys#foreign-flonum-argument ,param)))
-	     ((bytevector scheme-pointer)
+	     ((u8vector bytevector scheme-pointer)
 	      (let ((tmp (gensym)))
 		`(##core#let ((,tmp ,param))
 		   (##core#if ,tmp
@@ -1065,7 +1065,7 @@
 				   tmp
 				   `(##sys#foreign-block-argument ,tmp) )
 		       (##core#quote #f)) ) ) )
-	     ((nonnull-scheme-pointer nonnull-bytevector)
+	     ((nonnull-scheme-pointer nonnull-bytevector nonnull-u8vector)
 	      (if unsafe
 		  param
 		  `(##sys#foreign-block-argument ,param) ) )
@@ -1081,7 +1081,7 @@
 	      (if unsafe
 		  param
 		  `(##sys#foreign-struct-wrapper-argument (##core#quote pointer-vector) ,param) ) )
-	     ((u8vector u16vector s8vector s16vector u32vector s32vector
+	     ((u16vector s8vector s16vector u32vector s32vector
 			u64vector s64vector f32vector f64vector)
 	      (let ((tmp (gensym)))
 		`(##core#let ((,tmp ,param))
@@ -1090,7 +1090,7 @@
 				   tmp
 				   `(##sys#foreign-struct-wrapper-argument (##core#quote ,t) ,tmp) )
 		       (##core#quote #f)) ) ) )
-	     ((nonnull-u8vector nonnull-u16vector
+	     ((nonnull-u16vector
 				nonnull-s8vector nonnull-s16vector
 				nonnull-u32vector nonnull-s32vector
 				nonnull-u64vector nonnull-s64vector
