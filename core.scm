@@ -2782,7 +2782,8 @@
 	    '##core#closure (list (if emit-closure-info 2 1))
 	    (cons (make-node '##core#proc (list (car params) #t) '())
 		  (if emit-closure-info
-		      (list (qnode (##sys#make-lambda-info (car params))))
+		      (list (qnode (##sys#make-lambda-info 
+                                     (##sys#symbol->string/shared (car params)))))
 		      '() ) ) ) )
 
 	  ((##core#ref) n)

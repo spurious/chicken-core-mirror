@@ -258,7 +258,6 @@
 
 (define string-translate 
   (lambda (str from . to)
-
     (define (instring s)
       (let ([len (string-length s)])
 	(lambda (c)
@@ -266,7 +265,6 @@
 	    (cond [(fx>= i len) #f]
 		  [(eq? c (string-ref s i)) i]
 		  [else (loop (fx+ i 1))] ) ) ) ) )
-
     (let* ([from
 	    (cond [(char? from) (lambda (c) (eq? c from))]
 		  [(pair? from) (instring (list->string from))]
@@ -306,13 +304,14 @@
 		       (loop (fx+ i 1) (fx+ j 1)) ] ) ) ) ) ) ) ) )
 
 (define (fragments->string total fs)
-  (let ([dest (##sys#make-string total)])
-    (let loop ([fs fs] [pos 0])
+  (let ((dest (##sys#make-bytevector (fx+ total 1))))
+    (let loop ((fs fs) (pos 0))
       (if (null? fs)
-	  dest
-	  (let* ([f (##sys#slot fs 0)]
-		 [flen (string-length f)] )
-	    (##core#inline "C_utf_copy" f dest 0 flen pos)
+	  (##core#inline_allocate ("C_a_ustring" 5) dest
+                           (##core#inline "C_utf_length" dest))
+	  (let* ((f (##sys#slot fs 0))
+		 (flen (fx- (##sys#size f) 1)))
+	    (##core#inline "C_copy_memory_with_offset" dest f pos 0 flen)
 	    (loop (##sys#slot fs 1) (fx+ pos flen)) ) ) ) ) )
 
 (define (string-translate* str smap)
@@ -321,28 +320,31 @@
   (let ((len (string-length str)))
     (define (collect i from total fs)
       (if (fx>= i len)
-	  (fragments->string
-	   total
-	   (##sys#fast-reverse 
-	    (if (fx> i from) 
-		(cons (##sys#substring str from i) fs)
-		fs) ) )
+	  (begin
+            (when (fx> i from) 
+              (let ((bv (##sys#slot (##sys#substring str from i) 0)))
+                (set! fs (cons bv fs))
+                (set! total (fx+ total (fx- (##sys#size bv) 1)))))
+  	    (fragments->string total (##sys#fast-reverse fs)))
 	  (let loop ((smap smap))
 	    (if (null? smap) 
-		(collect (fx+ i 1) from (fx+ total 1) fs)
+		(collect (fx+ i 1) from total fs)
 		(let* ((p (car smap))
 		       (sm (car p))
 		       (smlen (string-length sm))
 		       (st (cdr p)) )
 		  (if (and (fx<= (fx+ i smlen) len)
 			   (##core#inline "C_u_i_substring_equal_p" str sm i 0 smlen))
-		      (let ((i2 (fx+ i smlen)))
+		      (let ((i2 (fx+ i smlen))
+                            (stbv (##sys#slot st 0)))
 			(when (fx> i from)
-			  (set! fs (cons (##sys#substring str from i) fs)) )
+                          (let ((bv (##sys#slot (##sys#substring str from i) 0)))
+                            (set! fs (cons bv fs))
+                            (set! total (fx+ total (fx- (##sys#size bv) 1)))))
 			(collect 
 			 i2 i2
-			 (fx+ total (string-length st))
-			 (cons st fs) ) ) 
+			 (fx+ total (fx- (##sys#size stbv) 1))
+			 (cons stbv fs) ) ) 
 		      (loop (cdr smap)) ) ) ) ) ) )
     (collect 0 0 0 '()) ) )
 

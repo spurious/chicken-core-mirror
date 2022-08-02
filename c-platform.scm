@@ -1110,8 +1110,8 @@
 (rewrite 'srfi-4#f64vector-set! 2 3 "C_u_i_f64vector_set" #f)
 (rewrite 'srfi-4#f64vector-set! 2 3 "C_i_f64vector_set" #t)
 
-(rewrite 'srfi-4#u8vector-length 2 1 "C_u_i_u8vector_length" #f)
-(rewrite 'srfi-4#u8vector-length 2 1 "C_i_u8vector_length" #t)
+(rewrite 'srfi-4#u8vector-length 2 1 "C_u_i_bytevector_length" #f)
+(rewrite 'srfi-4#u8vector-length 2 1 "C_i_bytevector_length" #t)
 (rewrite 'srfi-4#s8vector-length 2 1 "C_u_i_s8vector_length" #f)
 (rewrite 'srfi-4#s8vector-length 2 1 "C_i_s8vector_length" #t)
 (rewrite 'srfi-4#u16vector-length 2 1 "C_u_i_u16vector_length" #f)

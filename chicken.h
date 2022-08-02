@@ -1425,6 +1425,7 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 #define C_i_check_port(x, in, op)       C_i_check_port_2(x, in, op, C_SCHEME_FALSE)
 
 #define C_u_i_string_length(x)          C_block_item((x), 1)
+#define C_u_i_bytevector_length(x)      C_block_size(x)
 
 #define C_u_i_16vector_length(x)        C_fix(C_header_size(C_block_item(x, 1)) >> 1)
 #define C_u_i_32vector_length(x)        C_fix(C_header_size(C_block_item(x, 1)) >> 2)

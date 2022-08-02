@@ -6043,12 +6043,12 @@ static C_word C_fcall C_setenv(C_word x, C_word y) {
 (define current-directory
   (getter-with-setter
    (lambda ()
-     (let* ((buffer (make-string 1024))
+     (let* ((buffer (##sys#make-bytevector 1024))
 	    (len (##core#inline "C_curdir" buffer)))
       (unless ##sys#windows-platform ; FIXME need `cond-expand' here
 	(##sys#update-errno))
       (if len
-	  (##sys#substring buffer 0 len)
+	  (##sys#buffer->string buffer 0 len)
 	  (##sys#signal-hook
 	   #:file-error
 	   'current-directory "cannot retrieve current directory"))))
