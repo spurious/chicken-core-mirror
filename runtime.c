@@ -5174,6 +5174,7 @@ C_word C_a_i_string(C_word **a, int c, ...)
 
   len = p - (char *)C_data_pointer(b) + 1;
   *a = (C_word *)((C_word)(*a) + sizeof(C_header) + C_align(len));
+  *p = '\0';
   C_block_header_init(b, C_BYTEVECTOR_TYPE | len);
   va_end(v);
   if (c) barf(C_BAD_ARGUMENT_TYPE_ERROR, "string", x);
@@ -11111,14 +11112,14 @@ void C_ccall C_integer_to_string(C_word c, C_word *av)
       try_extended_number("##sys#integer->string/recursive",
                           4, k, num, C_fix(radix), C_fix(len));
     } else {
-      C_word kab[C_SIZEOF_CLOSURE(4)], *ka = kab, kav[6];
+      C_word kab[C_SIZEOF_CLOSURE(4)], *ka = kab, kav[4];
 
       kav[ 0 ] = (C_word)NULL;   /* No "self" closure */
       kav[ 1 ] = C_closure(&ka, 4, (C_word)bignum_to_str_2,
                            k, num, C_fix(radix));
       kav[ 2 ] = C_fix(len + 1);
-      kav[ 3 ] = 0; /* No initialization */
-      C_allocate_bytevector(6, kav);
+      kav[ 3 ] = C_SCHEME_FALSE; /* No initialization */
+      C_allocate_bytevector(4, kav);
     }
   }
 }
@@ -11225,13 +11226,14 @@ static void bignum_to_str_2(C_word c, C_word *av)
   
     /* Shorten with distance between start and index. */
     if (buf != index) {
-      i = C_header_size(string) - (index - buf) + 1;
+      i = C_header_size(string) - (index - buf);
       C_memmove(buf, index, i); /* Move start of number to beginning. */
+      buf[ i ] = '\0'; /* terminating 0 */
       C_block_header(string) = C_BYTEVECTOR_TYPE | i; /* Mutate strlength. */
     }
   }
 
-  C_kontinue(k, C_a_ustring(&a, 0, string, index - buf));
+  C_kontinue(k, C_a_ustring(&a, 0, string, C_fix(C_header_size(string) - 1)));
 }
 
 
@@ -12541,7 +12543,7 @@ static C_regparm C_word C_fcall decode_literal2(C_word **ptr, C_char **str,
     
   case C_STRING_TYPE:
     /* strings are always allocated statically */
-    val = C_static_string(ptr, size, *str);
+    val = C_static_string(ptr, size - 1, *str);
     *str += size;
     break;
     
