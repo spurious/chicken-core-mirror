@@ -1772,13 +1772,19 @@ C_regparm C_word C_fcall C_utf_overwrite(C_word s, C_word i, C_word len, C_word 
     return C_SCHEME_UNDEFINED;
 }
 
-/* XXX inline this? */
 C_regparm C_word C_fcall C_utf_compare(C_word s1, C_word s2, C_word start1, C_word start2,
     C_word len)
 {
     C_char *p1 = utf_index(s1, C_unfix(start1));
     C_char *p2 = utf_index(s2, C_unfix(start2));
-    return C_fix(C_memcmp(p1, p2, C_unfix(len)));
+    int e, n = C_unfix(len);
+    while(n--) {
+        C_u32 c1, c2;
+        p1 = utf8_decode(p1, &c1, &e);
+        p2 = utf8_decode(p2, &c2, &e);
+        if(c1 != c2) return C_fix((C_word)c1 - (C_word)c2);
+    }
+    return C_fix(0);
 }
 
 C_regparm C_word C_fcall C_utf_compare_ci(C_word s1, C_word s2, C_word start1, C_word start2, C_word len)
