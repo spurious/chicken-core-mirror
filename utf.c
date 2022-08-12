@@ -1699,7 +1699,7 @@ C_regparm C_word C_fcall C_utf_subchar(C_word s, C_word i)
     int e;
     C_u32 c;
     utf8_decode(p, &c, &e);
-    if(e != 0) C_decoding_error(s, i);
+    if(e != 0) C_decoding_error(C_block_item(s, 0), i);
     return C_make_character(c);
 }
 
