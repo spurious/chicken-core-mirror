@@ -1762,12 +1762,12 @@ C_regparm C_word C_fcall C_utf_overwrite(C_word s, C_word i, C_word len, C_word 
             p2, suffix + 1); /* include 0 byte */
         C_mutate_slot(&C_block_item(s, 0), bvn);
         C_mutate_scratch_slot(&C_block_item(s, 0), bvn);
-    } else if(count < d) {
+    } else if(count < d && count) {
         C_memcpy(p1, C_data_pointer(bv), count);
         C_memmove(p1 + count, p2, suffix + 1); /* include 0 byte */
         C_block_header_init(bvs, C_make_header(C_BYTEVECTOR_TYPE, 
             bvlen - (d - count) + 1));
-    } else if(count) C_memcpy(p1, C_data_pointer(bvs), count);
+    } else if(count) C_memcpy(p1, C_data_pointer(bv), count);
 
     return C_SCHEME_UNDEFINED;
 }
