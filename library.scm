@@ -2864,13 +2864,13 @@ EOF
 
 (define (bytevector-u8-ref bv i)
   (##sys#check-bytevector bv 'bytevector-u8-ref)
-  (##sys#check-fixnum bv 'bytevector-u8-ref)
+  (##sys#check-fixnum i 'bytevector-u8-ref)
   (##sys#check-range i 0 (##sys#size bv) 'bytevector-u8-ref)
   (##core#inline "C_subbyte" bv i))
 
 (define (bytevector-u8-set! bv i b)
   (##sys#check-bytevector bv 'bytevector-u8-set!)
-  (##sys#check-fixnum bv 'bytevector-u8-set!)
+  (##sys#check-fixnum i 'bytevector-u8-set!)
   (##sys#check-range i 0 (##sys#size bv) 'bytevector-u8-set!)
   (##sys#check-fixnum b 'bytevector-u8-set!)
   (##core#inline "C_setsubbyte" bv i b))
@@ -3276,7 +3276,7 @@ EOF
 ; 4:  (close PORT)
 ; 5:  (flush-output PORT)
 ; 6:  (char-ready? PORT) -> BOOL
-; 7:  (read-bytevector! PORT COUNT STRING START) -> COUNT'
+; 7:  (read-bytevector! PORT COUNT BYTEVECTOR START) -> COUNT'
 ; 8:  (read-line PORT LIMIT) -> STRING | EOF
 ; 9:  (read-buffered PORT) -> STRING
 
@@ -3713,6 +3713,11 @@ EOF
   (getter-with-setter
    scheme#list-ref
    (lambda (x i y) (set-car! (list-tail x i) y))))
+
+(set! chicken.bytevector#bytevector-u8-ref 
+  (getter-with-setter chicken.bytevector#bytevector-u8-ref 
+                      chicken.bytevector#bytevector-u8-set!
+                      "(chicken.bytevector#bytevector-u8-ref v i)"))
 
 
 ;;; Parameters:
@@ -4478,7 +4483,7 @@ EOF
      (let ((c (##sys#read-char-0 port)))
        (if (eq? c #\8)
            (let ((data (##sys#read-numvector-data port)))
-             (if (pair? data)
+             (if (or (null? data) (pair? data))
                  (##sys#list->bytevector data)
                  (##core#inline "C_chop_bv" (##sys#slot data 0))))
            (##sys#read-error port "invalid sharp-sign read syntax" char))))
@@ -4980,7 +4985,7 @@ EOF
                             (fx> limit (fx+ pos 1))
                             (eq? (##core#inline "C_subbyte" buf (fx+ pos 1)) 10))
                        (conc buf offset pos)
-                       (values (fx+ pos 2) (getine) #t))
+                       (values (fx+ pos 2) (getline) #t))
                       ((and (eq? c 13)	; Edge case (#568): \r{read}[\n|xyz]
                             (fx= limit (fx+ pos 1)))
                        (conc buf offset pos)
@@ -5568,7 +5573,7 @@ EOF
 	((22) (apply ##sys#signal-hook #:type-error loc "bad argument type - not a symbol" args))
 	((23) (apply ##sys#signal-hook #:limit-error loc "stack overflow" args))
 	((24) (apply ##sys#signal-hook #:type-error loc "bad argument type - not a structure of the required type" args))
-	((25) (apply ##sys#signal-hook #:type-error loc "bad argument type - not a blob" args))
+	((25) (apply ##sys#signal-hook #:type-error loc "bad argument type - not a bytevector" args))
 	((26) (apply ##sys#signal-hook #:type-error loc "locative refers to reclaimed object" args))
 	((27) (apply ##sys#signal-hook #:type-error loc "bad argument type - not a block object" args))
 	((28) (apply ##sys#signal-hook #:type-error loc "bad argument type - not a number vector" args))
@@ -5650,7 +5655,11 @@ EOF
   (##core#inline_allocate ("C_a_unsigned_int_to_num" 6) (##sys#slot ptr 0)) )
 
 (define (##sys#make-c-string str #!optional loc)
-  (##sys#slot str 0))
+  (let ((bv (##sys#slot str 0)))
+    (if (fx= (##core#inline "C_asciiz_strlen" bv) (fx- (##sys#size bv) 1))
+        bv
+        (##sys#error-hook (foreign-value "C_ASCIIZ_REPRESENTATION_ERROR" int)
+                          loc str))) )
 
 (define ##sys#peek-signed-integer (##core#primitive "C_peek_signed_integer"))
 (define ##sys#peek-unsigned-integer (##core#primitive "C_peek_unsigned_integer"))
@@ -6301,9 +6310,6 @@ static C_word C_fcall C_setenv(C_word x, C_word y) {
 	[(or (vector? obj) (pair? obj))
 	 (##sys#check-range index 0 (##sys#size obj) loc)
 	 (##core#inline_allocate ("C_a_i_make_locative" 5) 0 obj index weak?) ]
-	#;[(symbol? obj)
-	 (##sys#check-range index 0 1 loc)
-	 (##core#inline_allocate ("C_a_i_make_locative" 5) 0 obj index weak?) ]
 	[(and (##core#inline "C_blockp" obj)
 	      (##core#inline "C_bytevectorp" obj) )
 	 (##sys#check-range index 0 (##sys#size obj) loc)
@@ -6355,9 +6361,10 @@ static C_word C_fcall C_setenv(C_word x, C_word y) {
 	    (##sys#check-range index 0 (fx- (##sys#size obj) 1) loc)
 	    (##core#inline_allocate ("C_a_i_make_locative" 5) 0 obj (fx+ index 1) weak?) ) ) ]
 	((string? obj)
-	 (let ((obj (##sys#slot obj 0)))
-           (##sys#check-range index 0 (##sys#size obj) loc)
-  	   (##core#inline_allocate ("C_a_i_make_locative" 5) 1 obj index weak?) ) )
+	 (let ((bv (##sys#slot obj 0))
+               (p (##core#inline "C_utf_position" obj index)))
+           (##sys#check-range index 0 (##sys#slot obj 1) loc)
+  	   (##core#inline_allocate ("C_a_i_make_locative" 5) 1 bv p weak?) ) )
 	[else
 	 (##sys#signal-hook
 	  #:type-error loc

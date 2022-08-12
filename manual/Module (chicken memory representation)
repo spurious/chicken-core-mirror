@@ -110,7 +110,8 @@ contains.
 <procedure>(number-of-bytes BLOCK)</procedure>
 
 Returns the number of bytes that the object {{BLOCK}}
-contains. {{BLOCK}} may be any non-immediate value.
+holds. {{BLOCK}} may be any non-immediate value. For strings, the size
+of the buffer holding the encoded characters is returned.
 
 
 ==== object-copy

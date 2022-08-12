@@ -119,7 +119,6 @@
 
 /* Headers */
 
-#include <ctype.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -1877,6 +1876,7 @@ C_fctexport C_word C_fcall C_utf_equal(C_word s1, C_word s2) C_regparm;
 C_fctexport C_word C_fcall C_utf_equal_ci(C_word s1, C_word s2) C_regparm;
 C_fctexport C_word C_fcall C_utf_copy(C_word from, C_word to, C_word start1, C_word end1, C_word start2) C_regparm;
 C_fctexport C_word C_fcall C_utf_position(C_word str, C_word start) C_regparm;
+C_fctexport int C_fcall C_utf_char_position(C_word bv, int pos) C_regparm;
 C_fctexport C_word C_fcall C_utf_range(C_word str, C_word start, C_word end) C_regparm;
 C_fctexport int C_fcall C_utf_count(C_char *str, int len) C_regparm;
 C_fctexport C_char * C_fcall C_utf_encode(C_char *str, int chr) C_regparm;

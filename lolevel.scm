@@ -481,14 +481,16 @@ EOF
   (##sys#size x) )
 
 (define (number-of-bytes x)
-  (cond [(not (##core#inline "C_blockp" x))
+  (cond ((not (##core#inline "C_blockp" x))
 	 (##sys#signal-hook
 	  #:type-error 'number-of-bytes
-	  "cannot compute number of bytes of immediate object" x) ]
-	[(##core#inline "C_byteblockp" x)
-	 (##sys#size x)]
-	[else
-	 (##core#inline "C_bytes" (##sys#size x))] ) )
+	  "cannot compute number of bytes of immediate object" x) )
+        ((##core#inline "C_stringp" x)
+         (fx- (##sys#size (##sys#slot x 0)) 1))
+	((##core#inline "C_byteblockp" x)
+	 (##sys#size x))
+	(else
+	 (##core#inline "C_bytes" (##sys#size x))) ) )
 
 
 ;;; Record objects:

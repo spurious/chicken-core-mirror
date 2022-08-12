@@ -646,11 +646,11 @@ void parse_argv(C_char *cmds)
   C_main_argc = 0;
 
   for(;;) {
-    while(isspace((int)(*ptr))) ++ptr;
+    while(C_utf_isspace((int)(*ptr))) ++ptr;
 
     if(*ptr == '\0') break;
 
-    for(bptr0 = bptr = buffer; !isspace((int)(*ptr)) && *ptr != '\0'; *(bptr++) = *(ptr++))
+    for(bptr0 = bptr = buffer; !C_utf_isspace((int)(*ptr)) && *ptr != '\0'; *(bptr++) = *(ptr++))
       ++n;
 
     *bptr = '\0';
@@ -1963,7 +1963,7 @@ void barf(int code, char *loc, ...)
     break;
 
   case C_DECODING_ERROR:
-    msg = C_text("string decoding error");
+    msg = C_text("string contains invalid UTF-8 sequence");
     c = 2;
     break;
 
@@ -11140,6 +11140,7 @@ static void bignum_to_str_2(C_word c, C_word *av)
     negp = (C_bignum_negativep(bignum) ? 1 : 0);
   C_word us[ 5 ], *a = us;
 
+  *(index + 1) = '\0';
   radix_shift = C_ilen(radix) - 1;
   if (((C_uword)1 << radix_shift) == radix) { /* Power of two? */
     int radix_mask = radix - 1, big_digit_len = 0, radix_digit;
@@ -11998,7 +11999,7 @@ C_regparm C_word C_fcall C_a_i_locative_ref(C_word **a, int c, C_word loc)
 
   switch(C_unfix(C_block_item(loc, 2))) {
   case C_SLOT_LOCATIVE: return *ptr;
-  case C_CHAR_LOCATIVE: return C_make_character(*((char *)ptr));
+  case C_CHAR_LOCATIVE: return C_utf_decode_ptr((C_char *)ptr);
   case C_U8_LOCATIVE: return C_fix(*((unsigned char *)ptr));
   case C_S8_LOCATIVE: return C_fix(*((char *)ptr));
   case C_U16_LOCATIVE: return C_fix(*((unsigned short *)ptr));
@@ -12032,7 +12033,8 @@ C_regparm C_word C_fcall C_i_locative_set(C_word loc, C_word x)
     if((x & C_IMMEDIATE_TYPE_BITS) != C_CHARACTER_BITS)
       barf(C_BAD_ARGUMENT_TYPE_ERROR, "locative-set!", x);
       
-    *((char *)ptr) = C_character_code(x); 
+    /* does not check for exceeded buffer length! */
+    C_utf_encode((C_char *)ptr, C_character_code(x));
     break;
 
   case C_U8_LOCATIVE: 
@@ -12139,6 +12141,11 @@ C_regparm C_word C_fcall C_i_locative_index(C_word loc)
   case C_SLOT_LOCATIVE: return C_fix(bytes/sizeof(C_word)); break;
 
   case C_CHAR_LOCATIVE:
+    { C_word x = C_i_locative_to_object(loc);
+      if(x == C_SCHEME_FALSE)
+        barf(C_LOST_LOCATIVE_ERROR, "locative-index", loc);
+      return C_fix(C_utf_char_position(x, bytes)); }
+
   case C_U8_LOCATIVE:
   case C_S8_LOCATIVE: return C_fix(bytes); break;
 
