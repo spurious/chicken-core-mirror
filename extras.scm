@@ -406,7 +406,7 @@
 				      (out "#\\" col)
 				      (cond [(char-name obj) 
 					     => (lambda (cn) 
-						  (out (##sys#slot cn 1) col) ) ]
+						  (out (##sys#symbol->string/shared cn) col) ) ]
 					    [(fx< code 32)
 					     (out "x" col)
 					     (out (number->string code 16) col) ]

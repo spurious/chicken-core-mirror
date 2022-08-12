@@ -1514,7 +1514,7 @@ return((C_header_bits(lit) >> 24) & 0xff);
 	  (string-append "\\125" (number->string lit) "\\000") )
 	 ((keyword? lit)
 	  (let* ((str (keyword->string lit))
-                 (bv (##sys#slot str 1)))
+                 (bv (##sys#slot str 0)))
 	    (string-append 
 	     "\\001" (encode-size (fx- (##sys#size bv) 1)) "\\002" 
                     (byteblock->string bv -1)) ) )

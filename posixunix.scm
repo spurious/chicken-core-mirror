@@ -794,7 +794,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 	     (lambda ()
 	       (if (fx>= bufpos buflen)
 		   #!eof
-		   (string-ref buf bufpos)) )]
+		   (##core#inline "C_subbyte" buf bufpos)) )]
             [fetch
 	     (lambda ()
 	       (let loop ()

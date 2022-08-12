@@ -347,7 +347,7 @@ char *ttyname(int fd) {
 	     #f				; flush-output
 	     (lambda (p)		; char-ready?
 	       (ready?) )
-	     read-bytevector		; read-string!
+	     read-bytevector		; read-bytevector!
 	     read-line			; read-line
 	     read-buffered))
 	   (data (vector #f))
@@ -364,7 +364,8 @@ char *ttyname(int fd) {
 	     (lambda (p c)		; write-char
 	       (write (string c)) )
 	     (lambda (p bv from to)   		; write-bytevector
-               (write (substring bv from to)))
+               (let ((len (fx- to from)))
+                 (write (##sys#buffer->string bv from len))))
 	     (lambda (p d)		; close
 	       (close))
 	     (lambda (p)		; flush-output
@@ -391,7 +392,7 @@ char *ttyname(int fd) {
                        (write-bytevector bv to o)
                        (let* ((len (fx- to from))
                               (bv2 (##sys#make-bytevector len)))
-                         (##core#inline "C_copy_memory" bv2 bv len)
+                         (##core#inline "C_copy_memory_with_offset" bv2 bv 0 from len)
                          (write-bytevector bv2 len o))))
 		 (lambda (_ d)           ; close
 		   (case d
