@@ -1838,6 +1838,22 @@ C_regparm C_word C_fcall C_utf_position(C_word str, C_word index)
     return C_fix(p1 - (C_char *)C_data_pointer(C_block_item(str, 0)));
 }
 
+/* compute char-index from byte-index (slow, uncached) */
+C_regparm int C_fcall C_utf_char_position(C_word bv, int pos)
+{
+    int p = 0;
+    C_u32 c;
+    int e;
+    C_char *ptr = (C_char *)C_data_pointer(bv), *ptr2;
+    while(pos > 0) {
+        ptr2 = utf8_decode(ptr, &c, &e);
+        pos -= ptr2 - ptr;
+        ptr = ptr2;
+        ++p;
+    }
+    return p;
+}
+
 /* compute byte-offset between two char-indices */
 C_regparm C_word C_fcall C_utf_range(C_word str, C_word start, C_word end)
 {
