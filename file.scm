@@ -153,7 +153,7 @@ EOF
 
 (define (directory #!optional (spec (current-directory)) show-dotfiles?)
   (##sys#check-string spec 'directory)
-  (let ((buffer (make-string 256))
+  (let ((buffer (##sys#make-bytevector 256))
 	(handle (##sys#make-pointer))
 	(entry (##sys#make-pointer)))
     (##core#inline
@@ -165,8 +165,8 @@ EOF
 	  (##core#inline "C_readdir" handle entry)
 	  (if (##sys#null-pointer? entry)
 	      (begin (##core#inline "C_closedir" handle) '())
-	      (let* ((flen (##core#inline "C_foundfile" entry buffer (string-length buffer)))
-		     (file (##sys#substring buffer 0 flen))
+	      (let* ((flen (##core#inline "C_foundfile" entry buffer (##sys#size buffer)))
+		     (file (##sys#buffer->string buffer 0 flen))
 		     (char1 (string-ref file 0))
 		     (char2 (and (fx> flen 1) (string-ref file 1))))
 		(if (and (eq? #\. char1)

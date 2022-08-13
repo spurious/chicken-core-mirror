@@ -1350,11 +1350,12 @@
 <#
 
 (define (store-string str bufsize buf)
-  (let ((len (string-length str)))
+  (let* ((bv (##sys#slot str 0))
+         (len (fx- (##sys#size bv) 1)))
     (cond ((fx>= len bufsize)
 	   (set! last-error "Error: not enough room for result string")
 	   #f)
-	  (else (##core#inline "C_copy_result_string" str buf len)) ) ) )
+	  (else (##core#inline "C_copy_result_string" bv buf len)) ) ) )
 
 (define-external (CHICKEN_eval_to_string (scheme-object exp) ((c-pointer "char") buf)
 					  (int bufsize))
