@@ -4376,6 +4376,10 @@ EOF
 				    ((#\`)
 				     (##sys#read-char-0 port)
 				     (r-quote 'quasisyntax))
+				    ((#\$)
+				     (##sys#read-char-0 port)
+                                     ;; HACK: reuse r-quote to add line number info
+				     (r-quote 'location))
 				    ((#\:)
 				     (##sys#read-char-0 port)
 				     (let ((c (##sys#peek-char-0 port)))
