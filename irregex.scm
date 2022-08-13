@@ -210,6 +210,8 @@
 (include "irregex-core.scm")
 (include "irregex-utils.scm")
 
+(set! *allow-utf8-mode?* #f)
+
 (define glob->sre
   (let ((list->string list->string)
         (string->list string->list))
