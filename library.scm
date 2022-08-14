@@ -3608,7 +3608,7 @@ EOF
   (let* ((bv (##sys#slot str 0))
          (sz (fx- (##sys#size bv) 1))
 	 (info (##sys#make-bytevector sz)))
-    (##core#inline "C_copy_memory" info str sz)
+    (##core#inline "C_copy_memory" info bv sz)
     (##core#inline "C_bytevector_to_lambdainfo" info)
     info) )
 
