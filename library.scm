@@ -2880,15 +2880,12 @@ EOF
   (let* ((sbv (##sys#slot s 0))
          (n (##core#inline "C_fixnum_difference" (##sys#size sbv) 1))
 	 (bv (##sys#make-bytevector n)) )
-    (##core#inline "C_copy_memory" sbv bv n) 
+    (##core#inline "C_copy_memory" bv sbv n) 
     bv) )
 
 (define (utf8->string bv)
   (##sys#check-bytevector bv 'utf8->string)
-  (let* ((n (##sys#size bv))
-	 (s (##sys#make-string n)) )
-    (##core#inline "C_copy_memory" bv (##sys#slot s 0) n)
-    s) )
+  (##sys#buffer->string bv 0 (##sys#size bv)))
 
 (define (bytevector=? b1 b2)
   (##sys#check-bytevector b1 'bytevector=?)
