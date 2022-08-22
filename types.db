@@ -1535,6 +1535,8 @@
 (chicken.io#write-line (#(procedure #:enforce) chicken.io#write-line (string #!optional output-port) undefined))
 (chicken.io#write-string (#(procedure #:enforce) chicken.io#write-string (string #!optional * output-port) undefined))
 (chicken.io#write-bytevector (#(procedure #:enforce) chicken.io#write-bytevector (bytevector #!optional * output-port) undefined))
+(chicken.io#read-bytevector (#(procedure #:enforce) chicken.io#read-bytevector (#!optional * input-port) bytevector))
+(chicken.io#read-bytevector! (#(procedure #:enforce) chicken.io#read-bytevector! (fixnum bytevector #!optional input-port fixnum) undefined))
 
 ;; pretty-print
 

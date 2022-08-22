@@ -80,14 +80,23 @@ then the read characters are stored starting at that position.
 {{read-string!}} returns the actual number of characters read.
 
 
+=== read-bytevector
+=== read-bytevector!
 === write-bytevector
 
+<procedure>(read-bytevector [NUM [PORT]])</procedure>
+<procedure>(read-bytevector! NUM BYTEVECTOR [PORT [START]])</procedure>
 <procedure>(write-bytevector BYTEVECTOR [NUM [PORT]])</procedure>
 
 Read or write {{NUM}} bytes to {{PORT}}, which defaults to the
-value of {{(current-output-port)}}.
+value of {{(current-output-port)}}. {{read-bytevector}} allocates
+a new buffer and returns it (or the end-of-file object, if at the end"
+of the input file), {{read-bytevector!}} reads into an existing buffer.
+{{read-bytevector!}} returns the actual number of
+bytes read.
 
-If {{NUM}} is {{#f}} or not given, then the whole string is written.
+If {{NUM}} is optional and not given, then all remaining input is read
+or the whole bytevector is written.
 
 
 === read-token
