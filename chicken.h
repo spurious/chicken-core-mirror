@@ -1879,6 +1879,7 @@ C_fctexport C_word C_fcall C_utf_position(C_word str, C_word start) C_regparm;
 C_fctexport int C_fcall C_utf_char_position(C_word bv, int pos) C_regparm;
 C_fctexport C_word C_fcall C_utf_range(C_word str, C_word start, C_word end) C_regparm;
 C_fctexport int C_fcall C_utf_count(C_char *str, int len) C_regparm;
+C_fctexport int C_fcall C_utf_fast_count(C_char *str, int len) C_regparm;
 C_fctexport C_char * C_fcall C_utf_encode(C_char *str, int chr) C_regparm;
 C_fctexport C_word C_fcall C_utf_decode_ptr(C_char *bv) C_regparm;
 C_fctexport C_word C_fcall C_utf_decode(C_word bv, C_word pos) C_regparm;
@@ -1898,6 +1899,7 @@ C_fctexport int C_fcall C_utf_isdigit(int c) C_regparm;
 C_fctexport int C_fcall C_utf_isalpha(int c) C_regparm;
 C_fctexport int C_fcall C_utf_isupper(int c) C_regparm;
 C_fctexport int C_fcall C_utf_islower(int c) C_regparm;
+C_fctexport C_word C_fcall C_utf_validate(C_word bv, C_word blen) C_regparm;
 
 C_fctimport C_cpsproc(C_toplevel) C_noret;
 C_fctimport C_cpsproc(C_invalid_procedure) C_noret;

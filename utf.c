@@ -1641,6 +1641,12 @@ static C_char *utf8_decode(C_char *buf, C_u32 *c, int *e)
     *e ^= 0x2a; // top two bits of each tail byte correct?
     *e >>= shifte[len];
 
+    /* now make all that optimization pointless... */
+    if(*e) {
+        *c = 0xdc00 | *s;
+        return (C_char *)s + 1;
+    }
+
     return (C_char *)next;
 }
 /* */
@@ -1649,7 +1655,9 @@ static C_char *utf8_encode(C_u32 u, C_char *p1)
 {
     unsigned char *p = (unsigned char *)p1;
     if(u < 0x80) *(p++) = u;
-    else if(u < 0x800) {
+    else if((u & 0xff00) == 0xdc00) {
+        *(p++) = u & 0xff;
+    } else if(u < 0x800) {
         *(p++) = (u >> 6) | 0xC0;
         *(p++) = (u & 0x3F) | 0x80;
     } else if(u < 0x10000) {
@@ -1677,7 +1685,6 @@ static C_char *utf_index(C_word s, C_word i)
         p += off = C_unfix(C_block_item(s, 3));
         index = i0;
     }
-    /* this can surely be done more efficiently... */
     while(index <= count) {
         if(index == i) {
             C_set_block_item(s, 2, C_fix(index));
@@ -1686,7 +1693,6 @@ static C_char *utf_index(C_word s, C_word i)
         }
         p1 = p;
         p = utf8_decode(p, &c, &e);
-        if(e != 0) return NULL;
         ++index;
         off += p - p1;
     }
@@ -1699,7 +1705,6 @@ C_regparm C_word C_fcall C_utf_subchar(C_word s, C_word i)
     int e;
     C_u32 c;
     utf8_decode(p, &c, &e);
-    if(e != 0) C_decoding_error(C_block_item(s, 0), i);
     return C_make_character(c);
 }
 
@@ -1844,7 +1849,7 @@ C_regparm int C_fcall C_utf_char_position(C_word bv, int pos)
     int p = 0;
     C_u32 c;
     int e;
-    C_char *ptr = (C_char *)C_data_pointer(bv), *ptr2;
+    C_char *ptr = C_c_string(bv), *ptr2;
     while(pos > 0) {
         ptr2 = utf8_decode(ptr, &c, &e);
         pos -= ptr2 - ptr;
@@ -1862,9 +1867,41 @@ C_regparm C_word C_fcall C_utf_range(C_word str, C_word start, C_word end)
     return C_fix(p2 - p1);
 }
 
-/* count characters
-   http://canonical.org/~kragen/strlen-utf8.html */
+/* Count characters - slow variant, handles invalid sequences */
 C_regparm int C_fcall C_utf_count(C_char *s, int len) 
+{
+    int i = 0;
+    C_u32 c;
+    int e;
+    C_char *s2;
+    while (len > 0) {
+        s2 = utf8_decode(s, &c, &e);
+        len -= (s2 - s);
+        i++;
+    }
+    return i; 
+} 
+
+/* Count characters - slow variant, detects invalid sequences */
+C_regparm C_word C_fcall C_utf_validate(C_word bv, C_word blen) 
+{
+    int i = 0;
+    C_u32 c;
+    int e;
+    C_char *s = C_c_string(bv), *s2;
+    int len = C_unfix(blen);
+    while (len > 0) {
+        s2 = utf8_decode(s, &c, &e);
+        if(e) return C_SCHEME_FALSE;
+        len -= (s2 - s);
+        i++;
+    }
+    return C_fix(i); 
+} 
+
+/* count characters, fast, unsafe variant
+   http://canonical.org/~kragen/strlen-utf8.html */
+C_regparm int C_fcall C_utf_fast_count(C_char *s, int len) 
 {
     int i = 0, j = 0;   
     while (len--) {
@@ -1891,7 +1928,7 @@ C_regparm C_word C_fcall C_utf_decode(C_word bv, C_word pos)
 {
     C_u32 c;
     int e;
-    utf8_decode((C_char *)C_data_pointer(bv) + C_unfix(pos), &c, &e);
+    utf8_decode(C_c_string(bv) + C_unfix(pos), &c, &e);
     return C_make_character(c);
 }
 
