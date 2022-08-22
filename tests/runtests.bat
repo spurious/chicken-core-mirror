@@ -249,6 +249,8 @@ if errorlevel 1 exit /b 1
 %compile% -specialize unicode-tests.scm
 if errorlevel 1 exit /b 1
 a.out
+%interpret% -s invalid-utf-test.scm
+if errorlevel 1 exit /b 1
 
 echo ======================================== reader tests ...
 %interpret% -s reader-tests.scm

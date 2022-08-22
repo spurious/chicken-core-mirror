@@ -258,6 +258,8 @@ tests/messages-test.scm
 tests/messages.expected
 tests/types-db-consistency.scm
 tests/unicode-tests.scm
+tests/UTF-8-test.txt
+tests/invalid-utf-test.scm
 tweaks.scm
 Makefile
 Makefile.android
