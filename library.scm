@@ -5883,7 +5883,7 @@ EOF
 #>
 
 #define C_chdir(str) C_fix(chdir(C_c_string(str)))
-#define C_curdir(buf) (getcwd(C_c_string(buf), 1024) ? C_fix(strlen(C_c_string(buf))) : C_SCHEME_FALSE)
+#define C_curdir(buf, size) (getcwd(C_c_string(buf), size) ? C_fix(strlen(C_c_string(buf))) : C_SCHEME_FALSE)
 #define C_getenventry(i) (environ[ i ])
 
 #ifdef HAVE_CRT_EXTERNS_H
@@ -5949,8 +5949,9 @@ static C_word C_fcall C_setenv(C_word x, C_word y) {
 (define current-directory
   (getter-with-setter
    (lambda ()
-     (let* ((buffer (make-string 1024))
-	    (len (##core#inline "C_curdir" buffer)))
+     (let* ((buffer-size (foreign-value "C_MAX_PATH" size_t))
+            (buffer (make-string buffer-size))
+            (len (##core#inline "C_curdir" buffer buffer-size)))
       (unless ##sys#windows-platform ; FIXME need `cond-expand' here
 	(##sys#update-errno))
       (if len
