@@ -121,6 +121,12 @@ Allows user-defined extension of external representations. (For more information
 
 An abbreviation for {{(location EXPRESSION)}}.
 
+=== Bytevector strings
+
+<read>#u8"..."</read>
+
+String syntax for bytevectors, as an alternative to {{#u8(...)}}. The usual escape sequences for strings are recognized.
+
 === Keyword
 
 <read>#:</read>
