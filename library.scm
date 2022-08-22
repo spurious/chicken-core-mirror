@@ -1327,6 +1327,13 @@ EOF
     (##core#inline_allocate ("C_a_ustring" 5) bv
                             (##core#inline "C_utf_range_length" bv 0 len))))
 
+(define (##sys#buffer->string/check buf len)
+  (let ((c (##core#inline "C_utf_validate" bv len)))
+    (and c
+         (let ((bv (##sys#make-bytevector (fx+ len 1))))
+           (##core#inline "C_copy_memory" bv buf len)
+           (##core#inline_allocate ("C_a_ustring" 5) bv c)))))
+
 (set! scheme#make-string
   (lambda (size . fill)
     (##sys#check-fixnum size 'make-string)
@@ -3921,14 +3928,6 @@ EOF
 			(##sys#read-error port "unterminated string constant") 
 			(loop (cons x seq) (fx- n 1)) ) ) ) ) )
 
-	  (define (r-cons-codepoint cp lst)
-	    (let* ((s (##sys#char->utf8-string (integer->char cp)))
-		   (len (string-length s)))
-	      (let lp ((i 0) (lst lst))
-		(if (fx>= i len)
-		  lst
-		  (lp (fx+ i 1) (cons (string-ref s i) lst))))))
-
 	  (define (r-string term)
 	    (let loop ((c (##sys#read-char-0 port)) (lst '()))
 	      (cond ((##core#inline "C_eofp" c) 
@@ -3947,23 +3946,13 @@ EOF
 			(let ([ch (integer->char (r-usequence "x" 2 16))])
 			  (loop (##sys#read-char-0 port) (cons ch lst)) ) )
 		       ((#\u)
-			(let ([n (r-usequence "u" 4 16)])
-			  (if (##sys#unicode-surrogate? n)
-			      (if (and (eqv? #\\ (##sys#read-char-0 port))
-				       (eqv? #\u (##sys#read-char-0 port)))
-				  (let* ((m (r-usequence "u" 4 16))
-					 (cp (##sys#surrogates->codepoint n m)))
-				    (if cp
-					(loop (##sys#read-char-0 port)
-					      (r-cons-codepoint cp lst))
-					(##sys#read-error port "bad surrogate pair" n m)))
-				  (##sys#read-error port "unpaired escaped surrogate" n))
-			      (loop (##sys#read-char-0 port) (r-cons-codepoint n lst)) ) ))
+			(let ((n (r-usequence "u" 4 16)))
+                           (loop (##sys#read-char-0 port) 
+                                 (cons (integer->char n) lst)) ) )
 		       ((#\U)
-			(let ([n (r-usequence "U" 8 16)])
-			  (if (##sys#unicode-surrogate? n)
-			      (##sys#read-error port "invalid escape (surrogate)" n)
-			      (loop (##sys#read-char-0 port) (r-cons-codepoint n lst)) )))
+			(let ((n (r-usequence "U" 8 16)))
+                           (loop (##sys#read-char-0 port) 
+                                 (cons (integer->char n) lst)) ))
 		       ((#\\ #\' #\" #\|)
 			(loop (##sys#read-char-0 port) (cons c lst)))
 		       ((#\newline #\return #\space #\tab)
@@ -4434,39 +4423,6 @@ EOF
 			    (else (r-symbol) ) ) ) ) ) ) ) ) )
 	
 	(readrec) ) ) ) )
-
-
-;;; This is taken from Alex Shinn's UTF8 egg:
-
-(define (##sys#char->utf8-string c)
-  (let ([i (char->integer c)])
-    (cond [(fx<= i #x7F)
-           (string c) ]
-          [(fx<= i #x7FF)
-           (string (integer->char (fxior #b11000000 (fxshr i 6)))
-	           (integer->char (fxior #b10000000 (fxand i #b111111)))) ]
-          [(fx<= i #xFFFF)
-           (string (integer->char (fxior #b11100000 (fxshr i 12)))
-	           (integer->char (fxior #b10000000 (fxand (fxshr i 6) #b111111)))
-	           (integer->char (fxior #b10000000 (fxand i #b111111)))) ]
-          [(fx<= i #x1FFFFF)
-           (string (integer->char (fxior #b11110000 (fxshr i 18)))
-	           (integer->char (fxior #b10000000 (fxand (fxshr i 12) #b111111)))
-	           (integer->char (fxior #b10000000 (fxand (fxshr i 6) #b111111)))
-	           (integer->char (fxior #b10000000 (fxand i #b111111)))) ]
-          [else
-           (error "UTF-8 codepoint out of range:" i) ] ) ) )
-
-(define (##sys#unicode-surrogate? n)
-  (and (fx<= #xD800 n) (fx<= n #xDFFF)) )
-
-;; returns #f if the inputs are not a valid surrogate pair (hi followed by lo)
-(define (##sys#surrogates->codepoint hi lo)
-  (and (fx<= #xD800 hi) (fx<= hi #xDBFF)
-       (fx<= #xDC00 lo) (fx<= lo #xDFFF)
-       (fxior (fxshl (fx+ 1 (fxand (fxshr hi 6) #b11111)) 16)
-	      (fxior (fxshl (fxand hi #b111111) 10)
-		     (fxand lo #b1111111111)))) )
 
 ;;; Hooks for user-defined read-syntax:
 ;
@@ -5680,8 +5636,7 @@ EOF
   (let* ([len (##core#inline "C_fetch_c_strlen" b i)]
 	 [bv (##sys#make-bytevector (fx+ len 1) 0)] )
     (##core#inline "C_peek_c_string" b i bv len)
-    (##core#inline_allocate ("C_a_ustring" 5) bv
-                            (##core#inline "C_utf_length" bv))))
+    (##sys#buffer->string bv 0 len)))
 
 (define (##sys#peek-and-free-c-string b i)
   (let ((str (##sys#peek-c-string b i)))
