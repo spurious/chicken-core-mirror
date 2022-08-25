@@ -1,3 +1,5 @@
+;;; ensure invalid UTF-8 sequences are reproducibly read and written
+
 (import (chicken io) (chicken irregex) (chicken file))
 (import (chicken bytevector) (chicken file posix))
 

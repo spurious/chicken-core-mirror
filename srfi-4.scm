@@ -73,10 +73,9 @@ EOF
    make-f32vector make-f64vector make-s16vector make-s32vector
    make-s64vector make-s8vector make-u16vector make-u32vector
    make-u64vector make-u8vector
-   number-vector? read-u8vector read-u8vector! release-number-vector
+   number-vector? release-number-vector
    subf32vector subf64vector subs16vector subs32vector subs64vector
-   subs8vector subu16vector subu8vector subu32vector subu64vector
-   write-u8vector)
+   subs8vector subu16vector subu8vector subu32vector subu64vector)
 
 (import scheme
 	chicken.base
@@ -685,43 +684,6 @@ EOF
 (define (subs64vector v from to) (subnvector v 's64vector 8 from to 'subs64vector))
 (define (subf32vector v from to) (subnvector v 'f32vector 4 from to 'subf32vector))
 (define (subf64vector v from to) (subnvector v 'f64vector 8 from to 'subf64vector))
-
-(define (write-u8vector v #!optional (port ##sys#standard-output) (from 0) to)
-  (##sys#check-bytevector v 'write-u8vector)
-  (##sys#check-output-port port #t 'write-u8vector)
-  (let ((len (##sys#size v)))
-    (##sys#check-range from 0 (fx+ (or to len) 1) 'write-u8vector)
-    (when to (##sys#check-range to from (fx+ len 1) 'write-u8vector))
-    ((##sys#slot (##sys#slot port 2) 3) ; write-bytevector
-     port v from (or to len))))
-
-(define (read-u8vector! n dest #!optional (port ##sys#standard-input) (start 0))
-  (##sys#check-input-port port #t 'read-u8vector!)
-  (##sys#check-fixnum start 'read-u8vector!)
-  (##sys#check-bytevector dest 'read-u8vector!)
-  (when n (##sys#check-fixnum n 'read-u8vector!))
-  (let ((size (##sys#size dest)))
-    (unless (and n (fx<= (fx+ start n) size))
-      (set! n (fx- size start)))
-    (chicken.io#read-bytevector!/port n dest port start)))
-
-(define (read-u8vector #!optional n (p ##sys#standard-input))
-  (##sys#check-input-port p #t 'read-u8vector)
-  (cond (n (##sys#check-fixnum n 'read-u8vector)
-           (chicken.io#read-bytevector/port n p))
-        (else
-          (let ((bsize 2048))
-            (let loop ((buf (##sys#make-bytevector bsize))
-                       (pos 0))
-              (let* ((n (##sys#size buf))
-                     (m (chicken.io#read-bytevector!/port n buf p pos)))
-                (if (eq? n m)
-                    (let ((buf2 (##sys#make-bytevector (fx+ n bsize))))
-                      (##core#inline "C_copy_memory" buf2 buf n)
-                      (loop buf2 n))
-                    (let ((r (##sys#make-bytevector m)))
-                      (##core#inline "C_copy_memory" r buf m)
-                      r))))))))
 
 (register-feature! 'srfi-4))
 
