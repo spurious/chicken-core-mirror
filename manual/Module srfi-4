@@ -21,7 +21,8 @@ wrapped by a SRFI-4 type "header object" to structure its contents,
 there are several procedures which can convert between bytevectors and
 SRFI-4 vectors.
 
-<procedure>(u8vector->bytevector U8VECTOR)</procedure><br>
+Note that built-in bytevectors are identical to u8vectors.
+
 <procedure>(s8vector->bytevector S8VECTOR)</procedure><br>
 <procedure>(u16vector->bytevector U16VECTOR)</procedure><br>
 <procedure>(s16vector->bytevector S16VECTOR)</procedure><br>
@@ -49,28 +50,26 @@ Each of these procedures return the contents of the given vector as a
 contents of the vector, the others will copy the contents of the
 SRFI-4 vector's internal bytevector object.
 
-<procedure>(bytevector->u8vector BLOB)</procedure><br>
-<procedure>(bytevector->s8vector BLOB)</procedure><br>
-<procedure>(bytevector->u16vector BLOB)</procedure><br>
-<procedure>(bytevector->s16vector BLOB)</procedure><br>
-<procedure>(bytevector->u32vector BLOB)</procedure><br>
-<procedure>(bytevector->s32vector BLOB)</procedure><br>
-<procedure>(bytevector->u64vector BLOB)</procedure><br>
-<procedure>(bytevector->s64vector BLOB)</procedure><br>
-<procedure>(bytevector->f32vector BLOB)</procedure><br>
-<procedure>(bytevector->f64vector BLOB)</procedure><br>
-<procedure>(bytevector->u8vector/shared BLOB)</procedure><br>
-<procedure>(bytevector->s8vector/shared BLOB)</procedure><br>
-<procedure>(bytevector->u16vector/shared BLOB)</procedure><br>
-<procedure>(bytevector->s16vector/shared BLOB)</procedure><br>
-<procedure>(bytevector->u32vector/shared BLOB)</procedure><br>
-<procedure>(bytevector->s32vector/shared BLOB)</procedure><br>
-<procedure>(bytevector->u64vector/shared BLOB)</procedure><br>
-<procedure>(bytevector->s64vector/shared BLOB)</procedure><br>
-<procedure>(bytevector->f32vector/shared BLOB)</procedure><br>
-<procedure>(bytevector->f64vector/shared BLOB)</procedure><br>
+<procedure>(bytevector->s8vector BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->u16vector BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->s16vector BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->u32vector BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->s32vector BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->u64vector BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->s64vector BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->f32vector BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->f64vector BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->s8vector/shared BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->u16vector/shared BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->s16vector/shared BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->u32vector/shared BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->s32vector/shared BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->u64vector/shared BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->s64vector/shared BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->f32vector/shared BYTEVECTOR)</procedure><br>
+<procedure>(bytevector->f64vector/shared BYTEVECTOR)</procedure><br>
 
-Each of these procedures return a vector where the argument {{BLOB}}
+Each of these procedures return a vector where the argument {{BYTEVECTOR}}
 is taken as a 'packed' representation of the contents of the
 vector. The {{/shared}} variants return a vector that shares memory
 with the contents of the bytevector, the others will copy the bytevector.

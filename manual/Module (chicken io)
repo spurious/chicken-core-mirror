@@ -96,7 +96,7 @@ of the input file), {{read-bytevector!}} reads into an existing buffer.
 bytes read.
 
 If {{NUM}} is optional and not given, then all remaining input is read
-or the whole bytevector is written.
+or the whole bytevector is read/written.
 
 
 === read-token

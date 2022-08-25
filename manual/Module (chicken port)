@@ -7,6 +7,14 @@ This module contains various extended port definitions.
 
 === Port attributes
 
+==== port-encoding
+
+<procedure>(port-encoding PORT)</procedure>
+
+Returns the encoding used for reading and writing data from and to
+the given port. Encoding is currently one of the symbols {{utf-8}}
+or {{latin-1}}.
+
 ==== port-name
 
 <procedure>(port-name [PORT])</procedure>
