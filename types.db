@@ -1857,6 +1857,10 @@
 (chicken.port#with-output-to-string (#(procedure #:enforce) chicken.port#with-output-to-string ((procedure () . *)) string))
 (chicken.port#with-error-output-to-string (#(procedure #:enforce) chicken.port#with-error-output-to-string ((procedure () . *)) string))
 
+(chicken.port#port-encoding
+ (#(procedure #:clean #:enforce) chicken.port#port-encoding (port) *)
+ ((port) (##sys#slot #(1) '15)))
+
 (chicken.port#port-name
  (#(procedure #:clean #:enforce) chicken.port#port-name (#!optional port) *)
  ((port) (##sys#slot #(1) '3)))
@@ -2219,8 +2223,6 @@
 (srfi-4#make-u32vector (#(procedure #:clean #:enforce) srfi-4#make-u32vector (fixnum #!optional (or integer false) boolean boolean) (struct u32vector)))
 (srfi-4#make-u64vector (#(procedure #:clean #:enforce) srfi-4#make-u64vector (fixnum #!optional (or integer false) boolean boolean) (struct u64vector)))
 (srfi-4#make-u8vector (#(procedure #:clean #:enforce) srfi-4#make-u8vector (fixnum #!optional (or fixnum false) boolean boolean) bytevector))
-(srfi-4#read-u8vector (#(procedure #:enforce) srfi-4#read-u8vector (#!optional (or fixnum false) input-port) (or bytevector eof)))
-(srfi-4#read-u8vector! (#(procedure #:enforce) srfi-4#read-u8vector! ((or fixnum false) bytevector #!optional input-port fixnum) integer))
 (srfi-4#release-number-vector (procedure srfi-4#release-number-vector (*) undefined))
 (srfi-4#s16vector (#(procedure #:clean #:enforce) srfi-4#s16vector (#!rest fixnum) (struct s16vector)))
 (srfi-4#s16vector->bytevector (#(procedure #:clean #:enforce) srfi-4#s16vector->bytevector ((struct s16vector)) bytevector))
@@ -2319,8 +2321,6 @@
 (srfi-4#u8vector-set! (#(procedure #:clean #:enforce) srfi-4#u8vector-set! (bytevector fixnum fixnum) undefined))
 
 (srfi-4#u8vector? (#(procedure #:pure #:predicate bytevector) srfi-4#u8vector? (*) boolean))
-
-(srfi-4#write-u8vector (#(procedure #:enforce) srfi-4#write-u8vector (bytevector #!optional output-port fixnum fixnum) undefined))
 
 (srfi-4#number-vector? (#(procedure #:pure #:predicate (or bytevector (struct u16vector) (struct s8vector) (struct s16vector) (struct u32vector) (struct s32vector) (struct u64vector) (struct s64vector) (struct f32vector) (struct f64vector))) srfi-4#number-vector? (*) boolean))
 (##sys#srfi-4-vector? (#(procedure #:pure #:predicate (or bytevector (struct u16vector) (struct s8vector) (struct s16vector) (struct u32vector) (struct s32vector) (struct u64vector) (struct s64vector) (struct f32vector) (struct f64vector))) ##sys#srfi-4-vector? (*) boolean))

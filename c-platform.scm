@@ -210,12 +210,10 @@
     srfi-4#s32vector-set! srfi-4#s64vector-set!
     srfi-4#f32vector-set! srfi-4#f64vector-set!
 
-    srfi-4#u8vector->bytevector/shared srfi-4#s8vector->bytevector/shared
     srfi-4#u16vector->bytevector/shared srfi-4#s16vector->bytevector/shared
     srfi-4#u32vector->bytevector/shared srfi-4#s32vector->bytevector/shared
     srfi-4#u64vector->bytevector/shared srfi-4#s64vector->bytevector/shared
     srfi-4#f32vector->bytevector/shared srfi-4#f64vector->bytevector/shared
-    srfi-4#bytevector->u8vector/shared srfi-4#bytevector->s8vector/shared
     srfi-4#bytevector->u16vector/shared srfi-4#bytevector->s16vector/shared
     srfi-4#bytevector->u32vector/shared srfi-4#bytevector->s32vector/shared
     srfi-4#bytevector->u64vector/shared srfi-4#bytevector->s64vector/shared
@@ -1133,7 +1131,6 @@
 
 (rewrite 'chicken.base#atom? 17 1 "C_i_not_pair_p")
 
-(rewrite 'srfi-4#u8vector->bytevector/shared 7 1 "C_slot" 1 #f)
 (rewrite 'srfi-4#s8vector->bytevector/shared 7 1 "C_slot" 1 #f)
 (rewrite 'srfi-4#u16vector->bytevector/shared 7 1 "C_slot" 1 #f)
 (rewrite 'srfi-4#s16vector->bytevector/shared 7 1 "C_slot" 1 #f)

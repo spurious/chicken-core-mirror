@@ -270,7 +270,7 @@ EOF
     (check (newline out))
     (check (write-char #\x out))
     (check (write-line "foo" out))
-    (check (write-u8vector '#u8(1 2 3) out))
+    (check (write-bytevector '#u8(1 2 3) out))
     ;;(check (port->fileno in))
     (check (flush-output out))
 
@@ -294,9 +294,9 @@ EOF
     ;;(check (port->fileno in))
     (check (terminal-port? in))	   ; Calls isatty() on C_SCHEME_FALSE?
     (check (read-line in 5))
-    (check (read-u8vector 5 in))
-    (check "read-u8vector!" (let ((dest (make-u8vector 5)))
-                              (read-u8vector! 5 dest in)))
+    (check (read-bytevector 5 in))
+    (check "read-bytevector!" (let ((dest (make-u8vector 5)))
+                              (read-bytevector! 5 dest in)))
     #+(not mingw32) 
     (begin
       (check (file-test-lock in))
@@ -433,6 +433,64 @@ EOF
 (test-group
  "read-line process port position tests"
  (test-port-position read-echo-line/pos))
+
+;; bytevector I/O, moved here from srf-4-tests.scm:
+;; Ticket #1124: read-u8vector! w/o length, dest smaller than source.
+(let ((input (open-input-string "abcdefghijklmnopqrstuvwxyz"))
+      (u8vec (make-bytevector 10)))
+  (assert (= 10 (read-bytevector! #f u8vec input)))
+  (assert (equal? u8vec #u8(97 98 99 100 101 102 103 104 105 106)))
+  (assert (= 5  (read-bytevector! #f u8vec input 5)))
+  (assert (equal? u8vec #u8(97 98 99 100 101 107 108 109 110 111)))
+  (assert (= 5  (read-bytevector! 5  u8vec input)))
+  (assert (equal? u8vec #u8(112 113 114 115 116 107 108 109 110 111)))
+  (assert (= 6  (read-bytevector! 10 u8vec input)))
+  (assert (equal? u8vec #u8(117 118 119 120 121 122 108 109 110 111))))
+
+(let ((input (open-input-string "abcdefghijklmnopqrs")))
+  (assert (equal? (read-bytevector 5 input)
+		  #u8(97 98 99 100 101)))
+  (assert (equal? (read-bytevector 5 input) #u8(102 103 104 105 106)))
+  (assert (equal? (read-bytevector #f input)
+		  #u8(107 108 109 110 111 112 113 114 115)))
+  (with-input-from-string "abcdefghijklmnopqrs"
+   (lambda ()
+     (assert (equal? (read-bytevector 5)
+		     #u8(97 98 99 100 101)))
+     (assert (equal? (read-bytevector 5) #u8(102 103 104 105 106)))
+     (assert (equal? (read-bytevector)
+		     #u8(107 108 109 110 111 112 113 114 115))))))
+
+(assert (string=?
+	 "abc"
+	 (with-output-to-string
+	   (lambda ()
+	     (write-bytevector #u8(97 98 99))))))
+
+(assert (string=?
+	 "bc"
+	 (with-output-to-string
+	   (lambda ()
+	     (write-bytevector #u8(97 98 99) (current-output-port) 1)))))
+
+(assert (string=?
+	 "a"
+	 (with-output-to-string
+	   (lambda ()
+	     (write-bytevector #u8(97 98 99) (current-output-port) 0 1)))))
+
+(assert (string=?
+	 "b"
+	 (with-output-to-string
+	   (lambda ()
+	     (write-bytevector #u8(97 98 99) (current-output-port) 1 2)))))
+
+(assert (string=?
+	 ""
+	 (with-output-to-string
+	   (lambda ()
+	     (write-bytevector #u8())))))
+
 
 ;;;
 

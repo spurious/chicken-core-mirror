@@ -92,33 +92,6 @@ Creates a fresh number vector of the same type as the argument vector
 with the elements at the positions {{FROM}} up to but not including
 {{TO}}.
 
-=== Vector I/O
-
-<procedure>(read-u8vector [LENGTH [PORT]])</procedure>
-
-Reads {{LENGTH}} bytes from the {{PORT}} and returns a fresh
-{{u8vector}}, or as many as are available before end-of-file is
-encountered. {{PORT}} defaults to the value of {{(current-input-port)}}.
-If no bytes are available before the end-of-file, {{#!eof}} is returned.
-
-If {{LENGTH}} is {{#f}}, the vector will be filled completely until
-end-of-file is reached.
-
-<procedure>(read-u8vector! LENGTH U8VECTOR [PORT [START]])</procedure>
-
-Reads {{LENGTH}} bytes from the {{PORT}} writing the read input into
-{{U8VECTOR}} beginning at {{START}} (or 0 if not given). {{PORT}} defaults
-to the value of {{(current-input-port)}}.
-
-If {{LENGTH}} is {{#f}}, the vector will be filled completely until end-of-file is reached.
-This procedure returns the number of bytes read.
-
-<procedure>(write-u8vector U8VECTOR [PORT [START [END]]])</procedure>
-
-Writes the bytes {{U8VECTOR}} between the indices {{START}} (inclusive) and {{END}} (exclusive) to {{PORT}}.
-
-{{PORT}} defaults to the value of {{(current-output-port)}}.
-
 == SRFI-4 specification
 
 SRFI-4 describes a set of datatypes for vectors whose elements are
