@@ -1877,6 +1877,7 @@ C_regparm int C_fcall C_utf_count(C_char *s, int len)
     while (len > 0) {
         s2 = utf8_decode(s, &c, &e);
         len -= (s2 - s);
+        s = s2;
         i++;
     }
     return i; 
@@ -1894,6 +1895,7 @@ C_regparm C_word C_fcall C_utf_validate(C_word bv, C_word blen)
         s2 = utf8_decode(s, &c, &e);
         if(e) return C_SCHEME_FALSE;
         len -= (s2 - s);
+        s = s2;
         i++;
     }
     return C_fix(i); 
@@ -1986,6 +1988,7 @@ C_regparm int C_fcall C_utf_expect(int byte)
     return len + !len;
 }
 
+/* take bytevector section and compute full + incomplete codepoints */
 C_regparm C_word C_fcall C_utf_fragment_counts(C_word bv, C_word pos, C_word len)
 {
     int full = 0;
@@ -2022,4 +2025,33 @@ C_regparm C_word C_fcall C_utf_list_size(C_word lst)
         lst = C_block_item(lst, 1);
     }
     return C_fix(n);
+}
+
+C_regparm C_word C_fcall C_latin1_to_utf(C_word from, C_word to, C_word start, C_word len)
+{
+    int n = C_unfix(len);
+    C_uchar *pf = (C_uchar *)C_c_string(from) + C_unfix(start);
+    C_char *pt = C_c_string(to), *pt0 = pt;
+    while(n--) {
+        C_u32 c = *(pf++);
+        pt = utf8_encode(c, pt);
+    }
+    return C_fix(pt - pt0);
+}
+
+C_regparm C_word C_fcall C_utf_to_latin1(C_word from, C_word to, C_word start, C_word blen)
+{
+    int n = C_unfix(blen);
+    C_char *pf = C_c_string(from) + C_unfix(start), *pf2;
+    C_char *pt = C_c_string(to), *pt0 = pt;
+    C_u32 c;
+    int e;
+    while(n >= 0) {
+        pf2 = utf8_decode(pf, &c, &e);
+        n -= pf2 - pf;
+        pf = pf2;
+        *(pt++) = c & 0xff;
+    }
+    *pt = '\0';
+    return C_fix(pt - pt0);
 }

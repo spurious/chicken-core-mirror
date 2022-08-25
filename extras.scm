@@ -134,28 +134,40 @@
                   (else (fx+ n2 m))))))))
 
 (define (read-string!/port n dest port start)
-  (let ((buf (##sys#make-bytevector (fx* n 4))))
-    (define (finish un bytes)
-      (##core#inline "C_utf_overwrite" dest start un buf bytes)
-      un)
-    (let loop ((p 0) (n n) (un 0) (bn 0))
-      (let ((bytes (read-bytevector!/port n buf port p)))
-        (if (eq? bytes 0)
-            (finish un bn)
-            (let recount ((bytes bytes))
-              (let* ((fc (##core#inline "C_utf_fragment_counts" buf p bytes))
-                     (full (fxshr fc 4))
-                     (left (fxand fc 15))
-                     (total (fx+ un full))
-                     (tbytes (fx+ bn bytes))
-                     (remain (fx- n full)))
-                (cond ((fx> left 0)
-                       (let ((b2 (read-bytevector!/port left buf port (fx+ p bytes))))
-                         (if (fx< b2 left) 
-                             (finish total tbytes)  ;XXX add marker
-                             (recount (fx+ bytes b2)))))
-                      ((eq? remain 0) (finish total tbytes))
-                      (else (loop (fx+ p bytes) remain total tbytes))))))))))
+  (let ((buf (##sys#make-bytevector (fx* n 4)))
+        (enc (##sys#slot port 15)))
+    (##sys#encoding-hook
+      enc
+      (lambda (decoder _) 
+        (define (readb n buf port p)
+          (let ((bytes (read-bytevector!/port n buf port p)))
+            (if (eq? enc 'utf-8) ; fast path, avoid copying
+                bytes
+                (decoder buf p n
+                  (lambda (dbuf start len)
+                    (##core#inline "C_copy_memory_with_offset" buf dbuf p start len)
+                    len)))))
+        (define (finish un bytes)
+          (##core#inline "C_utf_overwrite" dest start un buf bytes)
+          un)
+        (let loop ((p 0) (n n) (un 0) (bn 0))
+          (let ((bytes (readb n buf port p)))
+            (if (eq? bytes 0)
+                (finish un bn)
+                (let recount ((bytes bytes))
+                  (let* ((fc (##core#inline "C_utf_fragment_counts" buf p bytes))
+                         (full (fxshr fc 4))
+                         (left (fxand fc 15))
+                         (total (fx+ un full))
+                         (tbytes (fx+ bn bytes))
+                         (remain (fx- n full)))
+                    (cond ((fx> left 0)
+                           (let ((b2 (readb left buf port (fx+ p bytes))))
+                             (if (fx< b2 left) 
+                                 (finish total tbytes)
+                                 (recount (fx+ bytes b2)))))
+                          ((eq? remain 0) (finish total tbytes))
+                          (else (loop (fx+ p bytes) remain total tbytes))))))))))))
 
 (define (read-string! n dest #!optional (port ##sys#standard-input) (start 0))
   (##sys#check-input-port port #t 'read-string!)
@@ -172,7 +184,10 @@
   (##sys#check-bytevector dest 'read-bytevector!)
   (##sys#check-fixnum n 'read-bytevector!)
   (##sys#check-fixnum start 'read-bytevector!)
-  (read-bytevector!/port n dest port start))
+  (let ((size (##sys#size dest)))
+    (unless (and n (fx<= (fx+ start n) size))
+      (set! n (fx- size start)))
+    (read-bytevector!/port n dest port start)))
 
 (define read-string/port
   (lambda (n p)
@@ -184,18 +199,25 @@
                    str
                    (##sys#substring str 0 n2))))
           (else
-            (let ((blocksize 2048))
-              (let loop ((buf (##sys#make-bytevector blocksize))
-                         (pos 0))
-                (let ((n (read-bytevector!/port blocksize buf p pos)))
-                  (cond ((eq? n 0) (##sys#buffer->string buf 0 pos))
-                        ((eq? n blocksize)
-                         (let* ((bsize (##sys#size buf))
-                                (buflen2 (fx+ bsize blocksize))
-                                (buf2 (##sys#make-bytevector buflen2)))
-                           (##core#inline "C_copy_memory" buf2 buf bsize)
-                           (loop buf2 (fx+ pos n))))
-                        (else (loop buf (fx+ pos n)))))))))))
+            (##sys#read-remaining
+              p
+              (lambda (buf len)
+                (##sys#buffer->string/encoding buf 0 len
+                                               (##sys#slot p 15))))))))
+
+(define (##sys#read-remaining p k)
+  (let ((len 1024))
+    (let loop ((buf (##sys#make-bytevector len))
+               (bsize len)
+               (pos 0))
+      (let* ((nr (fx- len pos))
+             (n (read-bytevector!/port nr buf p pos)))
+        (cond ((eq? n nr)
+               (let* ((bsize2 (fx* bsize 2))
+                      (buf2 (##sys#make-bytevector bsize2)))
+                 (##core#inline "C_copy_memory" buf2 buf bsize)
+                 (loop buf2 bsize2 (fx+ pos n))))
+              (else (k buf (fx+ n pos))))))))
 
 (define read-bytevector/port
   (lambda (n p)
@@ -211,10 +233,17 @@
   (when n (##sys#check-fixnum n 'read-string))
   (read-string/port n port))
 
-(define (read-bytevector n #!optional (port ##sys#standard-input))
+(define (read-bytevector #!optional n (port ##sys#standard-input))
   (##sys#check-input-port port #t 'read-bytevector)
-  (##sys#check-fixnum n 'read-bytevector)
-  (read-bytevector/port n port))
+  (cond (n (##sys#check-fixnum n 'read-bytevector)
+           (read-bytevector/port n port))
+        (else
+          (##sys#read-remaining 
+            port
+            (lambda (buf len)
+              (let ((r (##sys#make-bytevector len)))
+                (##core#inline "C_copy_memory" r buf len)
+                r))))))
 
 
 ;; Make internal reader procedures available for use in srfi-4.scm:

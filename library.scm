@@ -110,7 +110,7 @@ fast_read_string_from_file(C_word dest, C_word port, C_word len, C_word pos)
 {
   size_t m;
   int n = C_unfix (len);
-  char * buf = ((char *)C_data_pointer (dest) + C_unfix (pos));
+  C_char * buf = C_c_string(dest) + C_unfix(pos);
   C_FILEPTR fp = C_port_file (port);
 
   if(feof(fp)) return C_SCHEME_END_OF_FILE;
@@ -1327,12 +1327,46 @@ EOF
     (##core#inline_allocate ("C_a_ustring" 5) bv
                             (##core#inline "C_utf_range_length" bv 0 len))))
 
-(define (##sys#buffer->string/check buf len)
-  (let ((c (##core#inline "C_utf_validate" bv len)))
-    (and c
-         (let ((bv (##sys#make-bytevector (fx+ len 1))))
-           (##core#inline "C_copy_memory" bv buf len)
-           (##core#inline_allocate ("C_a_ustring" 5) bv c)))))
+(define (##sys#utf-decoder buf start len k)
+  (k buf start len))
+                          
+(define (##sys#utf-encoder buf start len k)
+  (k buf start len))
+                          
+(define (##sys#latin-decoder bv start len k)
+  (let* ((buf (##sys#make-bytevector (fx* len 2)))
+         (n (##core#inline "C_latin1_to_utf" bv buf start len)))
+    (k buf 0 n)))
+
+(define (##sys#latin-encoder bv start len k)
+  (let* ((buf (##sys#make-bytevector (fx+ len 1)))
+         (n (##core#inline "C_utf_to_latin1" bv buf start len)))
+    (k buf 0 n)))
+
+;; invokes k with encoding and decoding procedures
+(define (##sys#encoding-hook enc k)
+  (case enc
+    ((utf-8) (k ##sys#utf-decoder ##sys#utf-encoder))
+    ((latin-1) (k ##sys#latin-decoder ##sys#latin-encoder))
+    (else (##sys#signal-hook #:type-error #f "invalid file port encoding" enc))))
+                          
+;; decode buffer and create string
+(define (##sys#buffer->string/encoding buf start len enc)
+  (##sys#encoding-hook
+    enc
+    (lambda (decoder _) (decoder buf start len ##sys#buffer->string))))
+
+;; encode buffer into bytevector
+(define (##sys#encode-buffer bv start len enc k)
+  (##sys#encoding-hook
+    enc
+    (lambda (_ encoder) (encoder bv start len k))))
+
+;; decode buffer into bytevector
+(define (##sys#decode-buffer bv start len enc k)
+  (##sys#encoding-hook
+    enc
+    (lambda (decoder _) (decoder bv start len k))))
 
 (set! scheme#make-string
   (lambda (size . fill)
@@ -3259,7 +3293,7 @@ EOF
 
 ;;; Port layout:
 ;
-; 0:  FP (special)
+; 0:  file ptr (special)
 ; 1:  direction (fixnum, 0 = input)
 ; 2:  class (vector of procedures)
 ; 3:  name (string)
@@ -3269,7 +3303,8 @@ EOF
 ; 7:  type ('stream | 'custom | 'string | 'socket)
 ; 8:  closed (fixnum)
 ; 9:  data
-; 10-15: reserved, port class specific
+; 10-14: reserved, port class specific
+; 15: reserved (encoding)
 ;
 ; Port-class:
 ;
@@ -3293,6 +3328,7 @@ EOF
     (##sys#setislot port 5 0)
     (##sys#setslot port 7 type)
     (##sys#setslot port 8 i/o)
+    (##sys#setslot port 15 'utf-8)
     port) )
 
 ;;; Stream ports:
@@ -3325,7 +3361,10 @@ EOF
 	  (lambda (p c)			; write-char
 	    (##core#inline "C_display_char" p c) )
 	  (lambda (p s from to)			; write-bytevector
-	    (##core#inline "C_display_string" p s from to))
+            (##sys#encode-buffer
+              s from (fx- to from) (##sys#slot p 15)
+              (lambda (bv start len)
+                (##core#inline "C_display_string" p s start len))))
 	  (lambda (p d)			; close
 	    (##core#inline "C_close_file" p)
 	    (##sys#update-errno) )
@@ -3334,35 +3373,35 @@ EOF
 	  (lambda (p)			; char-ready?
 	    (##core#inline "C_char_ready_p" p) )
 	  (lambda (p n dest start)		; read-bytevector!
-            (let ((c (##sys#slot p 10)))
+            (let ((c (##sys#slot p 10))
+                  (nc 0))
               (when c
-                (let ((nc (##core#inline "C_utf_bytes" c)))
-                  (if (fx> nc n)
-                      (let ((bv (##sys#make-bytevector nc)))
-                        (##core#inline "C_utf_insert" bv 0 c)
-                        (##core#inline "C_copy_memory_with_offset" dest bv start 0 n))
-                      (##core#inline "C_utf_insert" dest start c))
-                  (set! start (fx- start nc))
-                  (set! n (fx- n nc)))
-                (##sys#setislot p 10 #f)))
-	    (let loop ((rem (or n (fx- (##sys#size dest) start)))
-                       (act 0) 
-                       (start start))
-	      (let ((len (##core#inline "fast_read_string_from_file" dest p rem start)))
-		(cond ((eof-object? len) ; EOF returns 0 bytes read
-		       act)
-		      ((fx< len 0)
-		       (if (eq? (##sys#update-errno) (foreign-value "EINTR" int))
-			   (##sys#dispatch-interrupt
-			    (lambda () (loop rem act start)))
-			   (##sys#signal-hook
-			    #:file-error 'read-bytevector!
-			    (##sys#string-append "cannot read from port - " strerror)
-			    p n dest start)))
-		      ((fx< len rem)
-		       (loop (fx- rem len) (fx+ act len) (fx+ start len)))
-		      (else
-		       (fx+ act len) ) ) )))
+                (set! nc (##core#inline "C_utf_bytes" c))
+                (if (fx> nc n)
+                    (let ((bv (##sys#make-bytevector nc)))
+                      (##core#inline "C_utf_insert" bv 0 c)
+                      (##core#inline "C_copy_memory_with_offset" dest bv start 0 n))
+                    (##core#inline "C_utf_insert" dest start c))
+                (set! start (fx+ start nc))
+                (set! n (fx- n nc))
+                (##sys#setislot p 10 #f))
+              (let loop ((rem (or n (fx- (##sys#size dest) start)))
+                         (act nc) 
+                         (start start))
+                (let ((len (##core#inline "fast_read_string_from_file" dest p rem start)))
+                  (cond ((eof-object? len) ; EOF returns 0 bytes read
+                         act)
+                        ((fx< len 0)
+                         (if (eq? (##sys#update-errno) (foreign-value "EINTR" int))
+                             (##sys#dispatch-interrupt
+                               (lambda () (loop rem act start)))
+                             (##sys#signal-hook
+                               #:file-error 'read-bytevector!
+                               (##sys#string-append "cannot read from port - " strerror)
+                               p n dest start)))
+                        ((fx< len rem)
+                         (loop (fx- rem len) (fx+ act len) (fx+ start len)))
+                        (else (fx+ act len) ) ) ))))
           (lambda (p rlimit)		; read-line
 	    (when rlimit (##sys#check-fixnum rlimit 'read-line))
 	    (let ((sblen read-line-buffer-initial-size))
@@ -3377,7 +3416,8 @@ EOF
                                         p (fxmin limit len))))
 		  (cond ((eof-object? n) (if f result #!eof))
 			((not n)
-                          (let ((prev (##sys#buffer->string buffer 0 limit)))
+                          (let ((prev (##sys#buffer->string/encoding buffer 0 limit
+                                                                     (##sys#slot p 15))))
   			     (if (fx< limit len)
 			         (##sys#string-append result prev)
    			         (loop (fx* len 2)
@@ -3393,7 +3433,7 @@ EOF
 				  (loop len limit buffer
 					(##sys#string-append
 					 result 
-                                         (##sys#buffer->string buffer 0 n))
+                                         (##sys#buffer->string/encoding buffer 0 n (##sys#slot p 15)))
 					#t))))
 			     (##sys#signal-hook
 			      #:file-error 'read-line
@@ -3401,10 +3441,10 @@ EOF
 			      p rlimit)))
 			(f (##sys#setislot p 4 (fx+ (##sys#slot p 4) 1))
 			   (##sys#string-append result
-                             (##sys#buffer->string buffer 0 n)))
+                             (##sys#buffer->string/encoding buffer 0 n (##sys#slot p 15))))
 			(else
 			 (##sys#setislot p 4 (fx+ (##sys#slot p 4) 1))
-			 (##sys#buffer->string buffer 0 n)))))))
+			 (##sys#buffer->string/encoding buffer 0 n (##sys#slot p 15))))))))
 	  #f	; read-buffered
 	  ) )
 
@@ -3478,20 +3518,27 @@ EOF
 (let ()
   (define (open name inp modes loc)
     (##sys#check-string name loc)
-    (let ([fmode (if inp "r" "w")]
-          [bmode ""] )
-      (do ([modes modes (##sys#slot modes 1)])
+    (let ((fmode (if inp "r" "w"))
+          (bmode "")
+          (enc 'utf-8))
+      (do ((modes modes (##sys#slot modes 1)))
         ((null? modes))
-        (let ([o (##sys#slot modes 0)])
+        (let ((o (##sys#slot modes 0)))
           (case o
-            [(#:binary) (set! bmode "b")]
-            [(#:text) (set! bmode "")]
-            [(#:append)
+            ((#:binary binary) 
+             (set! bmode "b")
+             (set! enc 'latin-1))
+            ((#:text text) (set! bmode ""))
+            ((#:utf-8 utf-8) #f)
+            ((#:latin-1 latin-1 #:iso-8859-1 iso-8859-1) 
+             (set! enc 'latin-1))
+            ((#:append append)
              (if inp
                (##sys#error loc "cannot use append mode with input file")
-               (set! fmode "a") ) ]
-            [else (##sys#error loc "invalid file option" o)] ) ) )
+               (set! fmode "a") ) )
+            (else (##sys#error loc "invalid file option" o)) ) ) )
       (let ((port (##sys#make-port (if inp 1 2) ##sys#stream-port-class name 'stream)))
+        (##sys#setslot port 15 enc)
         (unless (##sys#open-file-port port name (##sys#string-append fmode bmode))
           (##sys#update-errno)
           (##sys#signal-hook #:file-error loc (##sys#string-append "cannot open file - " strerror) name) )
@@ -5570,7 +5617,7 @@ EOF
 		 (string-append "attempted rest argument access at index " (##sys#number->string n)
                                 " but rest list length is " (##sys#number->string c) )
 		 (if fn (list fn) '()))))
-        ((57) (apply ##sys#signal-hook #:runtime-error loc "string contains invalid UTF-8 sequence" args))
+        ((57) (apply ##sys#signal-hook #:type-error loc "string contains invalid UTF-8 sequence" args))
 	(else (apply ##sys#signal-hook #:runtime-error loc "unknown internal error" args)) ) ) ) )
 
 ) ; chicken.condition

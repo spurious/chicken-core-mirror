@@ -484,7 +484,7 @@ void *alloca ();
 #define C_SIZEOF_TAGGED_POINTER   3
 #define C_SIZEOF_VECTOR(n)        ((n) + 1)
 #define C_SIZEOF_LOCATIVE         5
-#define C_SIZEOF_PORT             16
+#define C_SIZEOF_PORT             17
 #define C_SIZEOF_RATNUM           3
 #define C_SIZEOF_CPLXNUM          3
 #define C_SIZEOF_STRUCTURE(n)     ((n)+1)
@@ -1223,8 +1223,8 @@ typedef void (C_ccall *C_proc)(C_word, C_word *) C_noret;
 
 #define C_display_fixnum(p, n)          (C_fprintf(C_port_file(p), C_text("%d"), C_unfix(n)), C_SCHEME_UNDEFINED)
 #define C_display_char(p, c)            (C_utf_putc(C_character_code(c), C_port_file(p)), C_SCHEME_UNDEFINED)
-#define C_display_string(p, s, from, to)  \
-                                         (C_fwrite(C_c_string(s) + C_unfix(from), sizeof(C_char), C_unfix(to) - C_unfix(from), C_port_file(p)), C_SCHEME_UNDEFINED)
+#define C_display_string(p, s, start, len)  \
+                                         (C_fwrite(C_c_string(s) + C_unfix(start), sizeof(C_char), C_unfix(len), C_port_file(p)), C_SCHEME_UNDEFINED)
 #define C_flush_output(port)            (C_fflush(C_port_file(port)), C_SCHEME_UNDEFINED)
 
 #define C_fix_to_char(x)                (C_make_character(C_unfix(x)))
@@ -1900,6 +1900,8 @@ C_fctexport int C_fcall C_utf_isalpha(int c) C_regparm;
 C_fctexport int C_fcall C_utf_isupper(int c) C_regparm;
 C_fctexport int C_fcall C_utf_islower(int c) C_regparm;
 C_fctexport C_word C_fcall C_utf_validate(C_word bv, C_word blen) C_regparm;
+C_fctexport C_word C_fcall C_latin1_to_utf(C_word from, C_word to, C_word start, C_word len) C_regparm;
+C_fctexport C_word C_fcall C_utf_to_latin1(C_word from, C_word to, C_word start, C_word len) C_regparm;
 
 C_fctimport C_cpsproc(C_toplevel) C_noret;
 C_fctimport C_cpsproc(C_invalid_procedure) C_noret;
