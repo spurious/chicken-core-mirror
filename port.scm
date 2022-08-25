@@ -42,6 +42,7 @@
    copy-port
    make-input-port
    make-output-port
+   port-encoding
    port-fold
    port-for-each
    port-map
@@ -115,6 +116,10 @@ char *ttyname(int fd) {
 (define-foreign-variable _iolbf int "_IOLBF")
 (define-foreign-variable _ionbf int "_IONBF")
 (define-foreign-variable _bufsiz int "BUFSIZ")
+
+(define (port-encoding port) 
+  (##sys#check-port port 'port-encoding)
+  (##sys#slot port 15))
 
 (define (port-name #!optional (port ##sys#standard-input))
   (##sys#check-port port 'port-name)
