@@ -117,9 +117,16 @@ char *ttyname(int fd) {
 (define-foreign-variable _ionbf int "_IONBF")
 (define-foreign-variable _bufsiz int "BUFSIZ")
 
-(define (port-encoding port) 
-  (##sys#check-port port 'port-encoding)
-  (##sys#slot port 15))
+(define port-encoding 
+  (getter-with-setter
+    (lambda (port)
+      (##sys#check-port port 'port-encoding)
+      (##sys#slot port 15))
+    (lambda (port enc)
+      (##sys#check-port port 'port-encoding)
+      (##sys#check-symbol enc 'port-encoding)
+      (##sys#slotislot port 15 enc))
+    "(chicken.port#port-encoding port)"))
 
 (define (port-name #!optional (port ##sys#standard-input))
   (##sys#check-port port 'port-name)
