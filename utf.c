@@ -1840,7 +1840,7 @@ C_regparm C_word C_fcall C_utf_copy(C_word from, C_word to, C_word start1, C_wor
 C_regparm C_word C_fcall C_utf_position(C_word str, C_word index)
 {
     C_char *p1 = utf_index(str, C_unfix(index));
-    return C_fix(p1 - (C_char *)C_data_pointer(C_block_item(str, 0)));
+    return C_fix(p1 - C_c_string(C_block_item(str, 0)));
 }
 
 /* compute char-index from byte-index (slow, uncached) */
@@ -1953,7 +1953,7 @@ C_regparm C_word C_fcall C_utf_advance(C_word bv, C_word pos)
 
 C_regparm C_word C_fcall C_utf_insert(C_word bv, C_word pos, C_word c)
 {
-    C_char *p1 = (C_char *)C_data_pointer(bv) + C_unfix(pos);
+    C_char *p1 = C_c_string(bv) + C_unfix(pos);
     C_char *p2 = utf8_encode(C_character_code(c), p1);
     return C_fix(C_unfix(pos) + p2 - p1);
 }
@@ -2046,7 +2046,7 @@ C_regparm C_word C_fcall C_utf_to_latin1(C_word from, C_word to, C_word start, C
     C_char *pt = C_c_string(to), *pt0 = pt;
     C_u32 c;
     int e;
-    while(n >= 0) {
+    while(n > 0) {
         pf2 = utf8_decode(pf, &c, &e);
         n -= pf2 - pf;
         pf = pf2;

@@ -138,7 +138,7 @@
         (enc (##sys#slot port 15)))
     (##sys#encoding-hook
       enc
-      (lambda (decoder _) 
+      (lambda (decoder _ _)
         (define (readb n buf port p)
           (let ((bytes (read-bytevector!/port n buf port p)))
             (if (eq? enc 'utf-8) ; fast path, avoid copying
@@ -210,7 +210,7 @@
     (let loop ((buf (##sys#make-bytevector len))
                (bsize len)
                (pos 0))
-      (let* ((nr (fx- len pos))
+      (let* ((nr (fx- (##sys#size buf) pos))
              (n (read-bytevector!/port nr buf p pos)))
         (cond ((eq? n nr)
                (let* ((bsize2 (fx* bsize 2))
@@ -279,12 +279,12 @@
 (define write-string 
   (lambda (s . more)
     (##sys#check-string s 'write-string)
-    (let-optionals more ([n #f] [port ##sys#standard-output])
+    (let-optionals more ((n #f) (port ##sys#standard-output))
       (##sys#check-output-port port #t 'write-string)
       (when n (##sys#check-fixnum n 'write-string))
       (let* ((bv (##sys#slot s 0))
              (len (fx- (##sys#size bv) 1))
-             (bytes (##core#inline "C_utf_position" s n)))
+             (bytes (and n (##core#inline "C_utf_position" s n))))
         ((##sys#slot (##sys#slot port 2) 3) ; write-bytevector
          port
          bv
