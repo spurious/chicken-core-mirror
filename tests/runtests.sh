@@ -212,6 +212,7 @@ $interpret -s unicode-tests.scm
 $compile -specialize unicode-tests.scm
 ./a.out
 $interpret -s invalid-utf-test.scm
+$interpret -s file-encoding-test.scm
 
 echo "======================================== reader tests ..."
 $interpret -s reader-tests.scm

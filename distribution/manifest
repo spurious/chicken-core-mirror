@@ -260,6 +260,9 @@ tests/types-db-consistency.scm
 tests/unicode-tests.scm
 tests/UTF-8-test.txt
 tests/invalid-utf-test.scm
+tests/file-encoding-test.scm
+tests/i-dont-know-i-jkust-work-here.utf-8.txt
+tests/i-dont-know-i-jkust-work-here.latin-1.txt
 tweaks.scm
 Makefile
 Makefile.android
