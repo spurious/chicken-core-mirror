@@ -1344,7 +1344,7 @@ EOF
       (let ((n (##core#inline "C_utf_bytes_needed" byte)))
         (if (eq? n 1)
             #f
-            n))))
+            (fx- n 1)))))
                           
 (define (##sys#latin-decoder bv start len k)
   (let* ((buf (##sys#make-bytevector (fx* len 2)))
@@ -1426,7 +1426,7 @@ EOF
                 (let ((s2 (scan state (##core#inline "C_subbyte" buf i))))
                   (if s2
                       (loop s2 (fx+ i 1))
-                      (dec buf 0 (fx+ i 1) k))))))))))
+                      (k buf 0 (fx+ i 1) dec))))))))))
 
 (set! scheme#make-string
   (lambda (size . fill)
@@ -3386,6 +3386,7 @@ EOF
     (##sys#setslot port 3 name)
     (##sys#setislot port 4 1)
     (##sys#setislot port 5 0)
+    (##sys#setislot port 6 #f)
     (##sys#setslot port 7 type)
     (##sys#setslot port 8 i/o)
     (##sys#setislot port 10 #f)
@@ -3415,26 +3416,31 @@ EOF
                               c)))
                       (else (##sys#read-char/encoding 
                               p (##sys#slot p 15)
-                              (lambda (buf start _)
-                                (##core#inline "C_utf_decode" buf start))))))))
+                              (lambda (buf start len dec)
+                                (dec buf start len
+                                     (lambda (buf start len)
+                                       (##core#inline "C_utf_decode" buf start))))))))))
 	  (lambda (p)			; peek-char
-            (let ((pb (##sys#slot p 10)))
+            (let ((pb (##sys#slot p 10))
+                  (enc (##sys#slot p 15)))
               (if pb 
-                  (##sys#decode-char pb (##sys#slot p 15))
+                  (##sys#decode-char pb enc)
                   (##sys#read-char/encoding 
-                    p (##sys#slot p 15)
-                    (lambda (buf start len)
+                    p enc
+                    (lambda (buf start len dec)
                       (let ((pb (##sys#make-bytevector len)))
                         (##core#inline "C_copy_memory_with_offset" pb buf 0 start len)
                         (##sys#setslot p 10 pb)
-                        (##core#inline "C_utf_decode" pb 0)))))))
+                        (dec buf start len
+                             (lambda (buf start _)
+                               (##core#inline "C_utf_decode" buf start)))))))))
 	  (lambda (p c)			; write-char
             (let ((enc (##sys#slot p 15)))
               (if (eq? enc 'utf-8) ;; fast path
                   (##core#inline "C_display_char" p c)
                   (let* ((bv (##sys#make-bytevector 4))
                          (n (##sys#encode-char c bv enc)))
-                    ((##sys#slot (##sys#slot p 2) 0) p bv 0 n))))) ; write-bytevector 
+                    ((##sys#slot (##sys#slot p 2) 3) p bv 0 n))))) ; write-bytevector 
 	  (lambda (p bv from to)			; write-bytevector
             (##sys#encode-buffer
               bv from (fx- to from) (##sys#slot p 15)
@@ -3456,6 +3462,7 @@ EOF
                 (set! start (fx+ start nc))
                 (set! n (fx- n nc))
                 (##sys#setislot p 10 #f))
+              ;;XXX "n" below always true?
               (let loop ((rem (or n (fx- (##sys#size dest) start)))
                          (act nc) 
                          (start start))
@@ -3924,7 +3931,7 @@ EOF
 (define (##sys#peek-char-0 p)
   (if (##sys#slot p 6)
       #!eof
-      (let ([c ((##sys#slot (##sys#slot p 2) 1) p)]) ; peek-char
+      (let ((c ((##sys#slot (##sys#slot p 2) 1) p))) ; peek-char
 	(when (##core#inline "C_eofp" c)
 	  (##sys#setislot p 6 #t) )
 	c) ) )
