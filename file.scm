@@ -261,8 +261,8 @@ EOF
     (##sys#error 'copy-file "newfile exists but clobber is false" newfile))
   (let* ((i (open-input-file oldfile #:binary))
 	 (o (open-output-file newfile #:binary))
-	 (s (make-string blocksize)))
-    (let loop ((d (read-string! blocksize s i))
+	 (s (##sys#make-bytevector blocksize)))
+    (let loop ((d (read-bytevector! s i))
 	       (l 0))
       (if (fx= 0 d)
 	  (begin
@@ -270,8 +270,8 @@ EOF
 	    (close-output-port o)
 	    l)
 	  (begin
-	    (write-string s d o)
-	    (loop (read-string! blocksize s i) (fx+ d l)))))))
+	    (write-bytevector s o 0 d)
+	    (loop (read-bytevector! s i) (fx+ d l)))))))
 
 (define (move-file oldfile newfile #!optional (clobber #f) (blocksize 1024))
   (##sys#check-string oldfile 'move-file)
@@ -285,8 +285,8 @@ EOF
     (##sys#error 'move-file "newfile exists but clobber is false" newfile))
   (let* ((i (open-input-file oldfile #:binary))
 	 (o (open-output-file newfile #:binary))
-	 (s (make-string blocksize)))
-    (let loop ((d (read-string! blocksize s i))
+	 (s (##sys#make-bytevector blocksize)))
+    (let loop ((d (read-bytevector! s i))
 	       (l 0))
       (if (fx= 0 d)
 	  (begin
@@ -295,8 +295,8 @@ EOF
 	    (delete-file oldfile)
 	    l)
 	  (begin
-	    (write-string s d o)
-	    (loop (read-string! blocksize s i) (fx+ d l)))))))
+	    (write-bytevector s o 0 d)
+	    (loop (read-bytevector! s i) (fx+ d l)))))))
 
 
 ;;; Temporary file creation:

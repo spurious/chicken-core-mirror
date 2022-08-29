@@ -8,6 +8,7 @@
   (chicken irregex)
   (chicken memory)
   (chicken port)
+  (chicken io)
   (chicken format)
   (chicken process-context)
   (chicken process-context posix)

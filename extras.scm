@@ -32,7 +32,8 @@
 (module chicken.io
   (read-list read-buffered read-byte read-line
    read-lines read-string read-string! read-token
-   write-byte write-line write-string write-bytevector read-bytevector)
+   write-byte write-line write-string write-bytevector read-bytevector
+   read-bytevector!)
 
 (import scheme chicken.base chicken.fixnum)
 
@@ -179,14 +180,13 @@
   (##sys#check-fixnum start 'read-string!)
   (read-string!/port n dest port start))
 
-(define (read-bytevector! n dest #!optional (port ##sys#standard-input) (start 0))
+(define (read-bytevector! dest #!optional (port ##sys#standard-input) (start 0) end)
   (##sys#check-input-port port #t 'read-bytevector!)
   (##sys#check-bytevector dest 'read-bytevector!)
-  (##sys#check-fixnum n 'read-bytevector!)
   (##sys#check-fixnum start 'read-bytevector!)
-  (let ((size (##sys#size dest)))
-    (unless (and n (fx<= (fx+ start n) size))
-      (set! n (fx- size start)))
+  (when end (##sys#check-fixnum end 'read-bytevector!))
+  (let* ((size (##sys#size dest))
+         (n (fx- (or end size) start)))
     (read-bytevector!/port n dest port start)))
 
 (define read-string/port
@@ -311,18 +311,15 @@
     ((##sys#slot (##sys#slot port 2) 3) ; write-bytevector
      port bv 0 1)))
 
-(define (write-bytevector bv #!optional n (port ##sys#standard-output))
+(define (write-bytevector bv #!optional (port ##sys#standard-output) (start 0)
+                          end)
   (##sys#check-bytevector bv 'write-bytevector)
   (##sys#check-output-port port #t 'write-bytevector)
-  (when n (##sys#check-fixnum n 'write-bytevector))
-  (let ((len (fx- (##sys#size bv) 1)))
+  (##sys#check-fixnum start 'write-bytevector)
+  (when end (##sys#check-fixnum end 'write-bytevector))
+  (let ((end (fxmin end (##sys#size bv))))
     ((##sys#slot (##sys#slot port 2) 3) ; write-bytevector
-     port
-     bv
-     0
-     (if (and n (fx< n len))
-         n
-         len))))
+     port bv start end)))
 
 ) ; module chicken.io
 

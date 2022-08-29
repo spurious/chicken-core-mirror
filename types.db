@@ -1100,9 +1100,11 @@
 (chicken.bytevector#bytevector-length (#(procedure #:clean #:enforce #:foldable) chicken.bytevector#bytevector-size (bytevector) fixnum)
 	   ((bytevector) (##sys#size #(1))))
 (chicken.bytevector#utf8->string (#(procedure #:clean #:enforce) chicken.bytevector#utf8->string (bytevector) string))
+(chicken.bytevector#latin1->string (#(procedure #:clean #:enforce) chicken.bytevector#latin1->string (bytevector) string))
 (chicken.bytevector#make-bytevector (#(procedure #:clean #:enforce) chicken.bytevector#make-bytevector (fixnum) bytevector)
 	   ((fixnum) (##sys#make-bytevector #(1))))
 (chicken.bytevector#string->utf8 (#(procedure #:clean #:enforce) chicken.bytevector#string->utf8 (string) bytevector))
+(chicken.bytevector#string->latin1 (#(procedure #:clean #:enforce) chicken.bytevector#string->latin1 (string) bytevector))
 (chicken.bytevector#bytevector-u8-ref (#(procedure #:clean #:pure #:enforce) chicken.bytevector#bytevector-u8-ref (bytevector fixnum) fixnum))
 (chicken.bytevector#bytevector-u8-set! (#(procedure #:clean #:enforce) chicken.bytevector#bytevector-u8-set! (bytevector fixnum fixnum) undefined))
 (chicken.bytevector#bytevector-copy (#(procedure #:clean #:enforce) chicken.bytevector#bytevector-copy (bytevector #!optional fixnum fixnum) bytevector))
@@ -1534,9 +1536,9 @@
 (chicken.io#write-byte (#(procedure #:enforce) chicken.io#write-byte (fixnum #!optional output-port) undefined))
 (chicken.io#write-line (#(procedure #:enforce) chicken.io#write-line (string #!optional output-port) undefined))
 (chicken.io#write-string (#(procedure #:enforce) chicken.io#write-string (string #!optional * output-port) undefined))
-(chicken.io#write-bytevector (#(procedure #:enforce) chicken.io#write-bytevector (bytevector #!optional * output-port) undefined))
+(chicken.io#write-bytevector (#(procedure #:enforce) chicken.io#write-bytevector (bytevector #!optional output-port fixnum fixnum) undefined))
 (chicken.io#read-bytevector (#(procedure #:enforce) chicken.io#read-bytevector (#!optional * input-port) bytevector))
-(chicken.io#read-bytevector! (#(procedure #:enforce) chicken.io#read-bytevector! ((or fixnum false) bytevector #!optional input-port fixnum) fixnum))
+(chicken.io#read-bytevector! (#(procedure #:enforce) chicken.io#read-bytevector! (bytevector #!optional input-port fixnum fixnum) fixnum))
 
 ;; pretty-print
 

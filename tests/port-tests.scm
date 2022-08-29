@@ -1,5 +1,6 @@
 (import chicken.condition chicken.file chicken.file.posix
 	chicken.flonum chicken.format chicken.io chicken.port
+        chicken.bytevector
 	chicken.process chicken.process.signal chicken.tcp srfi-4)
 
 (include "test.scm")
@@ -296,7 +297,7 @@ EOF
     (check (read-line in 5))
     (check (read-bytevector 5 in))
     (check "read-bytevector!" (let ((dest (make-u8vector 5)))
-                              (read-bytevector! 5 dest in)))
+                              (read-bytevector! dest in 0 5)))
     #+(not mingw32) 
     (begin
       (check (file-test-lock in))
@@ -436,15 +437,17 @@ EOF
 
 ;; bytevector I/O, moved here from srf-4-tests.scm:
 ;; Ticket #1124: read-u8vector! w/o length, dest smaller than source.
+(test-group 
+ "bytevector I/O"
 (let ((input (open-input-string "abcdefghijklmnopqrstuvwxyz"))
       (u8vec (make-bytevector 10)))
-  (assert (= 10 (read-bytevector! #f u8vec input)))
+  (assert (= 10 (read-bytevector! u8vec input)))
   (assert (equal? u8vec #u8(97 98 99 100 101 102 103 104 105 106)))
-  (assert (= 5  (read-bytevector! #f u8vec input 5)))
+  (assert (= 5  (read-bytevector! u8vec input 5)))
   (assert (equal? u8vec #u8(97 98 99 100 101 107 108 109 110 111)))
-  (assert (= 5  (read-bytevector! 5  u8vec input)))
+  (assert (= 5  (read-bytevector! u8vec input 0 5)))
   (assert (equal? u8vec #u8(112 113 114 115 116 107 108 109 110 111)))
-  (assert (= 6  (read-bytevector! 10 u8vec input)))
+  (assert (= 6  (read-bytevector! u8vec input 0 10)))
   (assert (equal? u8vec #u8(117 118 119 120 121 122 108 109 110 111))))
 
 (let ((input (open-input-string "abcdefghijklmnopqrs")))
@@ -490,7 +493,7 @@ EOF
 	 (with-output-to-string
 	   (lambda ()
 	     (write-bytevector #u8())))))
-
+)
 
 ;;;
 
