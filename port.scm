@@ -400,12 +400,7 @@ char *ttyname(int fd) {
 		 (lambda (_ c)           ; write-char
 		   (write-char c o))
                  (lambda (_ bv from to)  ; write-bytevector
-                   (if (eq? from 0)
-                       (write-bytevector bv to o)
-                       (let* ((len (fx- to from))
-                              (bv2 (##sys#make-bytevector len)))
-                         (##core#inline "C_copy_memory_with_offset" bv2 bv 0 from len)
-                         (write-bytevector bv2 len o))))
+                   (chicken.io#write-bytevector bv o from to))
 		 (lambda (_ d)           ; close
 		   (case d
 		     ((1) (close-input-port i))
@@ -415,7 +410,7 @@ char *ttyname(int fd) {
 		 (lambda (_)             ; char-ready?
 		   (char-ready? i))
 		 (lambda (_ n d s)       ; read-bytevector!
-		   (chicken.io#read-bytevector! n d i s))
+		   (chicken.io#read-bytevector! d i s (fx+ s n)))
 		 (lambda (_ l)           ; read-line
 		   (read-line i l))
 		 (lambda ()              ; read-buffered

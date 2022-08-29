@@ -143,7 +143,7 @@
           (let ((bytes (read-bytevector!/port n buf port p)))
             (if (eq? enc 'utf-8) ; fast path, avoid copying
                 bytes
-                (decoder buf p n
+                (decoder buf p bytes
                   (lambda (dbuf start len)
                     (##core#inline "C_copy_memory_with_offset" buf dbuf p start len)
                     len)))))
