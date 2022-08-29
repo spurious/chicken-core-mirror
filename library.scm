@@ -2946,7 +2946,8 @@ EOF
   (bytevector? bytevector=? bytevector-length
                make-bytevector bytevector bytevector-u8-ref
                bytevector-u8-set! bytevector-copy bytevector-copy!
-               bytevector-append utf8->string string->utf8)
+               bytevector-append utf8->string string->utf8
+               latin1->string string->latin1)
 
 (import scheme)
 
@@ -2987,6 +2988,21 @@ EOF
 (define (utf8->string bv)
   (##sys#check-bytevector bv 'utf8->string)
   (##sys#buffer->string bv 0 (##sys#size bv)))
+
+(define (string->latin1 s)
+  (##sys#check-string s 'string->latin1)
+  (let* ((sbv (##sys#slot s 0))
+         (len (##sys#slot s 1))
+	 (bv (##sys#make-bytevector len)) )
+    (##core#inline "C_utf_to_latin" sbv bv 0 len)
+    bv))
+
+(define (latin1->string bv)
+  (##sys#check-bytevector bv 'latin1->string)
+  (let* ((len (##sys#size bv))
+         (buf (##sys#make-bytevector (##core#inline "C_fixnum_times" len 2)))
+         (n (##core#inline "C_latin_to_utf" bv buf 0 len)))
+    (##sys#buffer->string buf 0 n)))
 
 (define (bytevector=? b1 b2)
   (##sys#check-bytevector b1 'bytevector=?)
