@@ -1128,12 +1128,12 @@
 		`(##core#let ((,tmp ,param))
 		   (##core#if ,tmp
 			      ,(if unsafe 
-				   `(##sys#make-c-string ,tmp)
+				   `(##sys#slot ,tmp 0)
 				   `(##sys#make-c-string (##sys#foreign-string-argument ,tmp)) )
 		       (##core#quote #f)) ) ) )
 	     ((nonnull-c-string nonnull-c-string* nonnull-unsigned-c-string*)
 	      (if unsafe 
-		  `(##sys#make-c-string ,param)
+		  `(##sys#slot ,param 0)
 		  `(##sys#make-c-string (##sys#foreign-string-argument ,param)) ) )
 	     ((symbol)
 	      (if unsafe 
