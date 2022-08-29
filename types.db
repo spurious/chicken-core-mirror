@@ -1867,10 +1867,6 @@
  (#(procedure #:clean #:enforce) chicken.port#port-name (#!optional port) *)
  ((port) (##sys#slot #(1) '3)))
 
-(chicken.port#set-port-name!
- (#(procedure #:clean #:enforce) chicken.port#set-port-name! (port string) undefined)
- ((port string) (##sys#setslot #(1) '3 #(2))))
-
 (chicken.port#terminal-name (#(procedure #:clean #:enforce) chicken.port#terminal-name (port) string))
 (chicken.port#terminal-port? (#(procedure #:clean #:enforce) chicken.port#terminal-port? (port) boolean))
 (chicken.port#terminal-size (#(procedure #:clean #:enforce) chicken.port#terminal-size (port) fixnum fixnum))

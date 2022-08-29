@@ -13,7 +13,10 @@ This module contains various extended port definitions.
 
 Returns the encoding used for reading and writing data from and to
 the given port. Encoding is currently one of the symbols {{utf-8}}
-or {{latin-1}}.
+or {{latin-1}}. Note that the encoding can be changed by using
+the (SRFI-17) setter procedure for this operation:
+
+{{(set! (port-encoding PORT) ENCODING)}}
 
 ==== port-name
 
@@ -22,6 +25,11 @@ or {{latin-1}}.
 Fetch filename from {{PORT}}. This returns the filename that was used to open
 this file. Returns a special tag string, enclosed into parentheses for
 non-file ports. {{PORT}} defaults to the value of {{(current-input-port)}}.
+
+Note that the encoding can be changed by using
+the (SRFI-17) setter procedure for this operation:
+
+{{(set! (port-name PORT) STRING)}}
 
 
 ==== port-position
@@ -32,13 +40,6 @@ Returns the current position of {{PORT}} as two values: row and column number.
 If the port does not support such an operation an error is signaled. This
 procedure is currently only available for input ports. {{PORT}} defaults to the
 value of {{(current-input-port)}}.
-
-
-==== set-port-name!
-
-<procedure>(set-port-name! PORT STRING)</procedure>
-
-Sets the name of {{PORT}} to {{STRING}}.
 
 
 === Setting the file buffering mode

@@ -52,7 +52,6 @@
    make-broadcast-port
    make-concatenated-port
    set-buffering-mode!
-   set-port-name!
    terminal-name
    terminal-port?
    terminal-size
@@ -128,14 +127,16 @@ char *ttyname(int fd) {
       (##sys#slotislot port 15 enc))
     "(chicken.port#port-encoding port)"))
 
-(define (port-name #!optional (port ##sys#standard-input))
-  (##sys#check-port port 'port-name)
-  (##sys#slot port 3))
-
-(define (set-port-name! port name)
-  (##sys#check-port port 'set-port-name!)
-  (##sys#check-string name 'set-port-name!)
-  (##sys#setslot port 3 name))
+(define port-name
+  (getter-with-setter
+    (lambda (#!optional (port ##sys#standard-input))
+      (##sys#check-port port 'port-name)
+      (##sys#slot port 3))
+    (lambda (port name)    
+      (##sys#check-port port 'set-port-name!)
+      (##sys#check-string name 'set-port-name!)
+      (##sys#setslot port 3 name))
+    "(chicken.port#port-name port)"))
 
 (define (port-position #!optional (port ##sys#standard-input))
   (##sys#check-port port 'port-position)
