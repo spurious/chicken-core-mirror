@@ -1335,7 +1335,6 @@ EOF
 (define (##sys#utf-encoder buf start len k)
   (k buf start len))
                           
-;; currently not used but here for completeness                          
 (define (##sys#utf-scanner state byte)
   (if state
       (if (fx> state 1)
