@@ -83,7 +83,7 @@
 ;   ##compiler#local -> BOOL
 ;   ##compiler#visibility -> #f | 'hidden | 'exported
 ;   ##compiler#constant -> BOOL                             defined as constant
-;   ##compiler#intrinsic -> #f | 'standard | 'extended
+;   ##compiler#intrinsic -> #f | 'standard | 'extended | 'internal
 ;   ##compiler#inline -> 'no | 'yes
 ;   ##compiler#inline-global -> 'yes | 'no | <node>
 ;   ##compiler#profile -> BOOL
