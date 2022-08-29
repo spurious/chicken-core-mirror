@@ -2027,7 +2027,7 @@ C_regparm C_word C_fcall C_utf_list_size(C_word lst)
     return C_fix(n);
 }
 
-C_regparm C_word C_fcall C_latin1_to_utf(C_word from, C_word to, C_word start, C_word len)
+C_regparm C_word C_fcall C_latin_to_utf(C_word from, C_word to, C_word start, C_word len)
 {
     int n = C_unfix(len);
     C_uchar *pf = (C_uchar *)C_c_string(from) + C_unfix(start);
@@ -2039,7 +2039,7 @@ C_regparm C_word C_fcall C_latin1_to_utf(C_word from, C_word to, C_word start, C
     return C_fix(pt - pt0);
 }
 
-C_regparm C_word C_fcall C_utf_to_latin1(C_word from, C_word to, C_word start, C_word blen)
+C_regparm C_word C_fcall C_utf_to_latin(C_word from, C_word to, C_word start, C_word blen)
 {
     int n = C_unfix(blen);
     C_char *pf = C_c_string(from) + C_unfix(start), *pf2;

@@ -1348,12 +1348,12 @@ EOF
                           
 (define (##sys#latin-decoder bv start len k)
   (let* ((buf (##sys#make-bytevector (fx* len 2)))
-         (n (##core#inline "C_latin1_to_utf" bv buf start len)))
+         (n (##core#inline "C_latin_to_utf" bv buf start len)))
     (k buf 0 n)))
 
 (define (##sys#latin-encoder bv start len k)
   (let* ((buf (##sys#make-bytevector (fx+ len 1)))
-         (n (##core#inline "C_utf_to_latin1" bv buf start len)))
+         (n (##core#inline "C_utf_to_latin" bv buf start len)))
     (k buf 0 n)))
                           
 (define (##sys#latin-scanner state byte) #f)
