@@ -487,6 +487,8 @@ EOF
 	  "cannot compute number of bytes of immediate object" x) )
         ((##core#inline "C_stringp" x)
          (fx- (##sys#size (##sys#slot x 0)) 1))
+        ((##core#inline "C_symbolp" x)
+         (fx- (##sys#size (##sys#slot x 1)) 1))
 	((##core#inline "C_byteblockp" x)
 	 (##sys#size x))
 	(else
