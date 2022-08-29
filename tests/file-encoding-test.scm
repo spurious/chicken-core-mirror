@@ -1,7 +1,6 @@
 (import (chicken io))
 
-(include "tests/test.scm")
-;(include "test.scm")
+(include "test.scm")
 
 (define utf-file "i-dont-know-i-just-work-here.utf-8.txt")
 (define latin-file "i-dont-know-i-just-work-here.latin-1.txt")
