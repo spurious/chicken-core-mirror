@@ -1365,7 +1365,7 @@ EOF
     ((latin-1) (k ##sys#latin-decoder ##sys#latin-encoder ##sys#latin-scanner))
     (else (##sys#signal-hook #:type-error #f "invalid file port encoding" enc))))
                    
-(define (register-codec names dec enc scan)
+(define (##sys#register-encoding names dec enc scan)
   (let ((old ##sys#encoding-hook))
     (set! ##sys#encoding-hook
       (lambda (enc k)
@@ -3601,7 +3601,7 @@ EOF
 	  (let-optionals (cdr args) ((convert? #t) (set? #t))
 	    (when set? (set! ##sys#standard-error p)))
 	  p))))
-
+                          
 (define (##sys#tty-port? port)
   (and (not (zero? (##sys#peek-unsigned-integer port 0)))
        (##core#inline "C_tty_portp" port) ) )
@@ -3609,12 +3609,14 @@ EOF
 (define (##sys#port-data port) (##sys#slot port 9))
 (define (##sys#set-port-data! port data) (##sys#setslot port 9 data))
 
+(define ##sys#default-file-encoding)
+
 (let ()
   (define (open name inp modes loc)
     (##sys#check-string name loc)
     (let ((fmode (if inp "r" "w"))
           (bmode "")
-          (enc 'utf-8))
+          (enc (##sys#default-file-encoding)))
       (do ((modes modes (##sys#slot modes 1)))
         ((null? modes))
         (let ((o (##sys#slot modes 0)))
@@ -3623,7 +3625,8 @@ EOF
              (set! bmode "b")
              (set! enc 'latin-1))
             ((#:text text) (set! bmode ""))
-            ((#:utf-8 utf-8) #f)
+            ((#:utf-8 utf-8) 
+             (set! enc 'utf-8))
             ((#:latin-1 latin-1 #:iso-8859-1 iso-8859-1) 
              (set! enc 'latin-1))
             ((#:append append)
@@ -3966,6 +3969,8 @@ EOF
 (define ##sys#read-error-with-line-number #f)
 (define (##sys#read-prompt-hook) #f)	; just here so that srfi-18 works without eval
 (define (##sys#infix-list-hook lst) lst)
+
+(set! ##sys#default-file-encoding (make-parameter 'utf-8))
 
 (define (##sys#sharp-number-hook port n)
   (##sys#read-error port "invalid `#...' read syntax" n) )
