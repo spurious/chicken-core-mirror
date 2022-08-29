@@ -284,6 +284,8 @@
     ##sys#peek-fixnum ##sys#setislot ##sys#poke-integer ##sys#permanent? ##sys#values ##sys#poke-double
     ##sys#intern-symbol ##sys#intern-keyword ##sys#null-pointer? ##sys#peek-byte
     ##sys#foreign-symbol-argument
+    ##sys#symbol->string/shared ##sys#buffer->string ##sys#string->symbol-name
+    ##sys#bytevector->list ##sys#list->bytevector ##sys#make-bytevector
     ##sys#file-exists? ##sys#substring-index ##sys#substring-index-ci ##sys#lcm ##sys#gcd))
 
 (for-each
