@@ -1,3 +1,32 @@
+6.0.0
+
+- Core libraries
+  - The internal string representation has been converted to UTF-8,
+    making strings fully UNICODE capable.
+  - The (chicken blob) module has been replaced with (chicken bytevector),
+    containing R7RS compatible bytevector operations. Bytevectors are
+    now fully equivalent to SRFI-4 u8vectors.
+  - The read-syntax for blobs (`#${...}') has been removed. Bytevectors
+    can be read using `#u8(...)' or `#u8"..."'.
+  - `open-input-file' and `open-output-file' accept a file encoding,
+    supported are currently UTF-8 (the default) and Latin-1 (ISO-8859-1).
+  - `file-read', 'set-pseudo-random-seed!' and `random-bytes' require a
+    bytevector argument and do not accept strings.
+  - `read-u8vector', `read-u8vector!' and `write-u8vector' have been
+    removed, use the equivalent operations from the (chicken io)
+    module instead.
+  - Added `read-bytevector', `read-bytevector!' and `write-bytevector'
+    to the (chicken io) module.
+  - Removed `set-port-name!', use the SRFI-17 setter for `port-name'
+    instead.
+  - Added `port-encoding' to the (chicken port) module.
+  - Locatives on strings are now indexed by code-point, not byte.
+
+- Compiler
+  - Strings and symbols passed as arguments to foreign functions are
+    not copied, as their internal representation consists of a zero-
+    terminated UTF-8 encoded string, which is passed directly.
+
 5.3.1
 
 - Core libraries
