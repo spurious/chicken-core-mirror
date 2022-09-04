@@ -2948,7 +2948,7 @@ EOF
                bytevector-append utf8->string string->utf8
                latin1->string string->latin1)
 
-(import scheme)
+(import scheme (chicken foreign))
 
 (define (make-bytevector size #!optional (fill #f))
   (##sys#check-fixnum size 'make-bytevector)
@@ -2984,8 +2984,11 @@ EOF
     (##core#inline "C_copy_memory" bv sbv n) 
     bv) )
 
-(define (utf8->string bv)
+(define (utf8->string bv #!optional (validate #t))
   (##sys#check-bytevector bv 'utf8->string)
+  (if (and validate (not (##core#inline "C_utf_validate" bv (##sys#size bv))))
+    (##sys#error-hook (foreign-value "C_DECODING_ERROR" int)
+                      'utf8->string bv))
   (##sys#buffer->string bv 0 (##sys#size bv)))
 
 (define (string->latin1 s)

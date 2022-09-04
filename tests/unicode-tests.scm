@@ -2,6 +2,7 @@
 
 (import (chicken port) (chicken sort))
 (import (chicken string) (chicken io))
+(import (chicken bytevector))
 
 (include "test.scm")
                            
@@ -99,6 +100,10 @@
 (test-equal "逆リスト→文字列" (reverse-list->string
                      (map (cut string-ref <> 0)
                           '("列" "字" "文" "→" "ト" "ス" "リ" "逆"))))
+
+(test-error (utf8->string #u8(255 1 2)))
+(test-assert (utf8->string #u8(255 1 2) #f))
+(test-equal (string-length (utf8->string #u8(255 1 2) #f)) 3)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; extras

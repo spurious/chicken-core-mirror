@@ -50,9 +50,10 @@ should be a fixnum.
 
 === utf8->string
 
-<procedure>(utf8->string BYTEVECTOR)</procedure>
+<procedure>(utf8->string BYTEVECTOR [VALIDATE])</procedure>
 
-Returns a string with the contents of {{BYTEVECTOR}}. Note that invalidly
+Returns a string with the contents of {{BYTEVECTOR}}. if {{VALIDATE}}
+is given and false, then invalidly
 encoded characters do not signal an error - byte-sequences that do no represent
 valid UTF-8 characters are retained and, if extracted with {{string-ref}}
 are converted to a trailing surrogate pair half in the range U+DC80 to U+DCFF.
