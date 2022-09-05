@@ -1420,9 +1420,9 @@ EOF
                    (##core#inline "C_copy_memory_with_offset" bv buf 0 start len)
                    len))))))
 
-(define (##sys#decode-char bv enc)
+(define (##sys#decode-char bv enc start)
   (##sys#decode-buffer
-    bv 0 (##sys#size bv) enc
+    bv start (##sys#size bv) enc
     (lambda (buf start _)
       (##core#inline "C_utf_decode" buf start))))
 
@@ -3439,7 +3439,7 @@ EOF
               (let ((peeked (##sys#slot p 10)))
                 (cond (peeked
                        (##sys#setislot p 10 #f)
-                       (##sys#decode-char peeked (##sys#slot p 15)))
+                       (##sys#decode-char peeked (##sys#slot p 15) 0))
                       ((eq? 'utf-8  (##sys#slot p 15)) ; fast path
                         (let ((c (##core#inline "C_read_char" p)))
                           (if (eq? -1 c)
@@ -3459,7 +3459,7 @@ EOF
             (let ((pb (##sys#slot p 10))
                   (enc (##sys#slot p 15)))
               (if pb 
-                  (##sys#decode-char pb enc)
+                  (##sys#decode-char pb enc 0)
                   (##sys#read-char/encoding 
                     p enc
                     (lambda (buf start len dec)
@@ -5067,7 +5067,7 @@ EOF
 ;; Invokes the eos handler when EOS is reached to get more data.
 ;; The eos-handler is responsible for stopping, either when EOF is hit or
 ;; a user-supplied limit is reached (ie, it's indistinguishable from EOF)
-(define (##sys#scan-buffer-line buf limit start-pos eos-handler)
+(define (##sys#scan-buffer-line buf limit start-pos eos-handler #!optional enc)
   (let* ((hold 1024)
          (dpos 0)
          (line (##sys#make-bytevector hold)))
@@ -5087,7 +5087,9 @@ EOF
       (##core#inline "C_setsubbyte" line dpos b)
       (set! dpos (fx+ dpos 1)))
     (define (getline) 
-      (##sys#buffer->string line 0 dpos))
+      (if enc
+          (##sys#buffer->string/encoding line 0 dpos enc)
+          (##sys#buffer->string line 0 dpos)))
     (let loop ((buf buf)
                (offset start-pos)
                (pos start-pos)
