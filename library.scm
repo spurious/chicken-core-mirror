@@ -598,7 +598,9 @@ EOF
    alist-ref alist-update alist-update! rassoc atom? butlast chop
    compress flatten intersperse join list-of? tail? constantly
    complement compose conjoin disjoin each flip identity o
-
+   
+   char-foldcase string-foldcase
+     
    case-sensitive keyword-style parentheses-synonyms symbol-escape
 
    on-exit exit exit-handler implicit-exit-handler emergency-exit
@@ -881,6 +883,21 @@ EOF
 	      ((##sys#slot blst 0)
 	       (cons (##sys#slot lst 0) (loop (##sys#slot blst 1) (##sys#slot lst 1))))
 	      (else (loop (##sys#slot blst 1) (##sys#slot lst 1))) ) ) ) ) )
+
+
+;; case folding
+
+(define (char-foldcase c)
+  (##sys#check-char c 'char-foldcase)
+  (##core#inline "C_utf_char_foldcase" c))
+
+(define (string-foldcase str)
+  (##sys#check-string str 'string-foldcase)
+  (let* ((bv (##sys#slot str 0))
+         (n (##core#inline "C_fixnum_difference" (##sys#size bv) 1))
+         (buf (##sys#make-bytevector (##core#inline "C_fixnum_times" n 2)))
+         (len (##core#inline "C_utf_string_foldcase" bv buf n)))
+    (##sys#buffer->string buf 0 len)))
 
 
 ;;; Alists:

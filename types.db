@@ -1045,6 +1045,9 @@
 (chicken.base#join (#(procedure #:clean #:enforce) chicken.base#join ((list-of list) #!optional list) list))
 (chicken.base#list-of? (#(procedure #:clean #:enforce) chicken.base#list-of? ((procedure (*) *)) (procedure (list) boolean)))
 
+(chicken.base#char-foldcase (#(procedure #:clean #:enforce #:foldable) chicken.base#char-foldcase (char) char))
+(chicken.base#string-foldcase (#(procedure #:clean #:enforce) chicken.base#string-foldcase (string) string))
+
 (chicken.base#o (#(procedure #:clean #:enforce) chicken.base#o (#!rest (procedure (*) *)) (procedure (*) *)))
 
 (chicken.base#rassoc

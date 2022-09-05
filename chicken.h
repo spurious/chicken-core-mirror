@@ -1902,6 +1902,8 @@ C_fctexport int C_fcall C_utf_islower(int c) C_regparm;
 C_fctexport C_word C_fcall C_utf_validate(C_word bv, C_word blen) C_regparm;
 C_fctexport C_word C_fcall C_latin_to_utf(C_word from, C_word to, C_word start, C_word len) C_regparm;
 C_fctexport C_word C_fcall C_utf_to_latin(C_word from, C_word to, C_word start, C_word len) C_regparm;
+C_fctexport C_word C_fcall C_utf_char_foldcase(C_word c) C_regparm;
+C_fctexport C_word C_fcall C_utf_string_foldcase(C_word from, C_word to, C_word len) C_regparm;
 
 C_fctimport C_cpsproc(C_toplevel) C_noret;
 C_fctimport C_cpsproc(C_invalid_procedure) C_noret;
