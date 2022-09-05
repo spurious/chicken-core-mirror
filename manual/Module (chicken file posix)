@@ -559,14 +559,15 @@ procedure is unimplemented and will raise an error.
 ==== open-input-file*
 ==== open-output-file*
 
-<procedure>(open-input-file* FILENO [OPENMODE])</procedure><br>
-<procedure>(open-output-file* FILENO [OPENMODE])</procedure>
+<procedure>(open-input-file* FILENO [OPENMODE ENCODING])</procedure><br>
+<procedure>(open-output-file* FILENO [OPENMODE ENCODING])</procedure>
 
 Opens file for the file-descriptor {{FILENO}} for input or output
 and returns a port.  {{FILENO}} should be a positive exact integer.
 {{OPENMODE}} specifies an additional mode for opening the file
 (currently only the keyword {{#:append}} is supported, which opens
-an output-file for appending).
+an output-file for appending). {{ENCODING}} should be a symbol specifying a 
+file encoding and defaults to {{utf-8}}.
 
 ==== port->fileno
 

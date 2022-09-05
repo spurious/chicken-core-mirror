@@ -480,28 +480,27 @@ EOF
 (let ()
   (define (mode inp m loc)
     (##sys#make-c-string
-     (cond ((pair? m)
-            (let ([m (car m)])
-              (case m
+     (cond (m (case m
                 ((#:append) (if (not inp) "a" (##sys#error "invalid mode for input file" m)))
-                (else (##sys#error "invalid mode argument" m)) ) ) )
-           [inp "r"]
-           [else "w"] )
+                (else (##sys#error "invalid mode argument" m)) ) )
+           (inp "r")
+           (else "w") )
      loc) )
-  (define (check loc fd inp r)
+  (define (check loc fd inp r enc)
     (if (##sys#null-pointer? r)
         (posix-error #:file-error loc "cannot open file" fd)
         (let ((port (##sys#make-port (if inp 1 2) ##sys#stream-port-class "(fdport)" 'stream)))
           (##core#inline "C_set_file_ptr" port r)
+          (##sys#setslot port 15 enc)
           port) ) )
   (set! chicken.file.posix#open-input-file*
-    (lambda (fd . m)
+    (lambda (fd #!optional m (enc 'utf-8))
       (##sys#check-fixnum fd 'open-input-file*)
-      (check 'open-input-file* fd #t (##core#inline_allocate ("C_fdopen" 2) fd (mode #t m 'open-input-file*))) ) )
+      (check 'open-input-file* fd #t (##core#inline_allocate ("C_fdopen" 2) fd (mode #t m 'open-input-file*)) enc)) ) 
   (set! chicken.file.posix#open-output-file*
-    (lambda (fd . m)
+    (lambda (fd #!optional m (enc 'utf-8))
       (##sys#check-fixnum fd 'open-output-file*)
-      (check 'open-output-file* fd #f (##core#inline_allocate ("C_fdopen" 2) fd (mode #f m 'open-output-file*)) ) ) ) )
+      (check 'open-output-file* fd #f (##core#inline_allocate ("C_fdopen" 2) fd (mode #f m 'open-output-file*)) enc) ) ) )
 
 (set! chicken.file.posix#port->fileno
   (lambda (port)

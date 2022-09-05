@@ -1102,7 +1102,7 @@
 (chicken.bytevector#bytevector=? (#(procedure #:clean #:enforce #:foldable) chicken.bytevector#bytevector=? (bytevector bytevector) boolean))
 (chicken.bytevector#bytevector-length (#(procedure #:clean #:enforce #:foldable) chicken.bytevector#bytevector-size (bytevector) fixnum)
 	   ((bytevector) (##sys#size #(1))))
-(chicken.bytevector#utf8->string (#(procedure #:clean #:enforce) chicken.bytevector#utf8->string (bytevector) string))
+(chicken.bytevector#utf8->string (#(procedure #:clean #:enforce) chicken.bytevector#utf8->string (bytevector #!optional boolean) string))
 (chicken.bytevector#latin1->string (#(procedure #:clean #:enforce) chicken.bytevector#latin1->string (bytevector) string))
 (chicken.bytevector#make-bytevector (#(procedure #:clean #:enforce) chicken.bytevector#make-bytevector (fixnum) bytevector)
 	   ((fixnum) (##sys#make-bytevector #(1))))
@@ -2000,8 +2000,8 @@
 (chicken.file.posix#fileno/stdin fixnum)
 (chicken.file.posix#fileno/stdout fixnum)
 
-(chicken.file.posix#open-input-file* (#(procedure #:clean #:enforce) chicken.file.posix#open-input-file* (fixnum #!optional keyword) input-port))
-(chicken.file.posix#open-output-file* (#(procedure #:clean #:enforce) chicken.file.posix#open-output-file* (fixnum #!optional keyword) output-port))
+(chicken.file.posix#open-input-file* (#(procedure #:clean #:enforce) chicken.file.posix#open-input-file* (fixnum #!optional keyword symbol) input-port))
+(chicken.file.posix#open-output-file* (#(procedure #:clean #:enforce) chicken.file.posix#open-output-file* (fixnum #!optional keyword symbol) output-port))
 
 (chicken.file.posix#open/append fixnum)
 (chicken.file.posix#open/binary fixnum)
@@ -2063,7 +2063,7 @@
 ;; process
 
 (chicken.process#process-execute
- (#(procedure #:clean #:enforce) chicken.process#process-execute (string #!optional (list-of string) (list-of (pair string string)) fixnum) noreturn))
+ (#(procedure #:clean #:enforce) chicken.process#process-execute (string #!optional (list-of string) (list-of (pair string string)) boolean) noreturn))
 (chicken.process#process-fork (#(procedure #:enforce) chicken.process#process-fork (#!optional (or (procedure () . *) false) *) fixnum))
 (chicken.process#qs (#(procedure #:clean #:enforce) chicken.process#qs (string #!optional symbol) string))
 (chicken.process#process-run (#(procedure #:clean #:enforce) chicken.process#process-run (string #!optional (list-of string)) fixnum))
@@ -2072,8 +2072,8 @@
  (#(procedure #:clean #:enforce) chicken.process#process-spawn (fixnum string #!optional (list-of string) (list-of (pair string string)) boolean) fixnum))
 (chicken.process#system (#(procedure #:clean #:enforce) chicken.process#system (string) fixnum))
 (chicken.process#system* (#(procedure #:clean #:enforce) chicken.process#system* (string) undefined))
-(chicken.process#process (#(procedure #:clean #:enforce) chicken.process#process (string #!optional (list-of string) (list-of (pair string string)) boolean) input-port output-port fixnum))
-(chicken.process#process* (#(procedure #:clean #:enforce) chicken.process#process* (string #!optional (list-of string) (list-of (pair string string)) boolean) input-port output-port fixnum *))
+(chicken.process#process (#(procedure #:clean #:enforce) chicken.process#process (string #!optional (list-of string) (list-of (pair string string)) symbol boolean) input-port output-port fixnum))
+(chicken.process#process* (#(procedure #:clean #:enforce) chicken.process#process* (string #!optional (list-of string) (list-of (pair string string)) symbol boolean) input-port output-port fixnum))
 (chicken.process#process-wait (#(procedure #:clean #:enforce) chicken.process#process-wait (#!optional fixnum *) fixnum fixnum fixnum))
 (chicken.process#process-sleep (#(procedure #:clean #:enforce) chicken.process#process-sleep (fixnum) fixnum))
 (chicken.process#call-with-input-pipe (#(procedure #:enforce) chicken.process#call-with-input-pipe (string (procedure (input-port) . *) #!optional keyword) . *))
@@ -2345,13 +2345,13 @@
 ;; tcp
 
 (chicken.tcp#tcp-abandon-port (#(procedure #:clean #:enforce) chicken.tcp#tcp-abandon-port (port) undefined))
-(chicken.tcp#tcp-accept (#(procedure #:clean #:enforce) chicken.tcp#tcp-accept ((struct tcp-listener)) input-port output-port))
+(chicken.tcp#tcp-accept (#(procedure #:clean #:enforce) chicken.tcp#tcp-accept ((struct tcp-listener) #!optional symbol) input-port output-port))
 (chicken.tcp#tcp-accept-ready? (#(procedure #:clean #:enforce) chicken.tcp#tcp-accept-ready? ((struct tcp-listener)) boolean))
 (chicken.tcp#tcp-accept-timeout (#(procedure #:clean #:enforce) chicken.tcp#tcp-accept-timeout (#!optional (or false integer)) (or false integer)))
 (chicken.tcp#tcp-addresses (#(procedure #:clean #:enforce) chicken.tcp#tcp-addresses (port) string string))
 (chicken.tcp#tcp-buffer-size (#(procedure #:clean #:enforce) chicken.tcp#tcp-buffer-size (#!optional (or false fixnum)) (or false fixnum)))
 (chicken.tcp#tcp-close (#(procedure #:clean #:enforce) chicken.tcp#tcp-close ((struct tcp-listener)) undefined))
-(chicken.tcp#tcp-connect (#(procedure #:clean #:enforce) chicken.tcp#tcp-connect (string #!optional fixnum) input-port output-port))
+(chicken.tcp#tcp-connect (#(procedure #:clean #:enforce) chicken.tcp#tcp-connect (string #!optional fixnum symbol) input-port output-port))
 (chicken.tcp#tcp-connect-timeout (#(procedure #:clean #:enforce) chicken.tcp#tcp-connect-timeout (#!optional (or false integer)) (or false integer)))
 (chicken.tcp#tcp-listen (#(procedure #:clean #:enforce) chicken.tcp#tcp-listen (fixnum #!optional fixnum *) (struct tcp-listener)))
 

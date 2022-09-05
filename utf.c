@@ -3602,7 +3602,7 @@ C_regparm C_word C_fcall C_latin_to_utf(C_word from, C_word to, C_word start, C_
     int n = C_unfix(len);
     C_uchar *pf = (C_uchar *)C_c_string(from) + C_unfix(start);
     C_char *pt = C_c_string(to), *pt0 = pt;
-    while(n--) {
+    while(n-- > 0) {
         C_u32 c = *(pf++);
         pt = utf8_encode(c, pt);
     }
@@ -3641,7 +3641,7 @@ C_regparm C_word C_utf_string_foldcase(C_word from, C_word to, C_word len)
     C_char *pf = C_c_string(from), *pf2;
     C_char *pt = C_c_string(to), *pt0 = pt;
     int count = C_unfix(len);
-    while(count) {
+    while(count > 0) {
         pf2 = utf8_decode(pf, &c, &e);
         if(!e) {
             int r = c;

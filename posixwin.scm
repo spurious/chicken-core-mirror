@@ -801,7 +801,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
     ; The environment list must be sorted & include current directory
     ; information for the system drives. i.e !C:=...
     ; For now any environment is ignored.
-    (lambda (loc cmd args env stdoutf stdinf stderrf #!optional exactf)
+    (lambda (loc cmd args env stdoutf stdinf stderrf exactf enc)
       (let* ((arglist (cons cmd args))
 	     (cmdlin (string-intersperse
 		      (if exactf
@@ -829,7 +829,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 
 ;; TODO: See if this can be moved to posix-common
 (let ((%process
-	(lambda (loc err? cmd args env exactf)
+	(lambda (loc err? cmd args env exactf enc)
 	  (let ((chkstrlst
 		 (lambda (lst)
 		   (##sys#check-list lst loc)
@@ -843,16 +843,16 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 		(set! cmd (shell-command loc)) ) )
 	    (when env (check-environment-list env loc))
 	    (receive (in out pid err)
-		(process-impl loc cmd args env #t #t err? exactf)
+		(process-impl loc cmd args env #t #t err? exactf enc)
 	      (if err?
 		(values in out pid err)
 		(values in out pid) ) ) ) )) )
   (set! chicken.process#process
-    (lambda (cmd #!optional args env exactf)
-      (%process 'process #f cmd args env exactf) ))
+    (lambda (cmd #!optional args env (enc 'utf-8) exactf)
+      (%process 'process #f cmd args env exactf enc) ))
   (set! chicken.process#process*
-    (lambda (cmd #!optional args env exactf)
-      (%process 'process* #t cmd args env exactf) )) )
+    (lambda (cmd #!optional args env (enc 'utf-8) exactf)
+      (%process 'process* #t cmd args env exactf enc) )) )
 
 (define-foreign-variable _exstatus int "C_exstatus")
 

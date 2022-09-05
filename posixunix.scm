@@ -172,8 +172,8 @@ static C_TLS sigset_t C_sigset;
 #define C_sigprocmask_get(d)        C_fix(sigprocmask(SIG_SETMASK, NULL, &C_sigset))
 
 #define C_open(fn, fl, m)   C_fix(open(C_c_string(fn), C_unfix(fl), C_unfix(m)))
-#define C_read(fd, b, n)    C_fix(read(C_unfix(fd), C_data_pointer(b), C_unfix(n)))
-#define C_write(fd, b, n)   C_fix(write(C_unfix(fd), C_data_pointer(b), C_unfix(n)))
+#define C_read(fd, b, n)    C_fix(read(C_unfix(fd), C_c_string(b), C_unfix(n)))
+#define C_write(fd, b, start, n)   C_fix(write(C_unfix(fd), C_c_string(b) + C_unfix(start), C_unfix(n)))
 #define C_mkstemp(t)        C_fix(mkstemp(C_c_string(t)))
 
 #define C_ctime(n)          (C_secs = (n), ctime(&C_secs))
@@ -375,7 +375,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
       (##sys#signal-hook #:type-error 'file-write "bad argument type - not a bytevector" buffer) )
     (let ([size (if (pair? size) (car size) (##sys#size buffer))])
       (##sys#check-fixnum size 'file-write)
-      (let ([n (##core#inline "C_write" fd buffer size)])
+      (let ([n (##core#inline "C_write" fd buffer 0 size)])
         (when (eq? -1 n)
           (posix-error #:file-error 'file-write "cannot write to file" fd size) )
         n) ) ) )
@@ -775,12 +775,13 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 
 
 (define ##sys#custom-input-port
-  (lambda (loc nam fd #!optional (nonblocking? #f) (bufi 1) (on-close void) (more? #f))
+  (lambda (loc nam fd #!optional (nonblocking? #f) (bufi 1) (on-close void) (more? #f) enc)
     (when nonblocking? (##sys#file-nonblocking! fd) )
-    (let ([bufsiz (if (fixnum? bufi) bufi (##sys#size bufi))]
-	  [buf (if (fixnum? bufi) (##sys#make-bytevector bufi) bufi)]
-	  [buflen 0]
-	  [bufpos 0] )
+    (let ((bufsiz (if (fixnum? bufi) bufi (##sys#size bufi)))
+	  (buf (if (fixnum? bufi) (##sys#make-bytevector bufi) bufi))
+	  (buflen 0)
+	  (bufpos 0)
+          (this-port #f))
       (let ([ready?
 	     (lambda ()
 	       (let ((res (##sys#file-select-one fd)))
@@ -794,7 +795,9 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 	     (lambda ()
 	       (if (fx>= bufpos buflen)
 		   #!eof
-		   (integer->char (##core#inline "C_subbyte" buf bufpos)) ))]
+             	     (##sys#decode-buffer buf bufpos 1 (##sys#slot this-port 15)
+                   (lambda (buf start n)
+                     (##core#inline "C_utf_decode" buf start)))))]
             [fetch
 	     (lambda ()
 	       (let loop ()
@@ -827,14 +830,17 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 			 [else
 			  (set! buflen cnt)
 			  (set! bufpos 0)]) ) )	 )] )
-	(letrec ([this-port
+	(let ([the-port
 		  (make-input-port
 		   (lambda ()		; read-char
 		     (when (fx>= bufpos buflen)
 		       (fetch))
-		     (let ([ch (peek)])
-		       (unless (eof-object? ch) (set! bufpos (fx+ bufpos 1)))
-		       ch ) )
+                     (if (fx>= bufpos buflen)
+                         #!eof
+                         (##sys#decode-buffer buf bufpos 1 (##sys#slot this-port 15)
+                            (lambda (buf start n)
+                              (set! bufpos (fx+ bufpos n))
+                              (##core#inline "C_utf_decode" buf start)))))
 		   (lambda ()		; char-ready?
 		     (or (fx< bufpos buflen)
 			 (ready?)) )
@@ -885,7 +891,8 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 					       (values buf bufpos
 						       (fxmin buflen
                                                               (fx+ bufpos limit)))
-					       (values #f bufpos #f)))))))
+					       (values #f bufpos #f))))))
+                                (##sys#slot this-port 15))
 			     ;; Update row & column position
 			     (if full-line?
 				 (begin
@@ -899,66 +906,74 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 		     (if (fx>= bufpos buflen)
 			 ""
 			 (let* ((len (fx- buflen bufpos))
-                                (str (##sys#buffer->string buf bufpos len)))
+                                (str (##sys#buffer->string/encoding buf bufpos len (##sys#slot this-port 15))))
 			   (set! bufpos buflen)
                            str))))])
+          (set! this-port the-port)
 	  (##sys#setslot this-port 3 nam)
+          (##sys#setslot this-port 15 enc)
 	  this-port ) ) ) ) )
 
 (define ##sys#custom-output-port
-  (lambda (loc nam fd #!optional (nonblocking? #f) (bufi 0) (on-close void))
+  (lambda (loc nam fd #!optional (nonblocking? #f) (bufi 0) (on-close void) 
+               enc)
     (when nonblocking? (##sys#file-nonblocking! fd) )
-    (letrec ([poke
-	      (lambda (str len)
+    (letrec ((this-port #f)
+             (poke
+	      (lambda (bv start len)
 		(let loop ()
-		  (let ((cnt (##core#inline "C_write" fd str len)))
+		  (let ((cnt (##core#inline "C_write" fd bv start len)))
 		    (cond ((fx= -1 cnt)
 			   (cond
 			    ((or (fx= _errno _ewouldblock)
 				 (fx= _errno _eagain))
 			     (##sys#thread-yield!)
-			     (poke str len) )
+			     (poke bv start len) )
 			    ((fx= _errno _eintr)
 			     (##sys#dispatch-interrupt loop))
 			    (else
 			     (posix-error loc #:file-error "cannot write" fd nam) ) ) )
 			  ((fx< cnt len)
-			   (poke (##sys#substring str cnt len) (fx- len cnt)) ) ) ) ))]
-	     [store
+			   (poke bv (fx+ start cnt) (fx- len cnt)) ) ) ) )))
+	     (store
 	      (let ([bufsiz (if (fixnum? bufi) bufi (##sys#size bufi))])
 		(if (fx= 0 bufsiz)
 		    (lambda (str)
 		      (when str
-			(poke str (string-length str)) ) )
-		    (let ([buf (if (fixnum? bufi) (##sys#make-bytevector bufi) bufi)]
-			  [bufpos 0])
+                        (let ((bv (##sys#slot str 0)))
+                          (poke bv 0 (fx- (##sys#size bv) 1)))))
+		    (let ((buf (if (fixnum? bufi) (##sys#make-bytevector bufi) bufi))
+			  (bufpos 0))
 		      (lambda (str)
 			(if str
-			    (let loop ([rem (fx- bufsiz bufpos)] [start 0] 
-                                       [len (string-length str)])
-			      (cond [(fx= 0 rem)
-				     (poke buf bufsiz)
+                            (let ((bv (##sys#slot str 0)))
+                              (let loop ((rem (fx- bufsiz bufpos))
+                                         (start 0)
+                                         (len (fx- (##sys#size bv) 1)))
+			      (cond ((fx= 0 rem)
+				     (poke buf 0 bufsiz)
 				     (set! bufpos 0)
-				     (loop bufsiz 0 len)]
-				    [(fx< rem len)
-				     (##core#inline "C_utf_copy" str buf start rem bufpos)
-				     (loop 0 rem (fx- len rem))]
-				    [else
-				     (##core#inline "C_utf_copy" str buf start len bufpos)
-				     (set! bufpos (fx+ bufpos len))] ) )
+				     (loop bufsiz 0 len))
+				    ((fx< rem len)
+				     (##core#inline "C_copy_memory_with_offset" buf bv bufpos 0 len)
+				     (loop 0 rem (fx- len rem)))
+				    (else
+				     (##core#inline "C_copy_memory_with_offset" buf bv bufpos start len)
+				     (set! bufpos (fx+ bufpos len))) ) )
 			    (when (fx< 0 bufpos)
-			      (poke buf bufpos) ) ) ) ) ) )])
-      (letrec ([this-port
+			      (poke buf bufpos) ) ) ) ) ) ))))
+      (let ((the-port
 		(make-output-port
-		 (lambda (str)
-		   (store str) )
+		 (lambda (str) (store str))
 		 (lambda ()		; close
 		   (when (fx< (##core#inline "C_close" fd) 0)
 		     (posix-error #:file-error loc "cannot close" fd nam))
 		   (on-close))
 		 (lambda ()		; flush
-		   (store #f) ) )] )
+		   (store #f) ) )) )
+        (set! this-port the-port)
 	(##sys#setslot this-port 3 nam)
+        (##sys#setslot this-port 15 enc)
 	this-port ) ) ) )
 
 
@@ -1100,7 +1115,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 	    pid)))))
 
 (set! chicken.process#process-execute
-  (lambda (filename #!optional (arglist '()) envlist exactf)
+  (lambda (filename #!optional (arglist '()) envlist _)
     (call-with-exec-args
      'process-execute filename (lambda (x) x) arglist envlist
      (lambda (prg argbuf envbuf)
@@ -1224,14 +1239,14 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 		     (connect-child loc (swapped-ends epipe) stderrf chicken.file.posix#fileno/stderr)
 		     (chicken.process#process-execute cmd args env)))) ) ) ))
           [input-port
-            (lambda (loc pid cmd pipe stdf stdfd on-close)
+            (lambda (loc pid cmd pipe stdf stdfd on-close enc)
               (and-let* ([fd (connect-parent loc pipe stdf stdfd)])
-                (##sys#custom-input-port loc cmd fd #t DEFAULT-INPUT-BUFFER-SIZE on-close) ) )]
+                (##sys#custom-input-port loc cmd fd #t DEFAULT-INPUT-BUFFER-SIZE on-close enc) ) )]
           [output-port
-            (lambda (loc pid cmd pipe stdf stdfd on-close)
+            (lambda (loc pid cmd pipe stdf stdfd on-close enc)
               (and-let* ([fd (connect-parent loc pipe stdf stdfd)])
-                (##sys#custom-output-port loc cmd fd #t DEFAULT-OUTPUT-BUFFER-SIZE on-close) ) )] )
-        (lambda (loc cmd args env stdoutf stdinf stderrf)
+                (##sys#custom-output-port loc cmd fd #t DEFAULT-OUTPUT-BUFFER-SIZE on-close enc) ) )] )
+        (lambda (loc cmd args env stdoutf stdinf stderrf enc)
           (receive [inpipe outpipe errpipe pid]
                      (spawn loc cmd args env stdoutf stdinf stderrf)
             ;When shared assume already "closed", since only created ports
@@ -1241,20 +1256,23 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
               (values
 	       (input-port loc pid cmd inpipe stdinf
 			   chicken.file.posix#fileno/stdin
-			   (make-on-close loc pid clsvec 0 1 2))
+			   (make-on-close loc pid clsvec 0 1 2)
+                           enc)
 	       (output-port loc pid cmd outpipe stdoutf
 			    chicken.file.posix#fileno/stdout
-			    (make-on-close loc pid clsvec 1 0 2))
+			    (make-on-close loc pid clsvec 1 0 2)
+                            enc)
 	       pid
 	       (input-port loc pid cmd errpipe stderrf
 			   chicken.file.posix#fileno/stderr
-			   (make-on-close loc pid clsvec 2 0 1)) ) ) ) ) ) ) ) )
+			   (make-on-close loc pid clsvec 2 0 1)
+                           enc) ) ) ) ) ) ) ) )
 
 ;;; Run subprocess connected with pipes:
 
 ;; TODO: See if this can be moved to posix-common
 (let ((%process
-        (lambda (loc err? cmd args env k)
+        (lambda (loc err? cmd args env enc k)
           (let ((chkstrlst
 		 (lambda (lst)
 		   (##sys#check-list lst loc)
@@ -1267,17 +1285,17 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
                   (set! cmd (shell-command loc)) ) )
 	    (when env (check-environment-list env loc))
 	    (##sys#call-with-values
-	     (lambda () (process-impl loc cmd args env #t #t err?))
+	     (lambda () (process-impl loc cmd args env #t #t err? enc))
 	     k)))))
   (set! chicken.process#process
-    (lambda (cmd #!optional args env exactf)
+    (lambda (cmd #!optional args env (enc 'utf-8) exactf)
       (%process 
-       'process #f cmd args env
+       'process #f cmd args env enc
        (lambda (i o p e) (values i o p)))))
   (set! chicken.process#process*
-    (lambda (cmd #!optional args env exactf)
+    (lambda (cmd #!optional args env (enc 'utf-8) exactf)
       (%process
-       'process* #t cmd args env
+       'process* #t cmd args env enc
        values))))
 
 
