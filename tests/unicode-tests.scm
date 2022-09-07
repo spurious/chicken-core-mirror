@@ -151,6 +151,14 @@
 
 (test-equal 2 (substring-index "上海" "听说上海的东西很贵"))
 
+;; case folding
+
+(test-assert (string-ci=? "abc" "ABC"))
+(test-assert (string-ci=? "Xῌηιx" "xηιῌX"))
+(test-assert (string-ci=? "αβξ" "αβξ"))
+(test-assert (string-ci=? "αβξ" "ΑΒΞ"))
+
 (test-end)
+
 (test-exit)
 
