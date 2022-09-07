@@ -3244,12 +3244,12 @@ static C_char *utf8_encode(C_u32 u, C_char *p1)
     return (C_char *)p;
 }
 
-static C_char *utf_index(C_word s, C_word i) 
+static C_char *utf_index1(C_word s, C_word i) 
 {
     C_word i0 = C_unfix(C_block_item(s, 2));
     C_word count = C_unfix(C_block_item(s, 1));
     C_word off = 0, index = 0;
-    C_char *p1, *p = C_data_pointer(C_block_item(s, 0));
+    C_char *p1, *p = C_c_string(C_block_item(s, 0));
     int e;
     C_u32 c;
     if(i >= i0) {
@@ -3268,6 +3268,12 @@ static C_char *utf_index(C_word s, C_word i)
         off += p - p1;
     }
     return NULL;
+}
+
+static C_char *utf_index(C_word s, C_word i) 
+{
+    if(i == 0) return C_c_string(C_block_item(s, 0));
+    return utf_index1(s, i);
 }
 
 C_regparm C_word C_fcall C_utf_subchar(C_word s, C_word i) 
