@@ -3646,12 +3646,14 @@ C_regparm C_word C_fcall C_latin_to_utf(C_word from, C_word to, C_word start, C_
 C_regparm C_word C_fcall C_utf_to_latin(C_word from, C_word to, C_word start, C_word blen)
 {
     int n = C_unfix(blen);
-    C_char *pf = C_c_string(from) + C_unfix(start);
+    C_char *pf = C_c_string(from) + C_unfix(start), *pf2;
     C_char *pt = C_c_string(to), *pt0 = pt;
     C_u32 c;
     int e;
-    while(n-- > 0) {
-        pf = utf8_decode(pf, &c, &e);
+    while(n > 0) {
+        pf2 = utf8_decode(pf, &c, &e);
+        n -= pf2 - pf;
+        pf = pf2;
         *(pt++) = c & 0xff;
     }
     *pt = '\0';
