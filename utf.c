@@ -3146,6 +3146,7 @@ static int fold2[][ 4 ] = {
   {0xFB17, 0x0574, 0x056D, 0x0},
 };
 
+
 /* Branchless UTF-8 decoder
  * https://raw.githubusercontent.com/skeeto/branchless-utf8/
  * This is free and unencumbered software released into the public domain.
@@ -3369,11 +3370,44 @@ C_regparm C_word C_fcall C_utf_compare_ci(C_word s1, C_word s2, C_word start1, C
     int e, n = C_unfix(len);
     while(n--) {
         C_u32 c1, c2;
+        int *m, r, i;
         p1 = utf8_decode(p1, &c1, &e);
         p2 = utf8_decode(p2, &c2, &e);
-        c1 = C_utf_char_downcase(c1);
-        c2 = C_utf_char_downcase(c2);
-        if(c1 != c2) return C_fix((C_word)c1 - (C_word)c2);
+        if(c1 >= 'A' && c1 <= 'Z') c1 += 32;
+        if(c2 >= 'A' && c2 <= 'Z') c2 += 32;
+        if(c1 == c2) continue;
+        if(c1 < 128 || c2 < 128) goto fail;
+        r = c1;
+        m = bsearch(&r, fold2, nelem(fold2), sizeof(*fold2), &runemapcmp);
+        if(m) {
+            for(i = 1; i < 3; ++i) {
+                if(m[ i ] == 0) break;
+                if(m[ i ] != c2) return C_fix(m[ i ] - c2);
+                if(i != 2 && m[ i + 1 ] != 0) p2 = utf8_decode(p2, &c2, &e);
+            }
+        } else {
+            m = bsearch(&r, fold1, nelem(fold1), sizeof(*fold1), &runemapcmp);
+            if(m) {
+                if(m[ 1 ] != c2) return C_fix(m[ 1 ] - c2);
+            }
+        }
+        r = c2;
+        m = bsearch(&r, fold2, nelem(fold2), sizeof(*fold2), &runemapcmp);
+        if(m) {
+            for(i = 1; i < 3; ++i) {
+                if(m[ i ] == 0) break;
+                if(c1 != m[ i ]) return C_fix(c1 - m[ i ]);
+                if(i != 2 && m[ i + 1 ]) p1 = utf8_decode(p1, &c1, &e);
+            }
+        } else {
+            m = bsearch(&r, fold1, nelem(fold1), sizeof(*fold1), &runemapcmp);
+            if(m) {
+                if(c1 != m[ 1 ]) return C_fix(c1 - m[ 1 ]);
+            }
+        }
+        continue;
+fail:
+        return C_fix(c1 - c2);
     }
     return C_fix(0);
 }
