@@ -124,7 +124,7 @@ char *ttyname(int fd) {
     (lambda (port enc)
       (##sys#check-port port 'port-encoding)
       (##sys#check-symbol enc 'port-encoding)
-      (##sys#slotislot port 15 enc))
+      (##sys#setslot port 15 enc))
     "(chicken.port#port-encoding port)"))
 
 (define port-name
