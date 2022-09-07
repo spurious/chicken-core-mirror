@@ -3012,8 +3012,9 @@ EOF
   (##sys#check-string s 'string->latin1)
   (let* ((sbv (##sys#slot s 0))
          (len (##sys#slot s 1))
+         (blen (##core#inline "C_fixnum_difference" (##sys#size sbv) 1))
 	 (bv (##sys#make-bytevector len)) )
-    (##core#inline "C_utf_to_latin" sbv bv 0 len)
+    (##core#inline "C_utf_to_latin" sbv bv 0 blen)
     bv))
 
 (define (latin1->string bv)
