@@ -815,7 +815,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
 			 [(and more? (fx= cnt 0))
 			  ;; When "more" keep trying, otherwise read once more
 			  ;; to guard against race conditions
-			  (if (more?)
+			  (if more?
 			      (begin
 				(##sys#thread-yield!)
 				(loop) )
@@ -1241,7 +1241,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
           [input-port
             (lambda (loc pid cmd pipe stdf stdfd on-close enc)
               (and-let* ([fd (connect-parent loc pipe stdf stdfd)])
-                (##sys#custom-input-port loc cmd fd #t DEFAULT-INPUT-BUFFER-SIZE on-close enc) ) )]
+                (##sys#custom-input-port loc cmd fd #t DEFAULT-INPUT-BUFFER-SIZE on-close #f enc) ) )]
           [output-port
             (lambda (loc pid cmd pipe stdf stdfd on-close enc)
               (and-let* ([fd (connect-parent loc pipe stdf stdfd)])
