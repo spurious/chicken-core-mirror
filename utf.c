@@ -3370,15 +3370,16 @@ C_regparm C_word C_fcall C_utf_compare_ci(C_word s1, C_word s2, C_word start1, C
     int e, n = C_unfix(len);
     while(n--) {
         C_u32 c1, c2;
-        int *m, r, i;
+        int *m, r1, r2, i;
         p1 = utf8_decode(p1, &c1, &e);
         p2 = utf8_decode(p2, &c2, &e);
-        if(c1 >= 'A' && c1 <= 'Z') c1 += 32;
-        if(c2 >= 'A' && c2 <= 'Z') c2 += 32;
-        if(c1 == c2) continue;
-        if(c1 < 128 || c2 < 128) goto fail;
-        r = c1;
-        m = bsearch(&r, fold2, nelem(fold2), sizeof(*fold2), &runemapcmp);
+        if(c1 >= 'A' && c1 <= 'Z') r1 = c1 + 32;
+        else r1 = c1;
+        if(c2 >= 'A' && c2 <= 'Z') r2 = c2 + 32;
+        else r2 = c2;
+        if(r1 == r2) continue;
+        if(r1 < 128 || r2 < 128) goto fail;
+        m = bsearch(&r1, fold2, nelem(fold2), sizeof(*fold2), &runemapcmp);
         if(m) {
             for(i = 1; i < 3; ++i) {
                 if(m[ i ] == 0) break;
@@ -3386,13 +3387,12 @@ C_regparm C_word C_fcall C_utf_compare_ci(C_word s1, C_word s2, C_word start1, C
                 if(i != 2 && m[ i + 1 ] != 0) p2 = utf8_decode(p2, &c2, &e);
             }
         } else {
-            m = bsearch(&r, fold1, nelem(fold1), sizeof(*fold1), &runemapcmp);
+            m = bsearch(&r1, fold1, nelem(fold1), sizeof(*fold1), &runemapcmp);
             if(m) {
                 if(m[ 1 ] != c2) return C_fix(m[ 1 ] - c2);
             }
         }
-        r = c2;
-        m = bsearch(&r, fold2, nelem(fold2), sizeof(*fold2), &runemapcmp);
+        m = bsearch(&r2, fold2, nelem(fold2), sizeof(*fold2), &runemapcmp);
         if(m) {
             for(i = 1; i < 3; ++i) {
                 if(m[ i ] == 0) break;
@@ -3400,14 +3400,14 @@ C_regparm C_word C_fcall C_utf_compare_ci(C_word s1, C_word s2, C_word start1, C
                 if(i != 2 && m[ i + 1 ]) p1 = utf8_decode(p1, &c1, &e);
             }
         } else {
-            m = bsearch(&r, fold1, nelem(fold1), sizeof(*fold1), &runemapcmp);
+            m = bsearch(&r2, fold1, nelem(fold1), sizeof(*fold1), &runemapcmp);
             if(m) {
                 if(c1 != m[ 1 ]) return C_fix(c1 - m[ 1 ]);
             }
         }
         continue;
 fail:
-        return C_fix(c1 - c2);
+        return C_fix(r1 - r2);
     }
     return C_fix(0);
 }
