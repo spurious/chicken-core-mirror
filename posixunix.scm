@@ -730,7 +730,7 @@ static int set_file_mtime(char *filename, C_word atime, C_word mtime)
               (##sys#make-c-string old 'create-symbolic-link)
               (##sys#make-c-string new 'create-symbolic-link) )
              0)
-      (posix-error #:file-error 'create-symbol-link "cannot create symbolic link" old new) ) ) )
+      (posix-error #:file-error 'create-symbolic-link "cannot create symbolic link" old new) ) ) )
 
 (define-foreign-variable _filename_max int "FILENAME_MAX")
 
