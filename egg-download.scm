@@ -269,7 +269,7 @@
      (make-composite-condition
       (make-property-condition
        'exn
-       'message "invalid response from server"
+       'message msg
        'arguments args)
       (make-property-condition 'http-fetch))) )
 
