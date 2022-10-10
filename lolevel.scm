@@ -161,19 +161,21 @@ EOF
 	(##sys#error 'move-memory! "negative source offset" foffset))
       (when (fx< toffset 0)
 	(##sys#error 'move-memory! "negative destination offset" toffset))
-      (let move ([from from] [to to])
+      (let move ([from from] [to to] (n n))
 	(cond [(##sys#generic-structure? from)
 	       (if (memq (##sys#slot from 0) slot1structs)
-		   (move (##sys#slot from 1) to)
+		   (move (##sys#slot from 1) to n)
 		   (typerr from) ) ]
 	      [(##sys#generic-structure? to)
 	       (if (memq (##sys#slot to 0) slot1structs)
-		   (move from (##sys#slot to 1))
+		   (move from (##sys#slot to 1) n)
 		   (typerr to) ) ]
               ((string? from)
-                (move (##sys#slot from 0) to))
+               (let ((buf (##sys#slot from 0)))
+                 (move buf to (or n (fx- (##sys#size buf) 1)))))
               ((string? to)
-                (move from (##sys#slot to 0)))
+               (let ((buf (##sys#slot from 0)))
+                 (move from buf (or n (fx- (##sys#size buf) 1)))))
 	      [(%generic-pointer? from)
 	       (cond [(%generic-pointer? to)
 		      (memmove1 to from (or n (nosizerr)) toffset foffset)]
@@ -181,7 +183,7 @@ EOF
 		      (memmove3 to from (checkn1 (or n (nosizerr)) (##sys#size to) toffset) toffset foffset) )
 		     [else
 		      (typerr to)] ) ]
-	      [(or (##sys#bytevector? from) (string? from))
+	      [(##sys#bytevector? from)
 	       (let ([nfrom (##sys#size from)])
 		 (cond [(%generic-pointer? to)
 			(memmove2 to from (checkn1 (or n nfrom) nfrom foffset) toffset foffset)]
