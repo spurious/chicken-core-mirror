@@ -400,7 +400,7 @@ EOF
              (inport #f)
 	     (in
 	      (make-input-port
-	       (lambda ()
+	       (lambda () ; read
 		 (when (fx>= bufindex buflen)
 		   (read-input))
 		 (if (fx>= bufindex buflen)
@@ -409,7 +409,7 @@ EOF
                        (lambda (buf start n)
                          (set! bufindex (fx+ bufindex n))
                          (##core#inline "C_utf_decode" buf start)))))
-	       (lambda ()
+	       (lambda () ; char-ready?
 		 (or (fx< bufindex buflen)
 		     ;; XXX: This "knows" that check_fd_ready is
 		     ;; implemented using a winsock2 call on Windows
@@ -417,13 +417,13 @@ EOF
 		       (when (eq? _socket_error f)
 			 (network-error #f "cannot check socket for input" fd) )
 		       (eq? f 1) ) ) )
-	       (lambda ()
+	       (lambda () ; close
 		 (unless iclosed
 		   (set! iclosed #t)
 		   (unless (##sys#slot data 1) (shutdown fd _shut_rd))
 		   (when (and oclosed (eq? _socket_error (close fd)))
 		     (network-error #f "cannot close socket input port" fd) ) ) )
-	       (lambda ()
+	       (lambda () ; peek-char
 		 (when (fx>= bufindex buflen)
 		   (read-input))
 		 (if (fx>= bufindex buflen)
@@ -521,7 +521,7 @@ EOF
              (empty (##sys#make-bytevector 0))
 	     (out
 	      (make-output-port
-	       (if outbuf
+	       (if outbuf ; write
 		   (lambda (s)
                      (let* ((olen (##sys#size outbuf))
                             (sbv (##sys#slot s 0))
@@ -535,7 +535,7 @@ EOF
 		   (lambda (s) 
 		     (when (fx> (string-length s) 0)
 		       (output (##sys#slot s 0)) ) ))
-	       (lambda ()
+	       (lambda () ; close
 		 (unless oclosed
 		   (set! oclosed #t)
 		   (when (and outbuf (fx> (##sys#size outbuf) 0))
@@ -545,7 +545,7 @@ EOF
 		   (when (and iclosed (eq? _socket_error (close fd)))
 		     (network-error #f "cannot close socket output port" fd) ) ) )
 	       (and outbuf
-		    (lambda ()
+		    (lambda () ; flush
 		      (when (fx> (##sys#size outbuf) 0)
 			(output outbuf)
 			(set! outbuf empty) ) ) ) ) ) )
