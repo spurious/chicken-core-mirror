@@ -3609,9 +3609,11 @@ C_regparm C_word C_fcall C_utf_fragment_counts(C_word bv, C_word pos, C_word len
         unsigned int byte = *(ptr++);
         int n = lengths[ byte >> 3 ];
         int bn = n + !n;
-        if(count >= bn) ++full;
-        else return C_fix((full << 4) | (bn - count));
-        count -= bn;
+        if(count >= bn) {
+            ++full;
+            count -= bn;
+            ptr += bn - 1;
+        } else return C_fix((full << 4) | (bn - count));
     }
     
     return C_fix(full << 4);
