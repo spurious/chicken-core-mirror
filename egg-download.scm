@@ -79,7 +79,7 @@
            ""))
 
     (let-values (((in out)
-                  (tcp-connect (or proxy-host host) (or proxy-port port))))
+                  (tcp-connect (or proxy-host host) (or proxy-port port) 'latin-1)))
       (d "requesting ~s ...~%" locn)
       (display req out)
       (flush-output out)
@@ -188,7 +188,7 @@
 	        (let* ((size (read ins))
 	      	       (data (read-string size in)) )
 		  (with-output-to-file (make-pathname dest name)
-                    (cut display data) #:binary ) )
+                    (cut write-string data) #:binary ) )
 		(get-files (cons name files)) ) ) ) ) ))
 
 (define (http-retrieve-response in len)
@@ -215,7 +215,7 @@
 	       (error "invalid response from server - please try again"))
             ((zero? size)
                (d "~%")
-	       (string-intersperse (reverse data) ""))
+               (string-intersperse (reverse data) ""))
 	    (else
 	       (let ((chunk (read-string size in)))
 		 (d ".")
