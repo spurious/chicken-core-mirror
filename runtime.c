@@ -4580,15 +4580,15 @@ C_word C_fetch_trace(C_word starti, C_word buffer)
 
 C_regparm C_word C_fcall C_u_i_bytevector_hash(C_word str, C_word rnd)
 {
-  int len = C_header_size(str) - 1;
-  C_char *ptr = C_data_pointer(str);
+  int len = C_header_size(str);
+  C_char *ptr = C_c_string(str);
   return C_fix(hash_string(len, ptr, C_MOST_POSITIVE_FIXNUM, C_unfix(rnd), 0));
 }
 
 C_regparm C_word C_fcall C_u_i_bytevector_ci_hash(C_word str, C_word rnd)
 {
-  int len = C_header_size(str) - 1;
-  C_char *ptr = C_data_pointer(str);
+  int len = C_header_size(str);
+  C_char *ptr = C_c_string(str);
   return C_fix(hash_string(len, ptr, C_MOST_POSITIVE_FIXNUM, C_unfix(rnd), 1));
 }
 
