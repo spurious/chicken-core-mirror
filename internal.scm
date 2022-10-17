@@ -169,9 +169,9 @@
     (lambda (s n)
       (if (eq? s cache-s)
 	  (##core#inline "C_fixnum_modulo" cache-h n)
-	  (begin
+	  (let ((bv (##sys#slot s 1)))
 	    (set! cache-s s)
-	    (set! cache-h (##core#inline "C_u_i_bytevector_hash" (##sys#slot s 1) rand))
+	    (set! cache-h (##core#inline "C_u_i_bytevector_hash" bv 0 (fx- (##sys#size bv) 1) rand))
 	    (##core#inline "C_fixnum_modulo" cache-h n))))))
 
 (define (make-hash-table #!optional (size 301))
