@@ -973,6 +973,24 @@ EOF
 (define-constant complex-options
   '("-D" "-feature" "-I" "-include-path" "-K" "-keyword-style" "-no-feature") )
 
+(define (string-trim str)
+  (let loop ((front 0) 
+             (back (sub1 (string-length str))))
+    (cond ((= front back) "")
+          ((char-whitespace? (string-ref str front))
+           (loop (add1 front) back))
+          ((char-whitespace? (string-ref str back))
+           (loop front (sub1 back)))
+          (else (substring str front (add1 back))))))
+   
+(define (string->extension-name str)
+  (let ((str (string-trim str)))
+    (if (and (positive? (string-length str))
+             (char=? #\( (string-ref str 0)))
+        (handle-exceptions ex 
+          (##sys#error "invalid import specification" str)
+          (with-input-from-string str read))
+        (string->symbol str))))
 
 (define (run)
   (let* ([extraopts (parse-option-string (or (get-environment-variable "CSI_OPTIONS") ""))]
@@ -1101,7 +1119,7 @@ EOF
 		((member arg complex-options)
 		 (set! args (cdr args)) )
 		((or (string=? "-R" arg) (string=? "-require-extension" arg))
-		 (eval `(import ,(string->symbol (cadr args))))
+		 (eval `(import ,(string->extension-name (cadr args))))
 		 (set! args (cdr args)) )
 		((or (string=? "-e" arg) (string=? "-eval" arg))
 		 (evalstring (cadr args))

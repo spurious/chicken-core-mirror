@@ -176,7 +176,7 @@ the source text should be read from standard input.
 
 ; -raw : Disables the generation of any implicit code that uses the Scheme libraries (that is all runtime system files besides {{runtime.c}} and {{chicken.h}}). Use this only when you know what you are doing.
 
-; -require-extension NAME : Loads the extension {{NAME}} before the compilation process commences. This is identical to adding {{(require-extension NAME)}} at the start of the compiled program. If {{-uses NAME}} is also given on the command line, then any occurrences of {{-require-extension NAME}} are replaced with {{(declare (uses NAME))}}. Multiple names may be given and should be separated by commas.
+; -require-extension NAME : Loads the extension {{NAME}} before the compilation process commences. This is identical to adding {{(import NAME)}} at the start of the compiled program. If {{-uses NAME}} is also given on the command line, then any occurrences of {{-require-extension NAME}} are replaced with {{(declare (uses NAME))}}. {{NAME}} may be given in list notation, e.g {{"(srfi 1)"}}.
 
 ; -setup-mode : When locating extension, search the current directory first. By default, extensions are located first in the ''extension repository'', where {{chicken-install}} stores compiled extensions and their associated metadata.
 

@@ -47,7 +47,9 @@
 	chicken.pretty-print
 	chicken.process-context
 	chicken.string
+        chicken.port
 	chicken.time
+        chicken.condition
 	chicken.compiler.support
 	chicken.compiler.compiler-syntax
 	chicken.compiler.core
@@ -282,6 +284,25 @@
 	   (newline))
 	 xs) ) )
 
+    (define (string-trim str)
+      (let loop ((front 0) 
+                 (back (sub1 (string-length str))))
+        (cond ((= front back) "")
+              ((char-whitespace? (string-ref str front))
+               (loop (add1 front) back))
+              ((char-whitespace? (string-ref str back))
+               (loop front (sub1 back)))
+              (else (substring str front (add1 back))))))
+       
+    (define (string->extension-name str)
+      (let ((str (string-trim str)))
+        (if (and (positive? (string-length str))
+                 (char=? #\( (string-ref str 0)))
+            (handle-exceptions ex 
+              (##sys#error "invalid import specification" str)
+              (with-input-from-string str read))
+            (string->symbol str))))
+
     (define (arg-val str)
       (let* ((len (string-length str))
 	     (len1 (- len 1)) )
@@ -497,7 +518,7 @@
     (set! import-forms
       (append
        import-forms
-       (map (lambda (r) `(import ,(string->symbol r)))
+       (map (lambda (r) `(import ,(string->extension-name r)))
 	    (collect-options 'require-extension))))
 
     (when (memq 'compile-syntax options)
