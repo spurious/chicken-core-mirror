@@ -1056,23 +1056,6 @@ EOF
 
 ;;; Helper procedures:
 
-(define-constant +hairy-chars+ '(#\\ #\#))
-
-(define (cleanup s)
-  (let* ((q #f)
-	 (s (list->string
-	     (let fold ([s (string->list s)])
-	       (if (null? s) 
-		   '()
-		   (let ([c (car s)])
-		     (cond ((memq c +hairy-chars+) (cons* #\\ c (fold (cdr s))))
-			   (else
-			    (when (char-whitespace? c) (set! q #t))
-			    (cons c (fold (cdr s))) ) ) ) ) ) ) ) )
-    (if q 
-	(string-append "\"" (string-translate* s '(("\"" . "\\\""))) "\"")
-	s) ) )
-
 ;; Simpler replacement for SRFI-13's string-any
 (define (string-any criteria s)
   (let ((end (string-length s)))
@@ -1083,13 +1066,7 @@ EOF
             (or (criteria c)
                 (lp i1)))))))
 
-(define (quote-option x)
-  (cond ((string-any (cut char=? #\" <>) x) x)
-	((string-any (lambda (c)
-		       (or (char-whitespace? c) (memq c +hairy-chars+)) )
-		     x)
-	 (cleanup x))
-	(else x) ))
+(define quote-option qs)
 
 (define last-exit-code #f)
 
