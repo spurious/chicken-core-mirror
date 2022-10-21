@@ -584,6 +584,7 @@ scrutinizer.c: scrutinizer.scm mini-srfi-1.scm \
 		chicken.io.import.scm \
 		chicken.pathname.import.scm \
 		chicken.platform.import.scm \
+		chicken.sort.import.scm \
 		chicken.port.import.scm \
 		chicken.pretty-print.import.scm \
 		chicken.string.import.scm
