@@ -348,8 +348,6 @@ _/        _/    _/    _/    _/        _/  _/    _/        _/    _/_/
 	    |   |   |-- manual-html
 	    |   |   |-- chicken.png
 	    |   |   `-- *.html
-	    |   |-- CHICKEN.icns                      (Macintosh)
-	    |   |-- mac.r                             (Macintosh)
 	    |   |-- chicken.rc.o                      (Windows)
 	    |   |-- feathers.tcl
 	    |   `-- setup.defaults

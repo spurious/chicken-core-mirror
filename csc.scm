@@ -999,9 +999,7 @@ EOF
                                   TARGET_RUN_LIB_HOME)
                        lib))))
 	" " 
-	target) )
-      (when gui
-	(rez target)))
+	target) ))
     (unless keep-files 
       (for-each $delete-file
         (append generated-object-files
@@ -1094,13 +1092,6 @@ EOF
   (when verbose 
     (print "rm " str) )
   (unless dry-run (delete-file str) ))
-
-(define (rez file)
-  ;; see also: http://www.cocan.org/getting_started_with_ocaml_on_mac_os_x
-  (command 
-   (sprintf "/Developer/Tools/Rez -t APPL -o ~a ~a"
-     (quotewrap file)
-     (quotewrap (make-pathname home "mac.r")))))
 
 (define (create-win-manifest prg rcfname)
   (when verbose (print "generating " rcfname))

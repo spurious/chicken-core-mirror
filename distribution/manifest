@@ -387,9 +387,7 @@ egg-information.scm
 chicken-do.c
 chicken-do.mdoc
 types.db
-mac.r
 chicken.png
-CHICKEN.icns
 scripts/chicken-flymake
 scripts/chicken-flymake.bat
 scripts/csc-trans
