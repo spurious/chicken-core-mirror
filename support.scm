@@ -356,7 +356,7 @@
 		      (let loop ((lst '()))
 			(let ((x (read)))
 			  (if (eof-object? x)
-			      (apply values (reverse lst))
+			      (reverse lst)
 			      (loop (cons x lst)))))))))
 	  (cond [(null? xs) '(##core#undefined)]
 		[(null? (cdr xs)) (car xs)]

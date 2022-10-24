@@ -10,6 +10,7 @@
     e.g. (srfi 1).  Fixes #1809, reported by Wolfgang Corcoran-Mathe.
   - Fix shell quotation in options passed from csc to other tools.
     Fixes #1302, reported by Xin Wang.
+  - The -prelude and -postlude options for csc work properly again.
 
 - Build system
   - Default "cc" on BSD systems for building CHICKEN to avoid ABI problems
