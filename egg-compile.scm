@@ -599,11 +599,9 @@
 		       default-csc)
 		   platform))
          (sname (prefix srcdir name))
-         (tfile (qs* (prefix srcdir (conc types-file ".types"))
-                     platform))
-         (ifile (qs* (prefix srcdir (conc inline-file ".inline"))
-                     platform))
-         (lfile (qs* (conc sname +link-file-extension+) platform))
+         (tfile (prefix srcdir (conc types-file ".types")))
+         (ifile (prefix srcdir (conc inline-file ".inline")))
+         (lfile (conc sname +link-file-extension+))
          (opts (append (if (null? options)
                            default-static-compilation-options
                            options)
@@ -629,14 +627,13 @@
                           (maybe types-file tfile)
                           (maybe inline-file ifile)
                           (map (lambda (m)
-                                 (qs* (prefix srcdir (conc m ".import.scm"))
-                                      platform))
+                                 (prefix srcdir (conc m ".import.scm")))
                                (or modules '()))))
          (src (qs* (or source (conc name ".scm")) platform)))
     (when custom
       (prepare-custom-command cmd platform))
     (print "\n" (qs* default-builder platform #t) " "
-           (joins targets) " : "
+           (joins targets platform) " : "
            src " " (qs* eggfile platform) " "
            (if custom cmd "") " "
            (filelist srcdir source-dependencies platform)
@@ -645,7 +642,7 @@
            " -regenerate-import-libraries"
            (if modules " -J" "") " -M"
            " -setup-mode -static -I " srcdir 
-           " -emit-link-file " lfile
+           " -emit-link-file " (qs* lfile platform)
            (if (eq? mode 'host) " -host" "")
            " -D compiling-extension -c -unit " name
            " -D compiling-static-extension"
@@ -675,10 +672,8 @@
                        default-csc)
                    platform))
          (sname (prefix srcdir name))
-         (tfile (qs* (prefix srcdir (conc types-file ".types"))
-                     platform))
-         (ifile (qs* (prefix srcdir (conc inline-file ".inline"))
-                     platform))
+         (tfile (prefix srcdir (conc types-file ".types")))
+         (ifile (prefix srcdir (conc inline-file ".inline")))
          (opts (append (if (null? options)
                            default-dynamic-compilation-options
                            options)
@@ -700,13 +695,12 @@
                           (maybe inline-file ifile)
                           (maybe types-file tfile)
                           (map (lambda (m)
-                                 (qs* (prefix srcdir (conc m ".import.scm"))
-                                      platform))
+                                 (prefix srcdir (conc m ".import.scm")))
                             modules))))
     (when custom
       (prepare-custom-command cmd platform))
     (print "\n" (qs* default-builder platform #t) " "
-           (joins targets)
+           (joins targets platform)
            " : "
            src " "
            (qs* eggfile platform) " "
@@ -1274,6 +1268,7 @@ EOF
     (assert (string=? prefix p1) "wrong prefix")
     (substring fname (add1 plen))))
 
-(define (joins strs) (string-intersperse strs " "))
+(define (joins strs platform) 
+  (string-intersperse (map (cut qs* <> platform) strs) " "))
 
 (define (maybe f x) (if f (list x) '()))
