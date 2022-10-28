@@ -11,6 +11,12 @@
   - Fix shell quotation in options passed from csc to other tools.
     Fixes #1302, reported by Xin Wang.
   - The -prelude and -postlude options for csc work properly again.
+  - chicken-install now retrieves the latest egg version when
+    instructed to install an egg that's already installed (#1802).
+
+- Compiler
+  - When emitting types files, the output list is now sorted, to ensure
+    deterministic build output (fixes #1783, reported by "ss2").
 
 - Build system
   - Default "cc" on BSD systems for building CHICKEN to avoid ABI problems
