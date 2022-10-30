@@ -99,9 +99,9 @@ EOF
   (string-append default-runlibdir "/chicken/" (number->string binary-version)))
 
 (define +egg-info-extension+ "egg-info")
-(define +version-file+ "VERSION")
-(define +timestamp-file+ "TIMESTAMP")
-(define +status-file+ "STATUS")
+(define +version-file+ "_VERSION")
+(define +timestamp-file+ "_TIMESTAMP")
+(define +status-file+ "_STATUS")
 (define +egg-extension+ "egg")
 
 (define (validate-environment)
