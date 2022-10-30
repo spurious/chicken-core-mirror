@@ -646,7 +646,7 @@
            (if (eq? mode 'host) " -host" "")
            " -D compiling-extension -c -unit " name
            " -D compiling-static-extension"
-           " -C -I" srcdir (arglist opts platform) 
+           " -C -I" srcdir " " (joins opts platform) 
            " " src " -o " out2)
     (when (pair? link-objects)
       (let ((lobjs (filelist srcdir
@@ -714,9 +714,9 @@
            " -D compiling-extension -J -s"
            " -regenerate-import-libraries"
            " -setup-mode -I " srcdir
-           " -C -I" srcdir
-           (arglist opts platform)
-           (arglist link-options platform) " "
+           " -C -I" srcdir " "
+           (joins opts platform) " "
+           (joins link-options platform) " "
            src " "
            (filelist srcdir lobjs platform)
            " -o " out)
@@ -737,16 +737,16 @@
     (print "\n" (qs* default-builder platform #t) " "
            out
            " : "
-           src
+           src " "
            (filelist srcdir source-dependencies platform)
            " : "
            cmd
            (if keep-generated-files " -k" "")
            " -setup-mode -s"
            (if (eq? mode 'host) " -host" "")
-           " -I " srcdir " -C -I" srcdir
-           (arglist opts platform)
-           (arglist link-options platform) " "
+           " -I " srcdir " -C -I" srcdir " "
+           (joins opts platform) " " 
+           (joins link-options platform) " "
            src
            " -o " out)
     (print-end-command platform)))
@@ -784,8 +784,8 @@
            cmd
            " -setup-mode -static -I " srcdir
            (if (eq? mode 'host) " -host" "")
-           " -c -C -I" srcdir
-           (arglist opts platform)
+           " -c -C -I" srcdir " "
+           (joins opts platform)
            " " src
            " -o " out)
     (print-end-command platform)))
@@ -822,8 +822,8 @@
            cmd
            (if (eq? mode 'host) " -host" "")
            " -setup-mode -I " srcdir
-           " -s -c -C -I" srcdir
-           (arglist opts platform)
+           " -s -c -C -I" srcdir " "
+           (joins opts platform)
            " " src
            " -o " out)
     (print-end-command platform)))
@@ -866,9 +866,9 @@
            " -setup-mode"
            (if (eq? mode 'host) " -host" "")
            " -I " srcdir
-           " -C -I" srcdir
-           (arglist opts platform)
-           (arglist link-options platform) " "
+           " -C -I" srcdir " "
+           (joins opts platform) " "
+           (joins link-options platform) " "
            src " "
            (filelist srcdir lobjs platform)
            " -o " out)
@@ -911,10 +911,9 @@
            (if keep-generated-files " -k" "")
            (if (eq? mode 'host) " -host" "")
            " -static -setup-mode -I " srcdir
-           " -C -I"
-           srcdir
-           (arglist opts platform)
-           (arglist link-options platform) " "
+           " -C -I" srcdir " "
+           (joins opts platform) " "
+           (joins link-options platform) " "
            src " "
            (filelist srcdir lobjs platform)
            " -o " out)
@@ -1236,11 +1235,11 @@ EOF
 (define (target-file fname mode)
   (if (eq? mode 'target) (string-append fname ".target") fname))
 
-(define (arglist lst platform)
-  (apply conc (map (lambda (x) (conc " " (qs* x platform))) lst)))
+(define (joins strs platform) 
+  (string-intersperse (map (cut qs* <> platform) strs) " "))
 
 (define (filelist dir lst platform)
-  (arglist (map (cut prefix dir <>) lst) platform))
+  (joins (map (cut prefix dir <>) lst) platform))
 
 (define (shell-variable var platform)
   (case platform
@@ -1267,8 +1266,5 @@ EOF
          (p1 (substring fname 0 plen)))
     (assert (string=? prefix p1) "wrong prefix")
     (substring fname (add1 plen))))
-
-(define (joins strs platform) 
-  (string-intersperse (map (cut qs* <> platform) strs) " "))
 
 (define (maybe f x) (if f (list x) '()))
