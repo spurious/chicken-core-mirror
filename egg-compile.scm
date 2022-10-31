@@ -764,7 +764,6 @@
          (opts (if (null? options)
                    default-static-compilation-options
                    options))
-         (ename (pathname-file eggfile))
          (out (qs* (target-file (conc sname
                                       ".static"
                                       (object-extension platform))
