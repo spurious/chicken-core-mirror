@@ -595,9 +595,8 @@
                                    link-objects modules
                                    custom types-file inline-file)
          srcdir platform)
-  (let* ((cmd (qs* (or (custom-cmd custom srcdir platform)
-		       default-csc)
-		   platform))
+  (let* ((cmd (or (custom-cmd custom srcdir platform)
+		  default-csc))
          (sname (prefix srcdir name))
          (tfile (prefix srcdir (conc types-file ".types")))
          (ifile (prefix srcdir (conc inline-file ".inline")))
@@ -613,51 +612,46 @@
                            (list "-emit-inline-file" ifile)
                            '())))
          (out1 (conc sname ".static"))
-         (out2 (qs* (target-file (conc out1
-                                       (object-extension platform))
-                                 mode)
-                    platform))
+         (out2 (target-file (conc out1
+                                  (object-extension platform))
+                            mode))
          (out3 (if (null? link-objects)
                    out2
-                   (qs* (target-file (conc out1
-                                           (archive-extension platform))
-                                     mode)
-                        platform)))
+                   (target-file (conc out1
+                                      (archive-extension platform))
+                                mode)))
          (targets (append (list out3 lfile)
                           (maybe types-file tfile)
                           (maybe inline-file ifile)
                           (map (lambda (m)
                                  (prefix srcdir (conc m ".import.scm")))
                                (or modules '()))))
-         (src (qs* (or source (conc name ".scm")) platform)))
+         (src (or source (conc name ".scm"))))
     (when custom
       (prepare-custom-command cmd platform))
-    (print "\n" (qs* default-builder platform #t) " "
-           (joins targets platform) " : "
-           src " " (qs* eggfile platform) " "
-           (if custom cmd "") " "
-           (filelist srcdir source-dependencies platform)
-           " : " cmd
-           (if keep-generated-files " -k" "")
-           " -regenerate-import-libraries"
-           (if modules " -J" "") " -M"
-           " -setup-mode -static -I " srcdir 
-           " -emit-link-file " (qs* lfile platform)
-           (if (eq? mode 'host) " -host" "")
-           " -D compiling-extension -c -unit " name
-           " -D compiling-static-extension"
-           " -C -I" srcdir " " (joins opts platform) 
-           " " src " -o " out2)
+    (print-build-command targets
+			 `(,@(filelist srcdir source-dependencies) ,src ,eggfile
+			   ,@(if custom (list cmd) '()))
+			 `(,cmd ,@(if keep-generated-files '("-k") '())
+				"-regenerate-import-libraries"
+				,@(if modules '("-J") '()) "-M"
+				"-setup-mode" "-static" "-I" ,srcdir 
+				"-emit-link-file" ,lfile
+				,@(if (eq? mode 'host) '("-host") '())
+				"-D" "compiling-extension"
+				"-c" "-unit" ,name
+				"-D" "compiling-static-extension"
+				"-C" ,(conc "-I" srcdir)
+				,@opts ,src "-o" ,out2)
+			 platform)
     (when (pair? link-objects)
       (let ((lobjs (filelist srcdir
                              (map (cut conc <> ".static" (object-extension platform))
                                link-objects)
                              platform)))
-        (print (qs* default-builder platform #t) " " out3 " : "
-               out2 " " lobjs " : "
-               (qs* target-librarian platform) " "
-               target-librarian-options " " out3 " " out2 " "
-               lobjs)))
+	(print-build-command (list out3)
+			     `(,out2 ,@lobjs)
+			     `(,target-librarian ,target-librarian-options ,out3 ,out2 ,@lobjs))))
     (print-end-command platform)))
 
 (define ((compile-dynamic-extension name #!key mode mode
@@ -668,9 +662,8 @@
                                     source-dependencies modules
                                     custom types-file inline-file)
          srcdir platform)
-  (let* ((cmd (qs* (or (custom-cmd custom srcdir platform)
-                       default-csc)
-                   platform))
+  (let* ((cmd (or (custom-cmd custom srcdir platform)
+                  default-csc))
          (sname (prefix srcdir name))
          (tfile (prefix srcdir (conc types-file ".types")))
          (ifile (prefix srcdir (conc inline-file ".inline")))
@@ -684,8 +677,8 @@
                        (if inline-file
                            (list "-emit-inline-file" ifile)
                            '())))
-         (out (qs* (target-file (conc sname ".so") mode) platform))
-         (src (qs* (or source (conc name ".scm")) platform))
+         (out (target-file (conc sname ".so") mode))
+         (src (or source (conc name ".scm")))
          (lobjs (map (lambda (lo)
                        (target-file (conc lo
                                           (object-extension platform))
@@ -699,56 +692,46 @@
                             modules))))
     (when custom
       (prepare-custom-command cmd platform))
-    (print "\n" (qs* default-builder platform #t) " "
-           (joins targets platform)
-           " : "
-           src " "
-           (qs* eggfile platform) " "
-           (if custom cmd "") " "
-           (filelist srcdir lobjs platform) " "
-           (filelist srcdir source-dependencies platform)
-           " : "
-           cmd
-           (if keep-generated-files " -k" "")
-           (if (eq? mode 'host) " -host" "")
-           " -D compiling-extension -J -s"
-           " -regenerate-import-libraries"
-           " -setup-mode -I " srcdir
-           " -C -I" srcdir " "
-           (joins opts platform) " "
-           (joins link-options platform) " "
-           src " "
-           (filelist srcdir lobjs platform)
-           " -o " out)
+    (print-build-command targets
+			 `(,src ,eggfile ,@(if custom (list cmd) '())
+			   ,@(filelist srcdir lobjs)
+			   ,@(filelist srcdir source-dependencies))
+			 `(,cmd ,@(if keep-generated-files '("-k") '())
+				,@(if (eq? mode 'host) '("-host") '())
+				"-D" "compiling-extension"
+				"-J" "-s" "-regenerate-import-libraries"
+				"-setup-mode" "-I" ,srcdir
+				"-C" ,(conc "-I" srcdir)
+				,@opts
+				,@link-options
+				,src
+				,@(filelist srcdir lobjs)
+				"-o" ,out)
+			 platform)
     (print-end-command platform)))
 
 (define ((compile-import-library name #!key mode
                                  source-dependencies
                                  (options '()) (link-options '()))
          srcdir platform)
-  (let* ((cmd (qs* default-csc platform))
+  (let* ((cmd default-csc)
          (sname (prefix srcdir name))
          (opts (if (null? options) 
                    default-import-library-compilation-options
                    options))
-         (out (qs* (target-file (conc sname ".import.so") mode)
-		   platform))
-         (src (qs* (conc name ".import.scm") platform)))
-    (print "\n" (qs* default-builder platform #t) " "
-           out
-           " : "
-           src " "
-           (filelist srcdir source-dependencies platform)
-           " : "
-           cmd
-           (if keep-generated-files " -k" "")
-           " -setup-mode -s"
-           (if (eq? mode 'host) " -host" "")
-           " -I " srcdir " -C -I" srcdir " "
-           (joins opts platform) " " 
-           (joins link-options platform) " "
-           src
-           " -o " out)
+         (out (target-file (conc sname ".import.so") mode))
+         (src (conc name ".import.scm")))
+    (print-build-command (list out)
+			 ;; TODO: eggfile not part of dependencies?
+			 `(,src #;,eggfile ,@(filelist srcdir source-dependencies))
+			 `(,cmd ,@(if keep-generated-files '("-k") '())
+			   "-setup-mode" "-s"
+			   ,@(if (eq? mode 'host) '("-host") '())
+			   "-I" ,srcdir "-C" ,(conc "-I" srcdir)
+			   ,@opts ,@link-options
+			   ,src
+			   "-o" ,out)
+			 platform)
     (print-end-command platform)))
 
 (define ((compile-static-object name #!key mode
@@ -756,37 +739,28 @@
                                 source (options '())
                                 eggfile custom)
          srcdir platform)
-  (let* ((cmd (qs* (or (custom-cmd custom srcdir platform)
-                       default-csc)
-                   platform))
+  (let* ((cmd (or (custom-cmd custom srcdir platform)
+                  default-csc))
          (sname (prefix srcdir name))
          (ssname (and source (prefix srcdir source)))
          (opts (if (null? options)
                    default-static-compilation-options
                    options))
-         (out (qs* (target-file (conc sname
-                                      ".static"
-                                      (object-extension platform))
-                                mode)
-                   platform))
-         (src (qs* (or ssname (conc sname ".c")) platform)))
+         (out (target-file (conc sname
+                                 ".static"
+                                 (object-extension platform))
+                           mode))
+         (src (or ssname (conc sname ".c"))))
     (when custom
       (prepare-custom-command cmd platform))
-    (print "\n" (slashify default-builder platform) " "
-           out
-           " : "
-           (filelist srcdir source-dependencies platform) " "
-           src " "
-           (qs* eggfile platform) " "
-           (if custom cmd "")
-           " : "
-           cmd
-           " -setup-mode -static -I " srcdir
-           (if (eq? mode 'host) " -host" "")
-           " -c -C -I" srcdir " "
-           (joins opts platform)
-           " " src
-           " -o " out)
+    (print-build-command (list out)
+			 `(,@(filelist srcdir source-dependencies) ,src ,eggfile
+			   ,@(if custom (list cmd) '()))
+			 `(,cmd "-setup-mode" "-static" "-I" ,srcdir
+				,@(if (eq? mode 'host) '("-host") '())
+				"-c" "-C" ,(conc "-I" srcdir)
+				,@opts ,src "-o" ,out)
+			 platform)
     (print-end-command platform)))
 
 (define ((compile-dynamic-object name #!key mode mode
@@ -795,36 +769,26 @@
                                  source-dependencies
                                  custom)
          srcdir platform)
-  (let* ((cmd (qs* (or (custom-cmd custom srcdir platform)
-                       default-csc)
-                   platform))
+  (let* ((cmd (or (custom-cmd custom srcdir platform)
+                  default-csc))
          (opts (if (null? options)
                    default-dynamic-compilation-options
                    options))
          (sname (prefix srcdir name))
          (ssname (and source (prefix srcdir source)))
-         (out (qs* (target-file (conc sname
-                                      (object-extension platform))
-                                mode)
-                   platform))
-         (src (qs* (or ssname (conc sname ".c")) platform)))
+         (out (target-file (conc sname
+                                 (object-extension platform))
+                           mode))
+         (src (or ssname (conc sname ".c"))))
     (when custom
       (prepare-custom-command cmd platform))
-    (print "\n" (slashify default-builder platform) " "
-           out
-           " : "
-           src " "
-           (qs* eggfile platform) " "
-           (if custom cmd "") " "
-           (filelist srcdir source-dependencies platform)
-           " : "
-           cmd
-           (if (eq? mode 'host) " -host" "")
-           " -setup-mode -I " srcdir
-           " -s -c -C -I" srcdir " "
-           (joins opts platform)
-           " " src
-           " -o " out)
+    (print-build-command (list out)
+			 `(,src ,eggfile ,@(if custom (list cmd) '())
+			   ,@(filelist srcdir source-dependencies))
+			 `(,cmd ,@(if (eq? mode 'host) '("-host") '())
+			   "-s" "-c" "-C" ,(conc "-I" srcdir)
+			   ,@opts ,src "-o" ,out)
+			 platform)
     (print-end-command platform)))
 
 (define ((compile-dynamic-program name #!key source mode
@@ -832,45 +796,36 @@
                                   source-dependencies
                                   custom eggfile link-objects)
          srcdir platform)
-  (let* ((cmd (qs* (or (custom-cmd custom srcdir platform)
-		       default-csc)
-		   platform))
+  (let* ((cmd (or (custom-cmd custom srcdir platform)
+		  default-csc))
          (sname (prefix srcdir name))
          (opts (if (null? options) 
                    default-dynamic-compilation-options
                    options))
-         (out (qs* (target-file (conc sname
-				      (executable-extension platform)) 
-				mode)
-		  platform))
+         (out (target-file (conc sname
+				 (executable-extension platform)) 
+			   mode))
          (lobjs (map (lambda (lo)
                        (target-file (conc lo
                                           (object-extension platform))
                                     mode))
                   link-objects))
-         (src (qs* (or source (conc name ".scm")) platform)))
+         (src (or source (conc name ".scm"))))
     (when custom
       (prepare-custom-command cmd platform))
-    (print "\n" (qs* default-builder platform #t) " "
-           out
-           " : "
-           src " "
-           (qs* eggfile platform) " "
-           (if custom cmd "") " "
-           (filelist srcdir source-dependencies platform) " "
-           (filelist srcdir lobjs platform)
-           " : "
-           cmd
-           (if keep-generated-files " -k" "")
-           " -setup-mode"
-           (if (eq? mode 'host) " -host" "")
-           " -I " srcdir
-           " -C -I" srcdir " "
-           (joins opts platform) " "
-           (joins link-options platform) " "
-           src " "
-           (filelist srcdir lobjs platform)
-           " -o " out)
+    (print-build-command (list out)
+			 `(,src ,eggfile ,@(if custom (list cmd) '())
+			   ,@(filelist srcdir source-dependencies)
+			   ,@(filelist srcdir lobjs))
+			 `(,cmd ,@(if keep-generated-files '("-k") '())
+				"-setup-mode"
+				,@(if (eq? mode 'host) '("-host") '())
+				"-I" ,srcdir
+				"-C" ,(conc "-I" srcdir)
+				,@opts ,@link-options ,src
+				,@(filelist srcdir lobjs)
+				"-o" ,out)
+			 platform)
     (print-end-command platform)))
 
 (define ((compile-static-program name #!key source
@@ -878,57 +833,48 @@
                                  source-dependencies
                                  custom mode eggfile link-objects)
          srcdir platform)
-  (let* ((cmd (qs* (or (custom-cmd custom srcdir platform)
-		       default-csc)
-		   platform))
+  (let* ((cmd (or (custom-cmd custom srcdir platform)
+		  default-csc))
          (sname (prefix srcdir name))
          (opts (if (null? options) 
                    default-static-compilation-options
                    options))
-         (out (qs* (target-file (conc sname
-				      (executable-extension platform)) 
-				mode)
-		  platform))
+         (out (target-file (conc sname
+				 (executable-extension platform)) 
+			   mode))
          (lobjs (map (lambda (lo)
                        (target-file (conc lo
                                           (object-extension platform))
                                     mode))
                   link-objects))
-         (src (qs* (or source (conc name ".scm")) platform)))
+         (src (or source (conc name ".scm"))))
     (when custom
       (prepare-custom-command cmd platform))
-    (print "\n" (qs* default-builder platform #t) " "
-           out
-           " : "
-           src " "
-           (qs* eggfile platform) " "
-           (if custom cmd "") " "
-           (filelist srcdir lobjs platform) " "
-           (filelist srcdir source-dependencies platform)
-           " : "
-           cmd
-           (if keep-generated-files " -k" "")
-           (if (eq? mode 'host) " -host" "")
-           " -static -setup-mode -I " srcdir
-           " -C -I" srcdir " "
-           (joins opts platform) " "
-           (joins link-options platform) " "
-           src " "
-           (filelist srcdir lobjs platform)
-           " -o " out)
+    (print-build-command (list out)
+			 `(,src ,eggfile ,@(if custom (list cmd) '())
+			   ,@(filelist srcdir lobjs)
+			   ,@(filelist srcdir source-dependencies))
+			 `(,cmd ,@(if keep-generated-files '("-k") '())
+				,@(if (eq? mode 'host) '("-host") '())
+				"-static" "-setup-mode" "-I" ,srcdir
+				"-C" ,(conc "-I" srcdir)
+				,@opts ,@link-options ,src
+				,@(filelist srcdir lobjs)
+				"-o" ,out)
+			 platform)
     (print-end-command platform)))
 
 (define ((compile-generated-file name #!key source custom
                                  source-dependencies eggfile) 
          srcdir platform)
-  (let ((cmd (qs* (custom-cmd custom srcdir platform) platform))
-        (out (qs* (or source name) platform)))
+  (let ((cmd (custom-cmd custom srcdir platform))
+        (out (or source name)))
     (prepare-custom-command cmd platform)
-    (print "\n" (qs* default-builder platform #t)
-           " " out " : " cmd " "
-           (qs* eggfile platform) " "
-           (filelist srcdir source-dependencies platform)
-           " : " cmd)
+    (print-build-command (list out)
+			 `(,cmd ,eggfile
+			   ,@(filelist srcdir source-dependencies))
+			 (list cmd)
+			 platform)
     (print-end-command platform)))
 
 
@@ -1237,24 +1183,29 @@ EOF
 (define (joins strs platform) 
   (string-intersperse (map (cut qs* <> platform) strs) " "))
 
-(define (filelist dir lst platform)
-  (joins (map (cut prefix dir <>) lst) platform))
+(define (filelist dir lst)
+  (map (cut prefix dir <>) lst))
 
 (define (shell-variable var platform)
   (case platform
     ((unix) (string-append "\"${" var "}\""))
     ((windows) (string-append "%" var "%"))))
 
-;; NOTE `cmd' must already be quoted for shell
 (define (prepare-custom-command cmd platform)
   (unless (eq? 'windows platform)
-    (print "chmod +x " cmd)))
+    (print "chmod +x " (qs* cmd platform))))
 
 (define (custom-cmd custom srcdir platform)
   (and custom (prefix srcdir 
                       (case platform
                         ((windows) (conc custom ".bat"))
                         (else custom)))))
+
+(define (print-build-command targets sources command-and-args platform)
+  (print "\n" (qs* default-builder platform) " "
+         (joins targets platform)
+	 " : " (joins sources platform) " "
+         " : " (joins command-and-args platform)))
 
 (define (print-end-command platform)
   (case platform
