@@ -1044,7 +1044,7 @@
          (root (string-append srcdir "/"))
          (mkdir (mkdir-command platform))
          (sfiles (map (cut prefix srcdir <>) files))
-         (dfile (qs* (normalize-destination dest mode) platform #t))
+         (dfile (qs* dest platform #t))
          (ddir (shell-variable "DESTDIR" platform)))
     (print "\n" mkdir " " ddir dfile)
     (let-values (((ds fs) (partition directory? sfiles)))
