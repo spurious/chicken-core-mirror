@@ -650,7 +650,7 @@
                                link-objects))))
 	(print-build-command (list out3)
 			     `(,out2 ,@lobjs)
-			     `(,target-librarian ,target-librarian-options ,out3 ,out2 ,@lobjs)
+			     `(,target-librarian ,(raw-arg target-librarian-options) ,out3 ,out2 ,@lobjs)
 			     platform)))
     (print-end-command platform)))
 
@@ -1152,10 +1152,19 @@ EOF
 ;; have to undo that here again.  It can also convert slashes to
 ;; backslashes on Windows, which is necessary in many cases when
 ;; running programs via "cmd".
+;;
+;; It also supports already-quoted arguments which can be taken as-is.
 (define (qs* arg platform #!optional slashify?)
-  (let* ((arg (->string arg))
-	 (path (if slashify? (slashify arg platform) arg)))
-    (qs path (if (eq? platform 'windows) 'mingw32 platform))))
+  (if (raw-arg? arg)
+      (raw-arg-value arg)
+      (let* ((arg (->string arg))
+	     (path (if slashify? (slashify arg platform) arg)))
+	(qs path (if (eq? platform 'windows) 'mingw32 platform)))))
+
+(define-record-type raw-arg
+  (raw-arg value)
+  raw-arg?
+  (value raw-arg-value))
 
 (define (slashify str platform)
   (if (eq? platform 'windows)
