@@ -647,8 +647,7 @@
     (when (pair? link-objects)
       (let ((lobjs (filelist srcdir
                              (map (cut conc <> ".static" (object-extension platform))
-                               link-objects)
-                             platform)))
+                               link-objects))))
 	(print-build-command (list out3)
 			     `(,out2 ,@lobjs)
 			     `(,target-librarian ,target-librarian-options ,out3 ,out2 ,@lobjs))))
