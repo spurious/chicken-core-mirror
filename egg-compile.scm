@@ -650,7 +650,8 @@
                                link-objects))))
 	(print-build-command (list out3)
 			     `(,out2 ,@lobjs)
-			     `(,target-librarian ,target-librarian-options ,out3 ,out2 ,@lobjs))))
+			     `(,target-librarian ,target-librarian-options ,out3 ,out2 ,@lobjs)
+			     platform)))
     (print-end-command platform)))
 
 (define ((compile-dynamic-extension name #!key mode mode
