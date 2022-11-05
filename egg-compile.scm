@@ -1129,7 +1129,7 @@ EOF
 
 ~a ~a~a
 ~a ~a~a
-cat >~a~a <<ENDINFO
+cat >~a~a <<'ENDINFO'
 ~aENDINFO~%
 EOF
                mkdir ddir qdir
@@ -1139,11 +1139,18 @@ EOF
        (printf #<<EOF
 
 ~a ~a~a
-echo ~a >~a~a~%
+copy /y nul ~a~a~%
+~a
 EOF
                mkdir ddir qdir
-               (string-intersperse (string-split infostr "\n") "^\n\n")
-               ddir dest)))))
+	       ddir dest
+	       (string-intersperse (map (lambda (line)
+					  (ensure-line-limit
+                                             (caretize (format "echo ~a >>~a~a"
+                                                               line ddir dest))
+                                             8191 ))
+					(string-split infostr "\n"))
+				   "\n"))))))
 
 ;;; some utilities for mangling + quoting
 
@@ -1227,3 +1234,12 @@ EOF
     (substring fname (add1 plen))))
 
 (define (maybe f x) (if f (list x) '()))
+
+(define (caretize str)
+  (string-translate* str '(("&" . "^&") ("^" . "^^") ("|" . "^|")
+			   ("<" . "^<") (">" . "^>"))))
+
+(define (ensure-line-limit str lim)
+  (when (>= (string-length str) lim)
+    (error "line length exceeds platform limit: " str))
+  str)
