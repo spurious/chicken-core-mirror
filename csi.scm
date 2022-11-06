@@ -926,7 +926,7 @@ EOF
 		 (else (find (cdr ks))) ) ) ) ) )
 
 (define-constant short-options 
-  '(#\k #\s #\h #\D #\e #\i #\R #\b #\n #\q #\w #\- #\I #\p #\P) )
+  '(#\k #\s #\h #\D #\e #\i #\R #\b #\n #\q #\w #\- #\I #\p #\P #\K) )
 
 (define-constant long-options
   '("-ss" "-sx" "-script" "-version" "-help" "--help" "-feature" "-no-feature" "-eval"
