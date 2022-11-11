@@ -1,5 +1,11 @@
 5.3.1
 
+- Security fixes
+  - CVE-2022-45145: Neutralize possible escape characters in egg metadata
+    to avoid arbitrary OS command injection during egg installation,
+    reported by Vasilij Schneidermann who also provided the necessary
+    patches to mitigate this problem.
+
 - Core libraries
   - Added "locative-index", kindly contributed by John Croisant.
   - Added "fp*+" (fused multiply-add) to "chicken.flonum" module
