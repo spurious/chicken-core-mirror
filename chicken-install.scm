@@ -469,6 +469,25 @@
              (resolve-location new))))
         (else name)))
 
+(define (locate-local-egg-dir location egg-name version)
+  ;; Locate the directory of egg-name, considering the following
+  ;; directory layouts in order:
+  ;; * <location>/<egg-name>/<egg-name>.egg
+  ;; * <location>/<egg-name>/<version>/<egg-name>.egg
+  (and-let* ((egg-dir (probe-dir (make-pathname location egg-name))))
+    (cond
+     ;; <location>/<egg-name>/<egg-name>.egg
+     ((file-exists? (make-pathname egg-dir egg-name +egg-extension+))
+      egg-dir)
+     (else
+      ;; <location>/<egg-name>/<version>/<egg-name>.egg
+      (if version
+          (probe-dir (make-pathname egg-dir version))
+          (let ((versions (directory egg-dir)))
+            (and (not (null? versions))
+                 (let ((latest (car (sort versions version>=?))))
+                   (make-pathname egg-dir latest)))))))))
+
 (define (fetch-egg-sources name version dest lax)
   (print "fetching " name)
   (let loop ((locs default-locations))
@@ -503,7 +522,7 @@
                                  (make-pathname dest +timestamp-file+)
                                  (cut write (current-seconds))))
                              (else (loop (cdr srvs))))))))))
-          ((probe-dir (make-pathname (car locs) name))
+          ((locate-local-egg-dir (car locs) name version)
            => (lambda (dir)
                 (d "trying location ~a ...~%" dir)
                 (let* ((eggfile (make-pathname dir name +egg-extension+))

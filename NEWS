@@ -19,6 +19,9 @@
   - The -prelude and -postlude options for csc work properly again.
   - chicken-install now retrieves the latest egg version when
     instructed to install an egg that's already installed (#1802).
+  - When `location' is specified in setup.defaults, chicken-install
+    will consider two location layouts when looking for eggs:
+    <location>/<egg> and <location>/<egg>/<version>.
 
 - Compiler
   - When emitting types files, the output list is now sorted, to ensure
