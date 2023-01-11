@@ -22,6 +22,10 @@
   - When `location' is specified in setup.defaults, chicken-install
     will consider two location layouts when looking for eggs:
     <location>/<egg> and <location>/<egg>/<version>.
+  - chicken-install now prefixes special files like VERSION, STATUS
+    and TIMESTAMP with an underscore to reduce likelihood of
+    collisions with source files on case-insensitive file systems
+    like on MacOS (#1753, reported by Kon Lovett).
 
 - Compiler
   - When emitting types files, the output list is now sorted, to ensure
