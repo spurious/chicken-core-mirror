@@ -29,6 +29,7 @@
   - chicken-install: Fix #1684 (programs that specify
     component-dependencies should build-depend on their import
     libraries).
+  - chicken-install now caches eggs installed from local locations.
 
 - Compiler
   - When emitting types files, the output list is now sorted, to ensure
