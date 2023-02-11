@@ -1081,6 +1081,9 @@ usage: chicken-install [OPTION ...] [NAME[:VERSION] ...]
        -force                   don't ask, install even if versions don't match
   -k   -keep                    keep temporary files
   -s   -sudo                    use external command to elevate privileges for filesystem operations
+  -l   -location DIRECTORY      get egg sources from DIRECTORY.  May be provided multiple times.
+                                Locations specified on the command line have precedence over the
+                                ones specified in setup.defaults.
   -r   -retrieve                only retrieve egg into cache directory, don't install (giving `-r'
                                 more than once implies `-recursive')
        -recursive               if `-retrieve' is given, retrieve also dependencies
@@ -1177,6 +1180,13 @@ EOF
                   ((member arg '("-s" "-sudo"))
                    (set! sudo-install #t)
                    (loop (cdr args)))
+                  ((member arg '("-l" "-location"))
+                   (when (null? (cdr args))
+                     (fprintf (current-error-port) "-l|-location: missing argument.~%")
+                     (exit 1))
+                   (set! default-locations
+                     (append (list (cadr args)) default-locations))
+                   (loop (cddr args)))
                   ((member arg '("-n" "-no-install"))
                    (set! no-install #t)
                    (loop (cdr args)))

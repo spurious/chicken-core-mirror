@@ -27,6 +27,9 @@
     collisions with source files on case-insensitive file systems
     like on MacOS (#1753, reported by Kon Lovett).
   - chicken-install now caches eggs installed from local locations.
+  - chicken-install now accepts the -location command line option
+    (short: -l) to specify local directories where to get egg sources
+    from.
 
 - Compiler
   - When emitting types files, the output list is now sorted, to ensure
