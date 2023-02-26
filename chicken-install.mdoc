@@ -99,6 +99,11 @@ which has the same format as
 This option may be given multiple times.
 .It Fl cached
 Only install eggs from cache, do not download.
+.It Fl l , Fl location Ar directory
+Get egg sources from the given directory.  
+May be provided multiple times.
+Locations specified on the command line have precedence over the
+ones specified in setup.defaults.
 .It Fl feature , Fl D Ar name
 Register feature 
 .Ar name ,
