@@ -424,8 +424,7 @@
       (when (file-exists? cached)
         (delete-directory cached #t))
       (create-directory cached #t)
-      (fetch-egg-sources name version cached lax)
-      (with-output-to-file status (cut write current-status)))
+      (fetch-egg-sources name version cached lax))
     (cond ((or (not (probe-dir cached))
                (not (file-exists? eggfile)))
            (d "~a not cached~%" name)
@@ -474,19 +473,34 @@
   ;; directory layouts in order:
   ;; * <location>/<egg-name>/<egg-name>.egg
   ;; * <location>/<egg-name>/<version>/<egg-name>.egg
-  (and-let* ((egg-dir (probe-dir (make-pathname location egg-name))))
+  ;;
+  ;; Return (values <egg-dir> <version>).  <egg-dir> and <version>
+  ;; will be #f in case they cannot be determined.
+  (let ((egg-dir (probe-dir (make-pathname location egg-name))))
     (cond
+     ((not egg-dir)
+      (values #f #f))
      ;; <location>/<egg-name>/<egg-name>.egg
      ((file-exists? (make-pathname egg-dir egg-name +egg-extension+))
-      egg-dir)
+      (values egg-dir #f))
      (else
       ;; <location>/<egg-name>/<version>/<egg-name>.egg
       (if version
-          (probe-dir (make-pathname egg-dir version))
+          (values (probe-dir (make-pathname egg-dir version)) version)
           (let ((versions (directory egg-dir)))
-            (and (not (null? versions))
-                 (let ((latest (car (sort versions version>=?))))
-                   (make-pathname egg-dir latest)))))))))
+            (if (null? versions)
+                (values #f #f)
+                (let ((latest (car (sort versions version>=?))))
+                  (values (make-pathname egg-dir latest) latest)))))))))
+
+(define (write-cache-metadata egg-cache-dir egg-version)
+  (when egg-version
+    (with-output-to-file (make-pathname egg-cache-dir +version-file+)
+      (cut write egg-version)))
+  (with-output-to-file (make-pathname egg-cache-dir +timestamp-file+)
+    (cut write (current-seconds)))
+  (with-output-to-file (make-pathname egg-cache-dir +status-file+)
+    (cut write current-status)))
 
 (define (fetch-egg-sources name version dest lax)
   (print "fetching " name)
@@ -514,26 +528,32 @@
                        (cond (dir
                                (copy-egg-sources tmpdir dest)
                                (delete-directory tmpdir #t)
-                               (when ver
-                                 (with-output-to-file
-                                   (make-pathname dest +version-file+)
-                                     (cut write ver)))
-                               (with-output-to-file
-                                 (make-pathname dest +timestamp-file+)
-                                 (cut write (current-seconds))))
+			       (write-cache-metadata dest ver))
                              (else (loop (cdr srvs))))))))))
-          ((locate-local-egg-dir (car locs) name version)
-           => (lambda (dir)
-                (d "trying location ~a ...~%" dir)
-                (let* ((eggfile (make-pathname dir name +egg-extension+))
-                       (info (validate-egg-info (load-egg-info eggfile)))
-                       (rversion (get-egg-property info 'version)))
-                  (if (or (not rversion)
-                          (not version)
-                          (version>=? rversion version))
-                      (copy-egg-sources dir dest)
-                      (loop (cdr locs))))))
-          (else (loop (cdr locs))))))
+          (else
+           (receive (dir version-from-path)
+               (locate-local-egg-dir (car locs) name version)
+             (if dir
+                 (let* ((eggfile (make-pathname dir name +egg-extension+))
+                        (info (validate-egg-info (load-egg-info eggfile)))
+                        (rversion
+                         ;; If version-from-path is non-#f, prefer it
+                         ;; over rversion, as it means the egg author
+                         ;; actually tagged the egg.  rversion might
+                         ;; be outdated in case the egg author forgot
+                         ;; to bump it in the .egg file.
+                         (or version-from-path
+                             (get-egg-property info 'version))))
+                   (d "trying location ~a ...~%" dir)
+                   (if (or (not rversion)
+                           (not version)
+                           (version>=? rversion version))
+                       (begin
+                         (copy-egg-sources dir dest)
+                         (write-cache-metadata dest (or rversion version)))
+                       (loop (cdr locs))))
+                 (loop (cdr locs))))))))
+
 
 (define (copy-egg-sources from to)
   ;;XXX should probably be done manually, instead of calling tool
@@ -554,11 +574,14 @@
                     (or (and versions
                              (every (cut version>=? lversion <>) versions))
                         (loop (cdr srvs)))))))
-          ((probe-dir (make-pathname (car locs) name)) =>
-           (lambda (dir)
-             ;; for locally available eggs, check set of files and
-             ;; timestamps
-             (compare-trees dir cached)))
+          ;; The order of probe-dir's here is important.  First try
+          ;; the path with version, then the path without version.
+          ((or (probe-dir (make-pathname (list (car locs) name) lversion))
+               (probe-dir (make-pathname (car locs) name)))
+           => (lambda (dir)
+                ;; for locally available eggs, check set of files and
+                ;; timestamps
+                (compare-trees dir cached)))
           (else (loop (cdr locs))))))
 
 (define (compare-trees there here)
@@ -568,8 +591,8 @@
           (hfs (directory here)))
       (every (lambda (f) 
                (and (member f hfs)
-                    (let ((tf2 (string-append there "/" f))
-                          (hf2 (string-append here "/" f)))
+                    (let ((tf2 (make-pathname there f))
+                          (hf2 (make-pathname here f)))
                       (and (<= (file-modification-time tf2)
                                (file-modification-time hf2))
                            (if (directory-exists? tf2)
@@ -1058,6 +1081,9 @@ usage: chicken-install [OPTION ...] [NAME[:VERSION] ...]
        -force                   don't ask, install even if versions don't match
   -k   -keep                    keep temporary files
   -s   -sudo                    use external command to elevate privileges for filesystem operations
+  -l   -location DIRECTORY      get egg sources from DIRECTORY.  May be provided multiple times.
+                                Locations specified on the command line have precedence over the
+                                ones specified in setup.defaults.
   -r   -retrieve                only retrieve egg into cache directory, don't install (giving `-r'
                                 more than once implies `-recursive')
        -recursive               if `-retrieve' is given, retrieve also dependencies
@@ -1154,6 +1180,13 @@ EOF
                   ((member arg '("-s" "-sudo"))
                    (set! sudo-install #t)
                    (loop (cdr args)))
+                  ((member arg '("-l" "-location"))
+                   (when (null? (cdr args))
+                     (fprintf (current-error-port) "-l|-location: missing argument.~%")
+                     (exit 1))
+                   (set! default-locations
+                     (append (list (cadr args)) default-locations))
+                   (loop (cddr args)))
                   ((member arg '("-n" "-no-install"))
                    (set! no-install #t)
                    (loop (cdr args)))
