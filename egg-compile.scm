@@ -49,6 +49,7 @@
 (define +link-file-extension+ ".link")
 
 (define keep-generated-files #f)
+(define dependency-targets '())
 
 
 ;;; some utilities
@@ -588,7 +589,7 @@
 
 ;;; shell code generation - build operations
 
-(define ((compile-static-extension name #!key mode 
+(define ((compile-static-extension name #!key mode dependencies
                                    source-dependencies
                                    source (options '())
                                    predefined-types eggfile
@@ -620,18 +621,20 @@
                    (target-file (conc out1
                                       (archive-extension platform))
                                 mode)))
+         (imps (map (lambda (m)
+                      (prefix srcdir (conc m ".import.scm")))
+                 (or modules '())))
          (targets (append (list out3 lfile)
                           (maybe types-file tfile)
                           (maybe inline-file ifile)
-                          (map (lambda (m)
-                                 (prefix srcdir (conc m ".import.scm")))
-                               (or modules '()))))
+                          imps))
          (src (or source (conc name ".scm"))))
     (when custom
       (prepare-custom-command cmd platform))
     (print-build-command targets
 			 `(,@(filelist srcdir source-dependencies) ,src ,eggfile
-			   ,@(if custom (list cmd) '()))
+			   ,@(if custom (list cmd) '())
+                           ,@(get-dependency-targets dependencies))
 			 `(,cmd ,@(if keep-generated-files '("-k") '())
 				"-regenerate-import-libraries"
 				,@(if modules '("-J") '()) "-M"
@@ -654,7 +657,7 @@
 			     platform)))
     (print-end-command platform)))
 
-(define ((compile-dynamic-extension name #!key mode mode
+(define ((compile-dynamic-extension name #!key mode mode dependencies
                                     source (options '())
                                     (link-options '())
                                     predefined-types eggfile
@@ -684,18 +687,21 @@
                                           (object-extension platform))
                                     mode))
                   link-objects))
+         (imps (map (lambda (m)
+                      (prefix srcdir (conc m ".import.scm")))
+                 modules))
          (targets (append (list out)
                           (maybe inline-file ifile)
                           (maybe types-file tfile)
-                          (map (lambda (m)
-                                 (prefix srcdir (conc m ".import.scm")))
-                            modules))))
+                          imps)))
+    (add-dependency-target name out)
     (when custom
       (prepare-custom-command cmd platform))
     (print-build-command targets
 			 `(,src ,eggfile ,@(if custom (list cmd) '())
 			   ,@(filelist srcdir lobjs)
-			   ,@(filelist srcdir source-dependencies))
+			   ,@(filelist srcdir source-dependencies)
+                           ,@(get-dependency-targets dependencies))
 			 `(,cmd ,@(if keep-generated-files '("-k") '())
 				,@(if (eq? mode 'host) '("-host") '())
 				"-D" "compiling-extension"
@@ -734,7 +740,7 @@
 			 platform)
     (print-end-command platform)))
 
-(define ((compile-static-object name #!key mode
+(define ((compile-static-object name #!key mode dependencies
                                 source-dependencies
                                 source (options '())
                                 eggfile custom)
@@ -755,7 +761,8 @@
       (prepare-custom-command cmd platform))
     (print-build-command (list out)
 			 `(,@(filelist srcdir source-dependencies) ,src ,eggfile
-			   ,@(if custom (list cmd) '()))
+			   ,@(if custom (list cmd) '())
+                           ,@(get-dependency-targets dependencies))
 			 `(,cmd "-setup-mode" "-static" "-I" ,srcdir
 				,@(if (eq? mode 'host) '("-host") '())
 				"-c" "-C" ,(conc "-I" srcdir)
@@ -763,7 +770,7 @@
 			 platform)
     (print-end-command platform)))
 
-(define ((compile-dynamic-object name #!key mode mode
+(define ((compile-dynamic-object name #!key mode mode dependencies
                                  source (options '())
                                  eggfile
                                  source-dependencies
@@ -780,18 +787,20 @@
                                  (object-extension platform))
                            mode))
          (src (or ssname (conc sname ".c"))))
+    (add-dependency-target name out)
     (when custom
       (prepare-custom-command cmd platform))
     (print-build-command (list out)
 			 `(,src ,eggfile ,@(if custom (list cmd) '())
-			   ,@(filelist srcdir source-dependencies))
+			   ,@(filelist srcdir source-dependencies)
+                           ,@(get-dependency-targets dependencies))
 			 `(,cmd ,@(if (eq? mode 'host) '("-host") '())
 			   "-s" "-c" "-C" ,(conc "-I" srcdir)
 			   ,@opts ,src "-o" ,out)
 			 platform)
     (print-end-command platform)))
 
-(define ((compile-dynamic-program name #!key source mode
+(define ((compile-dynamic-program name #!key source mode dependencies
                                   (options '()) (link-options '())
                                   source-dependencies
                                   custom eggfile link-objects)
@@ -816,7 +825,8 @@
     (print-build-command (list out)
 			 `(,src ,eggfile ,@(if custom (list cmd) '())
 			   ,@(filelist srcdir source-dependencies)
-			   ,@(filelist srcdir lobjs))
+			   ,@(filelist srcdir lobjs)
+                           ,@(get-dependency-targets dependencies))
 			 `(,cmd ,@(if keep-generated-files '("-k") '())
 				"-setup-mode"
 				,@(if (eq? mode 'host) '("-host") '())
@@ -828,7 +838,7 @@
 			 platform)
     (print-end-command platform)))
 
-(define ((compile-static-program name #!key source
+(define ((compile-static-program name #!key source dependencies
                                  (options '()) (link-options '())
                                  source-dependencies
                                  custom mode eggfile link-objects)
@@ -853,7 +863,8 @@
     (print-build-command (list out)
 			 `(,src ,eggfile ,@(if custom (list cmd) '())
 			   ,@(filelist srcdir lobjs)
-			   ,@(filelist srcdir source-dependencies))
+			   ,@(filelist srcdir source-dependencies)
+                           ,@(get-dependency-targets dependencies))
 			 `(,cmd ,@(if keep-generated-files '("-k") '())
 				,@(if (eq? mode 'host) '("-host") '())
 				"-static" "-setup-mode" "-I" ,srcdir
@@ -864,15 +875,17 @@
 			 platform)
     (print-end-command platform)))
 
-(define ((compile-generated-file name #!key source custom
+(define ((compile-generated-file name #!key source custom dependencies
                                  source-dependencies eggfile) 
          srcdir platform)
   (let ((cmd (custom-cmd custom srcdir platform))
         (out (or source name)))
+    (add-dependency-target name out)
     (prepare-custom-command cmd platform)
     (print-build-command (list out)
 			 `(,cmd ,eggfile
-			   ,@(filelist srcdir source-dependencies))
+			   ,@(filelist srcdir source-dependencies)
+                           ,@(get-dependency-targets dependencies))
 			 (list cmd)
 			 platform)
     (print-end-command platform)))
@@ -1040,6 +1053,22 @@
                                 (override-prefix "/include"
                                                  host-incdir)))
                         files mode srcdir platform))
+
+;; manage dependency-targets
+
+(define (add-dependency-target target output)
+  (cond ((assq target dependency-targets) =>
+         (lambda (a)
+           (set-cdr! a output)))
+        (else (set! dependency-targets
+                (cons (cons target output) dependency-targets)))))
+
+(define (get-dependency-targets targets)
+  (append-map
+    (lambda (t)
+      (cond ((assq t dependency-targets) => (lambda (a) (list (cdr a))))
+            (else '())))
+    targets))
 
 
 ;;; Generate shell or batch commands from abstract build/install operations

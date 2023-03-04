@@ -26,6 +26,9 @@
     and TIMESTAMP with an underscore to reduce likelihood of
     collisions with source files on case-insensitive file systems
     like on MacOS (#1753, reported by Kon Lovett).
+  - chicken-install: Fix #1684 (programs that specify
+    component-dependencies should build-depend on their import
+    libraries).
   - chicken-install now caches eggs installed from local locations.
   - chicken-install now accepts the -location command line option
     (short: -l) to specify local directories where to get egg sources
