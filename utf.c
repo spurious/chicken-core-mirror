@@ -3272,7 +3272,10 @@ static C_char *utf_index1(C_word s, C_word i)
 
 static C_char *utf_index(C_word s, C_word i) 
 {
-    if(i == 0) return C_c_string(C_block_item(s, 0));
+    C_word bv = C_block_item(s, 0);
+    if(i == 0) return C_c_string(bv);
+    else if(C_header_size(bv) - 1 == C_unfix(C_block_item(s, 1)))
+        return C_c_string(bv) + i;
     return utf_index1(s, i);
 }
 
