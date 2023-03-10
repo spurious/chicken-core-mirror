@@ -174,7 +174,7 @@ EOF
                (let ((buf (##sys#slot from 0)))
                  (move buf to (or n (fx- (##sys#size buf) 1)))))
               ((string? to)
-               (let ((buf (##sys#slot from 0)))
+               (let ((buf (##sys#slot to 0)))
                  (move from buf (or n (fx- (##sys#size buf) 1)))))
 	      [(%generic-pointer? from)
 	       (cond [(%generic-pointer? to)
