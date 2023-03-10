@@ -1648,18 +1648,21 @@ EOF
 
 (set! scheme#string-append
   (lambda all
-    (let ((snew #f))
-      (let loop ((strs all) (n 0))
-	(if (eq? strs '())
-            (set! snew (##sys#make-bytevector (fx+ n 1) 0))
-            (let ((s (##sys#slot strs 0)))
-              (##sys#check-string s 'string-append)
-              (let* ((bv (##sys#slot s 0))
-                     (len (fx- (##sys#size bv) 1)))
-                (loop (##sys#slot strs 1) (fx+ n len))
-                (##core#inline "C_copy_memory_with_offset" snew bv n 0 len) ) ) ) )
-      (##core#inline_allocate ("C_a_ustring" 5) snew 
-                              (##core#inline "C_utf_length" snew)))))
+    (let ((snew #f)
+          (slen 0))
+      (let loop ((strs all) (n 0) (ul 0))
+	(cond ((eq? strs '())
+                (set! snew (##sys#make-bytevector (fx+ n 1) 0))
+                (set! slen ul))
+              (else
+                (let ((s (##sys#slot strs 0)))
+                  (##sys#check-string s 'string-append)
+                  (let* ((bv (##sys#slot s 0))
+                         (len (fx- (##sys#size bv) 1))
+                         (ulen (##sys#slot s 1)))
+                    (loop (##sys#slot strs 1) (fx+ n len) (fx+ ul ulen))
+                    (##core#inline "C_copy_memory_with_offset" snew bv n 0 len) ) ) ) ) )
+      (##core#inline_allocate ("C_a_ustring" 5) snew slen))))
 
 (set! scheme#string
   (let ([list->string list->string])
