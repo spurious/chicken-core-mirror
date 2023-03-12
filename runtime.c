@@ -337,7 +337,6 @@ C_TLS C_word (*C_debugger_hook)(C_DEBUG_INFO *cell, C_word c, C_word *av, C_char
 C_TLS int
   C_gui_mode = 0,
   C_abort_on_thread_exceptions,
-  C_enable_repl,
   C_interrupts_enabled,
   C_disable_overflow_check,
   C_heap_size_is_fixed,
@@ -1376,7 +1375,6 @@ void CHICKEN_parse_command_line(int argc, char *argv[], C_word *heap, C_word *st
 		 " -:tSIZE          set symbol-table size\n"
                  " -:fSIZE          set maximal number of pending finalizers\n"
 		 " -:x              deliver uncaught exceptions of other threads to primordial one\n"
-		 " -:b              enter REPL on error\n"
 		 " -:B              sound bell on major GC\n"
 		 " -:G              force GUI mode\n"
 		 " -:aSIZE          set trace-buffer/call-chain size\n"
@@ -1492,10 +1490,6 @@ void CHICKEN_parse_command_line(int argc, char *argv[], C_word *heap, C_word *st
 
 	case 'x':
 	  C_abort_on_thread_exceptions = 1;
-	  break;
-
-	case 'b':
-	  C_enable_repl = 1;
 	  break;
 
 	default: panic(C_text("illegal runtime option"));

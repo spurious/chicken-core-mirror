@@ -231,8 +231,6 @@ by the startup code and will not be contained in the result of
 
 ; {{-:ANUMBER}} : Specifies fixed ''temporary stack'' size. This is used mostly for {{apply}}. If you supply a zero size (the default), the temporary stack will be dynamically reallocated as needed.
 
-; {{-:b}} : Enter a read-eval-print-loop when an error is encountered.
-
 ; {{-:B}} : Sounds a bell (by writing ASCII 7 to stdout) on every major garbage collection.
 
 ; {{-:c}} : Forces console mode. Currently this is only used in the interpreter ({{csi}}) to force output of the {{#;N>}} prompt even if stdin is not a terminal (for example if running in an {{emacs}} buffer under Windows).

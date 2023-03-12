@@ -5135,8 +5135,6 @@ EOF
 (define (signal x)
   (##sys#current-exception-handler x) )
 
-(define ##sys#break-on-error (foreign-value "C_enable_repl" bool))
-
 (define ##sys#error-handler
   (make-parameter
    (let ([string-append string-append])
@@ -5161,11 +5159,6 @@ EOF
 			 args)])))
 	      (##sys#print #\newline #f ##sys#standard-error)
 	      (print-call-chain ##sys#standard-error)
-	      (when (and ##sys#break-on-error (##sys#symbol-has-toplevel-binding? 'chicken.repl#repl))
-		;; Hack to avoid hard / cyclic dependency
-		((##sys#slot 'chicken.repl#repl 0))
-		(##sys#print #\newline #f ##sys#standard-error)
-		(##core#inline "C_exit_runtime" _ex_software))
 	      (##core#inline "C_halt" #f))
 	     (else
 	      (let ((out (open-output-string)))

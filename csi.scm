@@ -260,8 +260,6 @@ EOF
   (or (##core#inline "C_i_tty_forcedp")
       (##sys#tty-port? ##sys#standard-input)))
 
-(set! ##sys#break-on-error #f)
-
 (set! ##sys#read-prompt-hook
   (let ([old ##sys#read-prompt-hook])
     (lambda ()
