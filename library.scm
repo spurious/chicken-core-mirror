@@ -1460,7 +1460,7 @@ EOF
 (set! scheme#string->list
   (lambda (s)
     (##sys#check-string s 'string->list)
-    (let ((len (string-length s)))
+    (let ((len (##sys#slot s 1)))
       (let loop ((i (fx- len 1)) (ls '()))
 	(if (fx< i 0)
 	    ls
@@ -1473,14 +1473,19 @@ EOF
   (lambda (lst0)
     (if (not (list? lst0))
 	(##sys#error-not-a-proper-list lst0 'list->string)
-	(let* ([len (length lst0)]
-	       [s (##sys#make-string len)] )
-	  (do ([i 0 (fx+ i 1)]
-	       [lst lst0 (##sys#slot lst 1)] )
-	      ((fx>= i len) s)
-	    (let ([c (##sys#slot lst 0)])
-	      (##sys#check-char c 'list->string)
-	      (string-set! s i c) ) ) ) )))
+	(let* ((len (##core#inline "C_utf_list_size" lst0))
+	       (bv (##sys#make-bytevector (fx+ 1 len))))
+	  (let loop ((i 0)
+                     (p 0)
+                     (lst lst0))
+            (if (not (pair? lst))
+                (##core#inline_allocate ("C_a_ustring" 5) bv i)
+                (let ((c (##sys#slot lst 0)))
+                  (##sys#check-char c 'list->string)
+                  (##core#inline "C_utf_insert" bv p c)
+                  (loop (fx+ i 1)
+                        (fx+ p (##core#inline "C_utf_bytes" c))
+                        (##sys#slot lst 1)))))))))
 
 (define ##sys#list->string list->string)
 
